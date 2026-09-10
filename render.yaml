@@ -19,6 +19,10 @@ services:
         sync: false
       - key: USE_EMBEDDED_MONGO
         value: "false"
+      # Production uses Atlas, so skip the ~100 MB embedded-mongod download
+      # that mongodb-memory-server would otherwise fetch during the build.
+      - key: MONGOMS_DISABLE_POSTINSTALL
+        value: "1"
       - key: APP_TIMEZONE
         value: Asia/Karachi
       - key: TICKET_NUMBER_START
