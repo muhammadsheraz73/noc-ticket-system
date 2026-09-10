@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import env, { SERVER_ROOT } from './config/env.js';
+import { IS_SERVERLESS } from './config/db.js';
 import logger from './utils/logger.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { notFoundHandler, errorHandler } from './middleware/error.js';
@@ -108,6 +109,10 @@ export function createApp() {
  * In development the Vite dev server handles this instead.
  */
 function serveWebApp(app) {
+  // On a serverless platform the CDN serves the built app straight from
+  // client/dist, so the function never sees a non-API request.
+  if (IS_SERVERLESS) return;
+
   const dist = path.resolve(SERVER_ROOT, '..', 'client', 'dist');
   const indexHtml = path.join(dist, 'index.html');
 

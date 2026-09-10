@@ -5,6 +5,15 @@ import logger from '../utils/logger.js';
 
 let embedded = null;
 
+/** True on Vercel, AWS Lambda and similar function runtimes. */
+export const IS_SERVERLESS = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+/**
+ * Survives module re-evaluation inside a warm serverless container, so a
+ * container never opens more than one connection.
+ */
+const cache = (globalThis.__nocMongoose ??= { promise: null });
+
 /**
  * Resolve the MongoDB connection string.
  *
@@ -77,16 +86,36 @@ async function isReachable(uri) {
 export async function connectDatabase() {
   if (mongoose.connection.readyState === 1) return mongoose.connection;
 
-  mongoose.set('strictQuery', true);
+  // On a serverless platform many invocations share one warm container, and
+  // several can race to connect at once. Caching the in-flight promise on
+  // globalThis means they all await a single connection instead of opening one
+  // each and exhausting the cluster's connection limit.
+  if (cache.promise) return cache.promise;
 
-  const uri = await resolveUri();
-  await mongoose.connect(uri, {
-    serverSelectionTimeoutMS: 15000,
-    autoIndex: true,
-  });
+  cache.promise = (async () => {
+    mongoose.set('strictQuery', true);
 
-  logger.info(`MongoDB: connected to database "${mongoose.connection.name}"`);
-  return mongoose.connection;
+    const uri = await resolveUri();
+    await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 15000,
+      // A serverless container needs only a handful of sockets; the default of
+      // 100 per instance would quickly exhaust an Atlas M0 (500 total).
+      maxPoolSize: IS_SERVERLESS ? 5 : 20,
+      // Index building belongs to deploys and the seeder, not to every cold start.
+      autoIndex: !IS_SERVERLESS,
+    });
+
+    logger.info(`MongoDB: connected to database "${mongoose.connection.name}"`);
+    return mongoose.connection;
+  })();
+
+  try {
+    return await cache.promise;
+  } catch (error) {
+    // Let the next request retry instead of caching a failed connection.
+    cache.promise = null;
+    throw error;
+  }
 }
 
 /**
@@ -108,6 +137,7 @@ export async function flushDatabase() {
 
 export async function disconnectDatabase() {
   await flushDatabase();
+  cache.promise = null;
 
   if (mongoose.connection.readyState !== 0) {
     await mongoose.disconnect();

@@ -112,15 +112,30 @@ router.post(
       after: ticket,
     });
 
+    const wantsAnalysis = req.body.runAiAnalysis !== false;
+    const info = aiStatusInfo();
+
+    // When AI cannot run at all there is nothing to wait for, so record the
+    // final state now rather than leaving the ticket stuck on "pending".
+    if (!wantsAnalysis || !info.available) {
+      ticket.ai = {
+        status: wantsAnalysis ? info.status : 'disabled',
+        error: wantsAnalysis ? info.reason : 'Analysis was not requested for this ticket',
+        troubleshootingSteps: [],
+        analyzedAt: new Date(),
+      };
+      await ticket.save();
+    }
+
     // Respond immediately — AI must never delay or block ticket creation.
     res.status(201).json({
       success: true,
       ticket: decorateTicket(ticket, customer),
       customer,
-      ai: aiStatusInfo(),
+      ai: info,
     });
 
-    if (req.body.runAiAnalysis !== false) {
+    if (wantsAnalysis && info.available) {
       runAnalysisInBackground(ticket._id, customer);
     }
   }),
