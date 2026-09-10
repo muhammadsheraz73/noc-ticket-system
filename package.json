@@ -1,0 +1,29 @@
+{
+  "name": "noc-ticket-management-system",
+  "private": true,
+  "version": "1.0.0",
+  "description": "NOC Ticket Management & Customer Network System",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "setup": "npm install && npm run seed",
+    "dev": "concurrently -n SERVER,CLIENT -c cyan,magenta \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm --workspace server run dev",
+    "dev:client": "npm --workspace client run dev",
+    "start": "npm --workspace server run start",
+    "seed": "npm --workspace server run seed",
+    "seed:reset": "npm --workspace server run seed:reset",
+    "migrate": "npm --workspace server run migrate --",
+    "test": "npm --workspace server run test",
+    "build": "npm --workspace client run build",
+    "preview": "npm --workspace client run preview"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
+}

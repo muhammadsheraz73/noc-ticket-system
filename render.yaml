@@ -1,0 +1,32 @@
+# Render.com blueprint — deploys the API and the compiled React app as one service.
+# Import this repository at https://dashboard.render.com/blueprints
+services:
+  - type: web
+    name: noc-ticket-system
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Generated once by Render and kept stable across deploys.
+      - key: JWT_SECRET
+        generateValue: true
+      # Set this in the Render dashboard to your Atlas connection string.
+      - key: MONGODB_URI
+        sync: false
+      - key: USE_EMBEDDED_MONGO
+        value: "false"
+      - key: APP_TIMEZONE
+        value: Asia/Karachi
+      - key: TICKET_NUMBER_START
+        value: "4626"
+      - key: INVOICE_CURRENCY
+        value: PKR
+      - key: COMPANY_NAME
+        value: NOC Network Services
+      # Optional — enables the AI assistant. Set in the dashboard, never in git.
+      - key: ANTHROPIC_API_KEY
+        sync: false
