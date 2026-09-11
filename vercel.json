@@ -6,7 +6,7 @@
   "framework": null,
   "functions": {
     "api/index.mjs": {
-      "maxDuration": 60,
+      "maxDuration": 90,
       "excludeFiles": "node_modules/mongodb-memory-server*/**"
     }
   },
