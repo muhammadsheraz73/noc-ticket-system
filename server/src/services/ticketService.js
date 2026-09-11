@@ -40,11 +40,15 @@ export async function createTicket({ payload, user }) {
 
   let assignee = null;
   if (payload.assignedTo) {
-    assignee = await FieldTeam.findOne({ _id: payload.assignedTo, isActive: true });
+    assignee = await FieldTeam.findOne({ _id: payload.assignedTo, isActive: true }).populate(
+      'user',
+      'isActive',
+    );
     if (!assignee) throw ApiError.badRequest('The selected field team/member is not available');
-    if (!assignee.user) {
+    // A stale `user` reference (account since deleted) must not count as a login.
+    if (!assignee.user || assignee.user.isActive === false) {
       throw ApiError.badRequest(
-        `${assignee.name} has no login account linked yet — link one from Field Teams before assigning tickets to them`,
+        `${assignee.name} has no active login account linked — link one from Field Teams before assigning tickets to them`,
       );
     }
   }
