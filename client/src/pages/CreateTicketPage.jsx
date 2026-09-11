@@ -47,7 +47,7 @@ export default function CreateTicketPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    Promise.all([api.get('/meta'), api.get('/field-teams'), api.get('/ai/status')])
+    Promise.all([api.get('/meta'), api.get('/field-teams?assignable=true'), api.get('/ai/status')])
       .then(([metaRes, teamRes, aiRes]) => {
         setMeta(metaRes.data);
         setTeams(teamRes.data.items);
@@ -250,19 +250,12 @@ export default function CreateTicketPage() {
                     </Select>
                   </Field>
 
-                  <Field label="Assign To (field team / member)" error={errors.assignedTo} full>
+                  <Field label="Assign To (team member)" error={errors.assignedTo} full hint="Only members with a login account can be assigned.">
                     <Select value={form.assignedTo} onChange={set('assignedTo')} error={errors.assignedTo}>
                       <option value="">Assign later</option>
-                      <optgroup label="Teams">
-                        {teams.filter((t) => t.kind === 'team').map((t) => (
-                          <option key={t._id} value={t._id}>{t.name}</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Members">
-                        {teams.filter((t) => t.kind === 'member').map((t) => (
-                          <option key={t._id} value={t._id}>{t.name}{t.area ? ` — ${t.area}` : ''} ({t.openTickets} open)</option>
-                        ))}
-                      </optgroup>
+                      {teams.map((t) => (
+                        <option key={t._id} value={t._id}>{t.name}{t.area ? ` — ${t.area}` : ''} ({t.openTickets} open)</option>
+                      ))}
                     </Select>
                   </Field>
 

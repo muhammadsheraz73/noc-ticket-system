@@ -275,6 +275,11 @@ router.post(
 
     const assignee = await FieldTeam.findOne({ _id: req.body.assignedTo, isActive: true });
     if (!assignee) throw ApiError.badRequest('The selected field team/member is not available');
+    if (!assignee.user) {
+      throw ApiError.badRequest(
+        `${assignee.name} has no login account linked yet — link one from Field Teams before assigning tickets to them`,
+      );
+    }
 
     const previous = ticket.assignedToName || 'unassigned';
     ticket.assignedTo = assignee._id;

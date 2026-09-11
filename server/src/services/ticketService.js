@@ -42,6 +42,11 @@ export async function createTicket({ payload, user }) {
   if (payload.assignedTo) {
     assignee = await FieldTeam.findOne({ _id: payload.assignedTo, isActive: true });
     if (!assignee) throw ApiError.badRequest('The selected field team/member is not available');
+    if (!assignee.user) {
+      throw ApiError.badRequest(
+        `${assignee.name} has no login account linked yet — link one from Field Teams before assigning tickets to them`,
+      );
+    }
   }
 
   const now = new Date();

@@ -143,13 +143,15 @@ export async function globalSearch(rawQuery, { user, limit = 10 } = {}) {
   return { query: q, total, ...groups };
 }
 
-/** Which FieldTeam records a field engineer is allowed to see tickets for. */
+/**
+ * Which FieldTeam records a field engineer is allowed to see tickets for.
+ * Only their own linked record — not their whole team's tickets — so
+ * "assigned to me" means tickets dispatched to them personally.
+ */
 export async function fieldEngineerScope(user) {
   const { default: FieldTeam } = await import('../models/FieldTeam.js');
-  const records = await FieldTeam.find({ user: user._id }).select('_id team').lean();
-  const ids = records.map((r) => r._id);
-  const teamIds = records.map((r) => r.team).filter(Boolean);
-  return { $in: [...ids, ...teamIds] };
+  const records = await FieldTeam.find({ user: user._id }).select('_id').lean();
+  return { $in: records.map((r) => r._id) };
 }
 
 function emptyResult(query) {

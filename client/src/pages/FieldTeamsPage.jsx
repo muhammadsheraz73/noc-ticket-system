@@ -167,7 +167,11 @@ export default function FieldTeamsPage() {
                       <tr key={member._id}>
                         <td>
                           <div className="strong">{member.name}</div>
-                          {member.user ? <div className="small muted">{member.user.email}</div> : null}
+                          {member.user ? (
+                            <div className="small muted">{member.user.email}</div>
+                          ) : (
+                            <Badge tone="neutral">No login — can't be assigned</Badge>
+                          )}
                         </td>
                         <td>{member.team?.name || <span className="muted">—</span>}</td>
                         <td>{member.area || <span className="muted">—</span>}</td>

@@ -50,7 +50,7 @@ export default function TicketDetailPage() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    if (canManageTickets) api.get('/field-teams').then(({ data: d }) => setTeams(d.items)).catch(() => {});
+    if (canManageTickets) api.get('/field-teams?assignable=true').then(({ data: d }) => setTeams(d.items)).catch(() => {});
   }, [canManageTickets]);
 
   // While an AI analysis is pending, poll until it settles.
@@ -347,17 +347,12 @@ export default function TicketDetailPage() {
           </>
         }
       >
-        <Field label="Field team or member" required>
+        <Field label="Team member" required hint="Only members with a login account can be assigned.">
           <Select value={assignTo} onChange={(event) => setAssignTo(event.target.value)}>
             <option value="">Select…</option>
-            <optgroup label="Teams">
-              {teams.filter((t) => t.kind === 'team').map((t) => <option key={t._id} value={t._id}>{t.name}</option>)}
-            </optgroup>
-            <optgroup label="Members">
-              {teams.filter((t) => t.kind === 'member').map((t) => (
-                <option key={t._id} value={t._id}>{t.name}{t.area ? ` — ${t.area}` : ''} ({t.openTickets} open)</option>
-              ))}
-            </optgroup>
+            {teams.map((t) => (
+              <option key={t._id} value={t._id}>{t.name}{t.area ? ` — ${t.area}` : ''} ({t.openTickets} open)</option>
+            ))}
           </Select>
         </Field>
         <Field label="Note (optional)" hint="Stored in the ticket audit trail.">

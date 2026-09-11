@@ -21,6 +21,8 @@ router.get(
     const filter = {};
     if (req.query.kind) filter.kind = req.query.kind;
     if (req.query.active !== 'all') filter.isActive = true;
+    // Tickets can only be assigned to a member with a linked login account.
+    if (req.query.assignable === 'true') filter.user = { $ne: null };
 
     const items = await FieldTeam.find(filter)
       .sort({ kind: 1, name: 1 })
