@@ -276,39 +276,43 @@ router.put(
   }),
 );
 
-/** DELETE /api/customers/:id — admin-only soft delete, always audited. */
+/** DELETE /api/customers/:id — admin-only, permanent. Always audited. */
 router.delete(
   '/:id',
   requireRole(ROLES.ADMIN),
   asyncHandler(async (req, res) => {
     const customer = await findCustomer(req.params.id);
 
-    const openTickets = await Ticket.countDocuments({
-      customer: customer._id,
-      isDeleted: false,
-      status: { $nin: ['Resolved', 'Closed'] },
-    });
-    if (openTickets > 0) {
+    // Nothing else may still reference this customer — a dangling reference
+    // would break the ticket/invoice/network pages that display it.
+    const [tickets, invoices, connections] = await Promise.all([
+      Ticket.countDocuments({ customer: customer._id }),
+      Invoice.countDocuments({ customer: customer._id }),
+      Connection.countDocuments({ customer: customer._id }),
+    ]);
+    const linked = tickets + invoices + connections;
+    if (linked > 0) {
+      const parts = [];
+      if (tickets) parts.push(`${tickets} ticket(s)`);
+      if (invoices) parts.push(`${invoices} invoice(s)`);
+      if (connections) parts.push(`${connections} network connection(s)`);
       throw ApiError.badRequest(
-        `This customer has ${openTickets} open ticket(s). Resolve or close them before deleting.`,
+        `This customer still has ${parts.join(', ')} on record and cannot be permanently deleted. Remove those first.`,
       );
     }
 
-    customer.isDeleted = true;
-    customer.deletedAt = new Date();
-    customer.deletedBy = req.user._id;
-    await customer.save();
+    await customer.deleteOne();
 
     await recordAudit({
       req,
-      action: 'soft_delete',
+      action: 'delete',
       entityType: 'Customer',
       entityId: customer._id,
       entityLabel: customer.customerReferenceNumber,
       before: customer,
     });
 
-    res.json({ success: true, message: 'Customer archived (soft deleted)' });
+    res.json({ success: true, message: 'Customer permanently deleted' });
   }),
 );
 

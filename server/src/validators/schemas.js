@@ -115,6 +115,7 @@ export const createTicketSchema = z.object({
   status: z.enum(TICKET_STATUSES).default('New'),
   ettrMinutes: z.coerce.number().int().min(5, 'ETTR must be at least 5 minutes').max(20160).default(60),
   assignedTo: objectId,
+  assignedHelper: objectId,
   runAiAnalysis: z.boolean().optional().default(true),
 });
 
@@ -131,6 +132,7 @@ export const assignTicketSchema = z.object({
   assignedTo: z
     .string()
     .regex(/^[0-9a-fA-F]{24}$/, 'Select a valid field team or member'),
+  assignedHelper: objectId,
   note: optionalText(500),
 });
 

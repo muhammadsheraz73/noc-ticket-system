@@ -7,19 +7,20 @@ import { PageHead } from '../components/Layout.jsx';
 import Countdown from '../components/Countdown.jsx';
 import TicketPreview, { CopyTicketButton } from '../components/TicketPreview.jsx';
 import {
-  Alert, Badge, DefItem, Field, Loading, Modal, Select, TextInput, Textarea,
+  Alert, Badge, ConfirmDialog, DefItem, Field, Loading, Modal, Select, TextInput, Textarea,
 } from '../components/ui.jsx';
 import {
   STATUS_TONE, PRIORITY_TONE, INVOICE_TONE, formatDateTime, formatDate, formatMoney, ettrLabel, relativeTime,
 } from '../utils/format.js';
 
 const STATUSES = ['New', 'In Progress', 'On Hold', 'Resolved', 'Closed'];
+const PRIORITIES = ['Urgent', 'High', 'Medium', 'Low'];
 
 export default function TicketDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const { user, canManageTickets, canViewInvoices, canManageInvoices, serverNow, syncClock } = useAuth();
+  const { user, isAdmin, canManageTickets, canViewInvoices, canManageInvoices, serverNow, syncClock } = useAuth();
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,11 +29,24 @@ export default function TicketDetailPage() {
 
   const [assignOpen, setAssignOpen] = useState(false);
   const [resolveOpen, setResolveOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [teams, setTeams] = useState([]);
+  const [meta, setMeta] = useState(null);
   const [assignTo, setAssignTo] = useState('');
+  const [assignHelper, setAssignHelper] = useState('');
   const [assignNote, setAssignNote] = useState('');
   const [resolution, setResolution] = useState('');
   const [resolveStatus, setResolveStatus] = useState('Resolved');
+  const [editForm, setEditForm] = useState({
+    issueType: '',
+    priority: '',
+    status: '',
+    ettrMinutes: 60,
+    remarks: '',
+    assignedTo: '',
+    assignedHelper: '',
+  });
 
   const load = useCallback(async () => {
     try {
@@ -51,6 +65,10 @@ export default function TicketDetailPage() {
 
   useEffect(() => {
     if (canManageTickets) api.get('/field-teams?assignable=true').then(({ data: d }) => setTeams(d.items)).catch(() => {});
+  }, [canManageTickets]);
+
+  useEffect(() => {
+    if (canManageTickets) api.get('/meta').then(({ data: d }) => setMeta(d)).catch(() => {});
   }, [canManageTickets]);
 
   // While an AI analysis is pending, poll until it settles.
@@ -80,11 +98,47 @@ export default function TicketDetailPage() {
     }
   };
 
+  const doEdit = async () => {
+    setBusy(true);
+    try {
+      await api.put(`/tickets/${ticket.ticketNumber}`, {
+        issueType: editForm.issueType,
+        priority: editForm.priority,
+        status: editForm.status,
+        ettrMinutes: Number(editForm.ettrMinutes),
+        remarks: editForm.remarks,
+      });
+
+      const assignmentChanged =
+        editForm.assignedTo &&
+        (editForm.assignedTo !== (ticket.assignedTo || '') ||
+          editForm.assignedHelper !== (ticket.assignedHelper || ''));
+      if (assignmentChanged) {
+        await api.post(`/tickets/${ticket.ticketNumber}/assign`, {
+          assignedTo: editForm.assignedTo,
+          assignedHelper: editForm.assignedHelper || undefined,
+        });
+      }
+
+      toast.success('Ticket updated', `TID ${ticket.ticketNumber}`);
+      setEditOpen(false);
+      await load();
+    } catch (err) {
+      toast.error('Could not update the ticket', errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const doAssign = async () => {
     if (!assignTo) return;
     setBusy(true);
     try {
-      await api.post(`/tickets/${ticket.ticketNumber}/assign`, { assignedTo: assignTo, note: assignNote });
+      await api.post(`/tickets/${ticket.ticketNumber}/assign`, {
+        assignedTo: assignTo,
+        assignedHelper: assignHelper || undefined,
+        note: assignNote,
+      });
       toast.success('Ticket assigned');
       setAssignOpen(false);
       setAssignNote('');
@@ -115,6 +169,18 @@ export default function TicketDetailPage() {
     }
   };
 
+  const remove = async () => {
+    setBusy(true);
+    try {
+      await api.delete(`/tickets/${ticket.ticketNumber}`);
+      toast.success(`TID ${ticket.ticketNumber} deleted`);
+      navigate('/tickets');
+    } catch (err) {
+      toast.error('Could not delete the ticket', errorMessage(err));
+      setBusy(false);
+    }
+  };
+
   const retryAi = async () => {
     setBusy(true);
     try {
@@ -137,8 +203,34 @@ export default function TicketDetailPage() {
         subtitle={`${ticket.issueType} · ${ticket.customerName} (${ticket.customerReferenceNumber})`}
         actions={
           <>
+            {canManageTickets ? (
+              <button
+                className="btn btn--secondary"
+                onClick={() => {
+                  setEditForm({
+                    issueType: ticket.issueType,
+                    priority: ticket.priority,
+                    status: ticket.status,
+                    ettrMinutes: ticket.ettrMinutes,
+                    remarks: ticket.remarks || '',
+                    assignedTo: ticket.assignedTo || '',
+                    assignedHelper: ticket.assignedHelper || '',
+                  });
+                  setEditOpen(true);
+                }}
+              >
+                ✏ Edit
+              </button>
+            ) : null}
             {canManageTickets && !closed ? (
-              <button className="btn btn--secondary" onClick={() => { setAssignTo(ticket.assignedTo || ''); setAssignOpen(true); }}>
+              <button
+                className="btn btn--secondary"
+                onClick={() => {
+                  setAssignTo(ticket.assignedTo || '');
+                  setAssignHelper(ticket.assignedHelper || '');
+                  setAssignOpen(true);
+                }}
+              >
                 🔧 Assign
               </button>
             ) : null}
@@ -147,6 +239,9 @@ export default function TicketDetailPage() {
             ) : null}
             {canManageInvoices ? (
               <Link className="btn btn--secondary" to={`/invoices/new?ticket=${ticket.ticketNumber}`}>🧾 Create Invoice</Link>
+            ) : null}
+            {isAdmin ? (
+              <button className="btn btn--secondary text-danger" onClick={() => setDeleting(true)}>🗑 Delete</button>
             ) : null}
           </>
         }
@@ -219,6 +314,7 @@ export default function TicketDetailPage() {
                   <DefItem label="ETTR" value={`${formatDateTime(ticket.ettrAt)} (${ettrLabel(ticket.ettrMinutes)})`} />
                   <DefItem label="Assigned By" value={ticket.assignedByName} />
                   <DefItem label="Assigned To" value={ticket.assignedToName || ''} />
+                  {ticket.assignedHelperName ? <DefItem label="Helper" value={ticket.assignedHelperName} /> : null}
                   <DefItem label="Assigned At" value={ticket.assignedAt ? formatDateTime(ticket.assignedAt) : ''} />
                   {ticket.resolvedAt ? <DefItem label="Resolved" value={formatDateTime(ticket.resolvedAt)} /> : null}
                   <DefItem label="Remarks" value={ticket.remarks} />
@@ -335,6 +431,74 @@ export default function TicketDetailPage() {
       </div>
 
       <Modal
+        open={editOpen}
+        title={`Edit TID ${ticket.ticketNumber}`}
+        onClose={() => setEditOpen(false)}
+        footer={
+          <>
+            <button className="btn btn--secondary" onClick={() => setEditOpen(false)} disabled={busy}>Cancel</button>
+            <button className="btn" onClick={doEdit} disabled={busy}>
+              {busy ? <span className="spinner" /> : null} Save changes
+            </button>
+          </>
+        }
+      >
+        <Field label="Issue Type" required>
+          <Select value={editForm.issueType} onChange={(event) => setEditForm((f) => ({ ...f, issueType: event.target.value }))}>
+            {(meta?.issueTypes ?? []).map((t) => <option key={t._id} value={t.name}>{t.name}</option>)}
+          </Select>
+        </Field>
+        <Field label="Priority" required>
+          <Select value={editForm.priority} onChange={(event) => setEditForm((f) => ({ ...f, priority: event.target.value }))}>
+            {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+          </Select>
+        </Field>
+        <Field
+          label="Status"
+          required
+          hint={
+            ['Resolved', 'Closed'].includes(editForm.status)
+              ? 'To record resolution remarks, use the Resolve button instead.'
+              : undefined
+          }
+        >
+          <Select value={editForm.status} onChange={(event) => setEditForm((f) => ({ ...f, status: event.target.value }))}>
+            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </Select>
+        </Field>
+        <Field label="ETTR" required hint="Recalculated from the ticket's original creation time.">
+          <Select value={String(editForm.ettrMinutes)} onChange={(event) => setEditForm((f) => ({ ...f, ettrMinutes: event.target.value }))}>
+            {(meta?.ettrPresets ?? [{ label: ettrLabel(editForm.ettrMinutes), minutes: editForm.ettrMinutes }]).map((preset) => (
+              <option key={preset.minutes} value={preset.minutes}>{preset.label}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Remarks" hint="What the NOC operator observed — appears on the generated ticket.">
+          <Textarea value={editForm.remarks} onChange={(event) => setEditForm((f) => ({ ...f, remarks: event.target.value }))} rows={3} />
+        </Field>
+        <Field label="Assigned to" hint="Only members with a login account can be assigned. This is the name shown on the ticket.">
+          <Select value={editForm.assignedTo} onChange={(event) => setEditForm((f) => ({ ...f, assignedTo: event.target.value }))}>
+            <option value="">Unassigned</option>
+            {teams.map((t) => (
+              <option key={t._id} value={t._id}>{t.name}{t.area ? ` — ${t.area}` : ''} ({t.openTickets} open)</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Helper (optional)" hint="Sees this ticket too, but is never named on the ticket itself.">
+          <Select
+            value={editForm.assignedHelper}
+            onChange={(event) => setEditForm((f) => ({ ...f, assignedHelper: event.target.value }))}
+            disabled={!editForm.assignedTo}
+          >
+            <option value="">— none —</option>
+            {teams.filter((t) => t._id !== editForm.assignedTo).map((t) => (
+              <option key={t._id} value={t._id}>{t.name}{t.area ? ` — ${t.area}` : ''} ({t.openTickets} open)</option>
+            ))}
+          </Select>
+        </Field>
+      </Modal>
+
+      <Modal
         open={assignOpen}
         title={`Assign TID ${ticket.ticketNumber}`}
         onClose={() => setAssignOpen(false)}
@@ -347,10 +511,18 @@ export default function TicketDetailPage() {
           </>
         }
       >
-        <Field label="Team member" required hint="Only members with a login account can be assigned.">
+        <Field label="Assigned to" required hint="Only members with a login account can be assigned. This is the name shown on the ticket.">
           <Select value={assignTo} onChange={(event) => setAssignTo(event.target.value)}>
             <option value="">Select…</option>
             {teams.map((t) => (
+              <option key={t._id} value={t._id}>{t.name}{t.area ? ` — ${t.area}` : ''} ({t.openTickets} open)</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Helper (optional)" hint="Sees this ticket too, but is never named on the ticket itself.">
+          <Select value={assignHelper} onChange={(event) => setAssignHelper(event.target.value)}>
+            <option value="">— none —</option>
+            {teams.filter((t) => t._id !== assignTo).map((t) => (
               <option key={t._id} value={t._id}>{t.name}{t.area ? ` — ${t.area}` : ''} ({t.openTickets} open)</option>
             ))}
           </Select>
@@ -383,6 +555,16 @@ export default function TicketDetailPage() {
           <Textarea value={resolution} onChange={(event) => setResolution(event.target.value)} rows={4} placeholder="Fiber spliced at Shahid Town, link restored and tested." />
         </Field>
       </Modal>
+
+      <ConfirmDialog
+        open={deleting}
+        title="Permanently delete this ticket?"
+        message={`TID ${ticket.ticketNumber} will be permanently deleted. This is blocked if any invoices are linked to it, and the action is audited. This cannot be undone.`}
+        confirmLabel="Delete ticket"
+        busy={busy}
+        onConfirm={remove}
+        onCancel={() => setDeleting(false)}
+      />
     </>
   );
 }

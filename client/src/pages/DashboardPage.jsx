@@ -73,13 +73,13 @@ export default function DashboardPage() {
       <div className="stack">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           <StatTile label="Total Customers" value={formatNumber(s.totalCustomers)} hint="Active master records" onClick={() => navigate('/customers')} />
+          <StatTile label="Total Tickets" value={formatNumber(s.totalTickets)} hint="All tickets, every status" onClick={() => navigate('/tickets')} />
           <StatTile label="Open Tickets" value={formatNumber(s.openTickets)} tone="warn" hint="New · In Progress · On Hold" onClick={() => navigate('/tickets?open=true')} />
           <StatTile label="Urgent Tickets" value={formatNumber(s.urgentTickets)} tone="danger" hint="Priority: Urgent" onClick={() => navigate('/tickets?priority=Urgent&open=true')} />
           <StatTile label="Overdue (past ETTR)" value={formatNumber(s.overdueTickets)} tone="danger" hint="Breached the committed ETTR" onClick={() => navigate('/tickets?overdue=true')} />
           <StatTile label="In Progress" value={formatNumber(s.inProgressTickets)} tone="warn" hint="Field work underway" onClick={() => navigate('/tickets?status=In Progress')} />
           <StatTile label="Resolved Today" value={formatNumber(s.resolvedToday)} tone="ok" hint={`${s.createdToday} created today`} />
           <StatTile label="Pending Invoices" value={formatNumber(s.pendingInvoices)} tone="purple" hint="Draft or Unpaid" onClick={() => navigate('/invoices?status=Draft,Unpaid')} />
-          <StatTile label="Field Members" value={formatNumber(s.totalFieldMembers)} hint="Active engineers" onClick={() => navigate('/field-teams')} />
         </div>
 
         <Card>
@@ -219,6 +219,7 @@ export default function DashboardPage() {
                           <div className="timeline__meta" title={formatDateTime(entry.createdAt)}>
                             {relativeTime(entry.createdAt, serverNow())}
                           </div>
+                          {entry.note ? <div className="small muted">“{entry.note}”</div> : null}
                         </div>
                       </div>
                     ))}

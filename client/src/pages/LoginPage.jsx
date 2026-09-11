@@ -5,13 +5,6 @@ import { useToast } from '../context/ToastContext.jsx';
 import { errorMessage } from '../api/client.js';
 import { Alert, Field, TextInput } from '../components/ui.jsx';
 
-const DEMO_ACCOUNTS = [
-  { role: 'Admin', username: 'admin', password: 'Admin@123', icon: '🛡' },
-  { role: 'NOC Operator', username: 'noc', password: 'Noc@12345', icon: '🎧' },
-  { role: 'Field Engineer', username: 'field', password: 'Field@12345', icon: '🔧' },
-  { role: 'Accounts', username: 'accounts', password: 'Accounts@123', icon: '🧾' },
-];
-
 export default function LoginPage() {
   const { login } = useAuth();
   const toast = useToast();
@@ -43,9 +36,14 @@ export default function LoginPage() {
         <div className="login-card__brand">
           <div className="login-card__logo">NOC</div>
           <div>
-            <h1 style={{ fontSize: 18 }}>NOC Manager</h1>
+            <h1 className="login-card__title">NOC Manager</h1>
             <div className="small muted">Ticket &amp; Customer Network System</div>
           </div>
+        </div>
+
+        <div className="login-card__intro">
+          <h2 className="login-card__heading">Sign in</h2>
+          <p className="small muted">Enter your credentials to access the operations console.</p>
         </div>
 
         {error ? <Alert tone="error">{error}</Alert> : null}
@@ -94,30 +92,13 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="login-demo">
-          <div className="login-demo__title">Demo accounts — click to sign in</div>
-          <div className="login-demo__grid">
-            {DEMO_ACCOUNTS.map((account) => (
-              <button
-                key={account.username}
-                type="button"
-                className="login-demo__btn"
-                disabled={busy}
-                onClick={() => {
-                  setIdentifier(account.username);
-                  setPassword(account.password);
-                  signIn(account.username, account.password);
-                }}
-              >
-                <span>{account.icon}</span>
-                <span>
-                  <strong>{account.role}</strong>
-                  <span className="muted"> · {account.username}</span>
-                </span>
-              </button>
-            ))}
-          </div>
+        <div className="login-card__footer small muted">
+          Having trouble signing in? Contact your system administrator.
         </div>
+      </div>
+
+      <div className="login-page__footer small">
+        © {new Date().getFullYear()} NOC Network Services — Secure internal access
       </div>
     </div>
   );

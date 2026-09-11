@@ -15,7 +15,6 @@ import InvoicesPage from './pages/InvoicesPage.jsx';
 import CreateInvoicePage from './pages/CreateInvoicePage.jsx';
 import InvoiceDetailPage from './pages/InvoiceDetailPage.jsx';
 import SearchPage from './pages/SearchPage.jsx';
-import FieldTeamsPage from './pages/FieldTeamsPage.jsx';
 import NetworkPage from './pages/NetworkPage.jsx';
 import UsersPage from './pages/UsersPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
@@ -105,7 +104,7 @@ export default function App() {
         <Route
           path="invoices/new"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS]}>
+            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
               <CreateInvoicePage />
             </Protected>
           }
@@ -120,7 +119,6 @@ export default function App() {
         />
 
         <Route path="search" element={<SearchPage />} />
-        <Route path="field-teams" element={<FieldTeamsPage />} />
         <Route
           path="network"
           element={

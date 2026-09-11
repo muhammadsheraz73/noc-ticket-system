@@ -12,14 +12,13 @@ const NAV = [
       { to: '/tickets', label: 'Tickets', icon: '🎫' },
       { to: '/tickets/new', label: 'Create Ticket', icon: '＋', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
       { to: '/customers', label: 'Customers', icon: '👥', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR, ROLES.ACCOUNTS] },
-      { to: '/field-teams', label: 'Field Team', icon: '🔧' },
     ],
   },
   {
     group: 'Billing',
     items: [
       { to: '/invoices', label: 'Invoices', icon: '🧾', roles: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR] },
-      { to: '/invoices/new', label: 'Create Invoice', icon: '＋', roles: [ROLES.ADMIN, ROLES.ACCOUNTS] },
+      { to: '/invoices/new', label: 'Create Invoice', icon: '＋', roles: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR] },
     ],
   },
   {

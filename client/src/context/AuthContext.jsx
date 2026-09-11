@@ -90,7 +90,7 @@ export function AuthProvider({ children }) {
       hasRole: (...roles) => Boolean(user) && roles.flat().includes(user.role),
       isAdmin: user?.role === ROLES.ADMIN,
       canManageTickets: [ROLES.ADMIN, ROLES.NOC_OPERATOR].includes(user?.role),
-      canManageInvoices: [ROLES.ADMIN, ROLES.ACCOUNTS].includes(user?.role),
+      canManageInvoices: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR].includes(user?.role),
       canViewInvoices: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR].includes(user?.role),
       canViewNetwork: [ROLES.ADMIN, ROLES.NOC_OPERATOR].includes(user?.role),
     }),

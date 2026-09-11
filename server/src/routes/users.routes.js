@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import User from '../models/User.js';
+import FieldTeam from '../models/FieldTeam.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
@@ -7,6 +8,35 @@ import { validate } from '../middleware/validate.js';
 import { recordAudit } from '../utils/audit.js';
 import { ROLES, ROLE_LABELS, ROLE_VALUES } from '../utils/constants.js';
 import { createUserSchema, updateUserSchema, resetPasswordSchema } from '../validators/schemas.js';
+
+/**
+ * A login account needs a FieldTeam record to be assignable to tickets.
+ * Rather than making an admin create and link one by hand, keep it in sync
+ * with the account automatically — every role is assignable — and mirror
+ * the account's active state (never delete it — it may still carry ticket
+ * history).
+ */
+async function syncFieldTeamLink(user) {
+  const existing = await FieldTeam.findOne({ user: user._id });
+
+  if (existing) {
+    if (existing.isActive !== user.isActive) {
+      existing.isActive = user.isActive;
+      await existing.save();
+    }
+    return;
+  }
+
+  if (user.isActive) {
+    await FieldTeam.create({
+      name: user.name,
+      kind: 'member',
+      phone: user.phone || '',
+      user: user._id,
+      isActive: true,
+    });
+  }
+}
 
 /**
  * Reject a username or email already taken by somebody else. Mongo's unique
@@ -64,6 +94,8 @@ router.post(
       passwordHash: await User.hashPassword(req.body.password),
     });
 
+    await syncFieldTeamLink(user);
+
     await recordAudit({
       req,
       action: 'create',
@@ -101,6 +133,7 @@ router.put(
     Object.assign(user, rest);
     if (password) user.passwordHash = await User.hashPassword(password);
     await user.save();
+    await syncFieldTeamLink(user);
 
     await recordAudit({
       req,
@@ -144,29 +177,31 @@ router.post(
   }),
 );
 
-/** DELETE /api/users/:id — deactivates the account. */
+/** DELETE /api/users/:id — permanently deletes the login account. */
 router.delete(
   '/:id',
   asyncHandler(async (req, res) => {
     if (String(req.params.id) === String(req.user._id)) {
-      throw ApiError.badRequest('You cannot deactivate your own account');
+      throw ApiError.badRequest('You cannot delete your own account');
     }
 
     const user = await User.findById(req.params.id);
     if (!user) throw ApiError.notFound('User not found');
 
-    user.isActive = false;
-    await user.save();
+    // Field team members keep their history, but the login link must not
+    // dangle once the account is gone.
+    await FieldTeam.updateMany({ user: user._id }, { $unset: { user: '' } });
+    await user.deleteOne();
 
     await recordAudit({
       req,
-      action: 'deactivate',
+      action: 'delete',
       entityType: 'User',
       entityId: user._id,
       entityLabel: user.username,
     });
 
-    res.json({ success: true, message: `${user.name} deactivated` });
+    res.json({ success: true, message: `${user.name} permanently deleted` });
   }),
 );
 

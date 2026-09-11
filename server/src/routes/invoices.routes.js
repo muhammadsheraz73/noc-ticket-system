@@ -25,7 +25,7 @@ const router = Router();
 router.use(requireAuth);
 
 const canRead = requireRole(ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR);
-const canWrite = requireRole(ROLES.ADMIN, ROLES.ACCOUNTS);
+const canWrite = requireRole(ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR);
 
 /**
  * GET /api/invoices/lookup/:ticketNumber
@@ -278,25 +278,23 @@ router.patch(
   }),
 );
 
-/** DELETE /api/invoices/:id — admin-only soft delete. */
+/** DELETE /api/invoices/:id — admin-only, permanent. */
 router.delete(
   '/:id',
   requireRole(ROLES.ADMIN),
   asyncHandler(async (req, res) => {
     const invoice = await findInvoice(req.params.id);
-    invoice.isDeleted = true;
-    invoice.deletedAt = new Date();
-    await invoice.save();
+    await invoice.deleteOne();
 
     await recordAudit({
       req,
-      action: 'soft_delete',
+      action: 'delete',
       entityType: 'Invoice',
       entityId: invoice._id,
       entityLabel: invoice.invoiceNumber,
     });
 
-    res.json({ success: true, message: 'Invoice archived (soft deleted)' });
+    res.json({ success: true, message: 'Invoice permanently deleted' });
   }),
 );
 

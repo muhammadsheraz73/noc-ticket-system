@@ -40,6 +40,7 @@ export default function CreateTicketPage() {
     status: 'New',
     ettrMinutes: 60,
     assignedTo: '',
+    assignedHelper: '',
     runAiAnalysis: true,
   });
   const [errors, setErrors] = useState({});
@@ -140,6 +141,7 @@ export default function CreateTicketPage() {
         ettrMinutes: Number(form.ettrMinutes),
         customerId: customer.customerReferenceNumber,
         assignedTo: form.assignedTo || undefined,
+        assignedHelper: form.assignedHelper || undefined,
       });
       toast.success(`Ticket TID ${data.ticket.ticketNumber} created`, `${customer.name} · ${form.issueType}`);
       if (data.ai && !data.ai.available && form.runAiAnalysis) {
@@ -250,10 +252,19 @@ export default function CreateTicketPage() {
                     </Select>
                   </Field>
 
-                  <Field label="Assign To (team member)" error={errors.assignedTo} full hint="Only members with a login account can be assigned.">
+                  <Field label="Assign To (team member)" error={errors.assignedTo} hint="Only members with a login account can be assigned.">
                     <Select value={form.assignedTo} onChange={set('assignedTo')} error={errors.assignedTo}>
                       <option value="">Assign later</option>
                       {teams.map((t) => (
+                        <option key={t._id} value={t._id}>{t.name}{t.area ? ` — ${t.area}` : ''} ({t.openTickets} open)</option>
+                      ))}
+                    </Select>
+                  </Field>
+
+                  <Field label="Helper (optional)" error={errors.assignedHelper} hint="Sees this ticket too, but is never named on the ticket itself.">
+                    <Select value={form.assignedHelper} onChange={set('assignedHelper')} error={errors.assignedHelper}>
+                      <option value="">— none —</option>
+                      {teams.filter((t) => t._id !== form.assignedTo).map((t) => (
                         <option key={t._id} value={t._id}>{t.name}{t.area ? ` — ${t.area}` : ''} ({t.openTickets} open)</option>
                       ))}
                     </Select>

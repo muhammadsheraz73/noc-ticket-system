@@ -60,11 +60,11 @@ export default function CustomersPage() {
     setDeleteBusy(true);
     try {
       await api.delete(`/customers/${deleting._id}`);
-      toast.success('Customer archived', `${deleting.customerReferenceNumber} was soft deleted.`);
+      toast.success('Customer deleted', `${deleting.customerReferenceNumber} was permanently deleted.`);
       setDeleting(null);
       load();
     } catch (error) {
-      toast.error('Could not archive customer', errorMessage(error));
+      toast.error('Could not delete customer', errorMessage(error));
     } finally {
       setDeleteBusy(false);
     }
@@ -198,9 +198,9 @@ export default function CustomersPage() {
 
       <ConfirmDialog
         open={Boolean(deleting)}
-        title="Archive this customer?"
-        message={`${deleting?.customerReferenceNumber} — ${deleting?.name} will be soft deleted. Ticket and invoice history is kept, and the action is written to the audit log.`}
-        confirmLabel="Archive customer"
+        title="Permanently delete this customer?"
+        message={`${deleting?.customerReferenceNumber} — ${deleting?.name} will be permanently deleted. This is blocked if any tickets, invoices, or network connections still reference them, and the action is written to the audit log.`}
+        confirmLabel="Delete customer"
         busy={deleteBusy}
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}

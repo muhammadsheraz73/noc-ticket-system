@@ -65,12 +65,6 @@ export default function CustomerDetailPage() {
         }
       />
 
-      {customer.isDeleted ? (
-        <Alert tone="warn" title="Archived customer">
-          This customer has been soft deleted and cannot receive new tickets.
-        </Alert>
-      ) : null}
-
       <div className="stack">
         <div className="grid grid--stats">
           <Stat label="Total Tickets" value={formatNumber(stats.totalTickets)} />

@@ -23,7 +23,7 @@ import {
   refreshGeneratedText,
   pushHistory,
 } from '../services/ticketService.js';
-import { fieldEngineerScope } from '../services/searchService.js';
+import { fieldEngineerScope, assigneeFilter } from '../services/searchService.js';
 import { analyzeTicket, aiStatusInfo } from '../services/aiService.js';
 import { addMinutes } from '../utils/datetime.js';
 import { findInternalLeaks } from '../utils/ticketFormatter.js';
@@ -40,10 +40,9 @@ router.get(
   asyncHandler(async (req, res) => {
     const { page, limit, skip } = parsePagination(req.query);
     const filter = { isDeleted: false };
-
-    if (req.user.role === ROLES.FIELD_ENGINEER) {
-      filter.assignedTo = await fieldEngineerScope(req.user);
-    }
+    // Collected separately because a Mongo filter object can only hold one
+    // top-level $or — the role scope and the text search each need their own.
+    const andConditions = [];
 
     if (req.query.status) filter.status = { $in: String(req.query.status).split(',') };
     if (req.query.priority) filter.priority = { $in: String(req.query.priority).split(',') };
@@ -62,15 +61,26 @@ router.get(
       const q = String(req.query.q).trim();
       const rx = containsRegex(q);
       const asNumber = Number.parseInt(q, 10);
-      filter.$or = [
-        ...(Number.isFinite(asNumber) && /^\d+$/.test(q) ? [{ ticketNumber: asNumber }] : []),
-        { customerReferenceNumber: rx },
-        { customerName: rx },
-        { issueType: rx },
-        { remarks: rx },
-        { assignedToName: rx },
-      ];
+      andConditions.push({
+        $or: [
+          ...(Number.isFinite(asNumber) && /^\d+$/.test(q) ? [{ ticketNumber: asNumber }] : []),
+          { customerReferenceNumber: rx },
+          { customerName: rx },
+          { issueType: rx },
+          { remarks: rx },
+          { assignedToName: rx },
+        ],
+      });
     }
+
+    // Applied last (and via $and, not a plain key) so it can never be
+    // overridden by another filter above — a field engineer must only ever
+    // see tickets they're the primary handler or helper on.
+    if (req.user.role === ROLES.FIELD_ENGINEER) {
+      andConditions.push(assigneeFilter(await fieldEngineerScope(req.user)));
+    }
+
+    if (andConditions.length) filter.$and = andConditions;
 
     const sort = parseSort(req.query.sort, { createdAt: -1 }, [
       'createdAt',
@@ -273,22 +283,19 @@ router.post(
   asyncHandler(async (req, res) => {
     const ticket = await findTicket(req.params.id, req.user);
 
-    const assignee = await FieldTeam.findOne({ _id: req.body.assignedTo, isActive: true }).populate(
-      'user',
-      'isActive',
-    );
-    if (!assignee) throw ApiError.badRequest('The selected field team/member is not available');
-    // A stale `user` reference (account since deleted) must not count as a login.
-    if (!assignee.user || assignee.user.isActive === false) {
-      throw ApiError.badRequest(
-        `${assignee.name} has no active login account linked — link one from Field Teams before assigning tickets to them`,
-      );
+    if (req.body.assignedHelper && req.body.assignedHelper === req.body.assignedTo) {
+      throw ApiError.badRequest('The helper must be a different person from the primary assignee');
     }
+
+    const assignee = await resolveAssignee(req.body.assignedTo);
+    const helper = req.body.assignedHelper ? await resolveAssignee(req.body.assignedHelper) : null;
 
     const previous = ticket.assignedToName || 'unassigned';
     ticket.assignedTo = assignee._id;
     ticket.assignedToName = assignee.name;
     ticket.assignedAt = new Date();
+    ticket.assignedHelper = helper?._id;
+    ticket.assignedHelperName = helper?.name || '';
     if (ticket.status === 'New') ticket.status = 'In Progress';
 
     pushHistory(ticket, {
@@ -296,7 +303,7 @@ router.post(
       action: 'assigned',
       from: previous,
       to: assignee.name,
-      note: req.body.note,
+      note: [req.body.note, `Helper: ${helper?.name || 'none'}`].filter(Boolean).join(' — '),
     });
 
     const customer = await Customer.findById(ticket.customer);
@@ -309,7 +316,7 @@ router.post(
       entityType: 'Ticket',
       entityId: ticket._id,
       entityLabel: `TID ${ticket.ticketNumber}`,
-      meta: { from: previous, to: assignee.name },
+      meta: { from: previous, to: assignee.name, helper: helper?.name || null },
     });
 
     res.json({ success: true, ticket: decorateTicket(ticket, customer) });
@@ -352,7 +359,7 @@ router.post(
       entityType: 'Ticket',
       entityId: ticket._id,
       entityLabel: `TID ${ticket.ticketNumber}`,
-      meta: { from, to: req.body.status },
+      meta: { from, to: req.body.status, note: req.body.resolutionRemarks },
     });
 
     res.json({ success: true, ticket: decorateTicket(ticket, customer) });
@@ -385,31 +392,33 @@ router.post(
   }),
 );
 
-/** DELETE /api/tickets/:id — admin-only soft delete. */
+/** DELETE /api/tickets/:id — admin-only, permanent. */
 router.delete(
   '/:id',
   requireRole(ROLES.ADMIN),
   asyncHandler(async (req, res) => {
     const ticket = await findTicket(req.params.id, req.user);
 
-    const invoices = await Invoice.countDocuments({ ticket: ticket._id, isDeleted: false });
+    // Any invoice still pointing at this ticket (even an archived one) would
+    // be left with a dangling reference, so it must go first.
+    const invoices = await Invoice.countDocuments({ ticket: ticket._id });
     if (invoices > 0) {
-      throw ApiError.badRequest(`This ticket has ${invoices} linked invoice(s) and cannot be deleted`);
+      throw ApiError.badRequest(
+        `This ticket has ${invoices} linked invoice(s) and cannot be permanently deleted. Remove those first.`,
+      );
     }
 
-    ticket.isDeleted = true;
-    ticket.deletedAt = new Date();
-    await ticket.save();
+    await ticket.deleteOne();
 
     await recordAudit({
       req,
-      action: 'soft_delete',
+      action: 'delete',
       entityType: 'Ticket',
       entityId: ticket._id,
       entityLabel: `TID ${ticket.ticketNumber}`,
     });
 
-    res.json({ success: true, message: 'Ticket archived (soft deleted)' });
+    res.json({ success: true, message: 'Ticket permanently deleted' });
   }),
 );
 
@@ -427,12 +436,25 @@ async function findTicket(idOrNumber, user) {
   }
 
   if (user.role === ROLES.FIELD_ENGINEER) {
-    filter.assignedTo = await fieldEngineerScope(user);
+    Object.assign(filter, assigneeFilter(await fieldEngineerScope(user)));
   }
 
   const ticket = await Ticket.findOne(filter);
   if (!ticket) throw ApiError.notFound(`No ticket found for "${value}"`);
   return ticket;
+}
+
+/** Resolve an assignee (primary or helper), requiring an active linked login. */
+async function resolveAssignee(id) {
+  const assignee = await FieldTeam.findOne({ _id: id, isActive: true }).populate('user', 'isActive');
+  if (!assignee) throw ApiError.badRequest('The selected field team/member is not available');
+  // A stale `user` reference (account since deleted) must not count as a login.
+  if (!assignee.user || assignee.user.isActive === false) {
+    throw ApiError.badRequest(
+      `${assignee.name} has no active login account linked — link one from Field Teams before assigning tickets to them`,
+    );
+  }
+  return assignee;
 }
 
 /** Fire-and-forget AI analysis; failures are stored on the ticket, never thrown. */

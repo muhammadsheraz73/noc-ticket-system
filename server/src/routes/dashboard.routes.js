@@ -8,7 +8,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { startOfLocalDay } from '../utils/datetime.js';
 import { CLOSED_STATUSES, ROLES } from '../utils/constants.js';
 import { decorateTicket } from '../services/ticketService.js';
-import { fieldEngineerScope } from '../services/searchService.js';
+import { fieldEngineerScope, assigneeFilter } from '../services/searchService.js';
 import { recentActivityFor, ACTIVITY_SCOPE_LABELS } from '../services/activityService.js';
 
 const router = Router();
@@ -23,7 +23,7 @@ router.get(
 
     const ticketScope = { isDeleted: false };
     if (req.user.role === ROLES.FIELD_ENGINEER) {
-      ticketScope.assignedTo = await fieldEngineerScope(req.user);
+      Object.assign(ticketScope, assigneeFilter(await fieldEngineerScope(req.user)));
     }
 
     const openFilter = { ...ticketScope, status: { $nin: CLOSED_STATUSES } };
@@ -31,6 +31,7 @@ router.get(
 
     const [
       totalCustomers,
+      totalTickets,
       openTickets,
       urgentTickets,
       overdueTickets,
@@ -47,6 +48,7 @@ router.get(
       invoiceTotals,
     ] = await Promise.all([
       Customer.countDocuments({ isDeleted: false }),
+      Ticket.countDocuments(ticketScope),
       Ticket.countDocuments(openFilter),
       Ticket.countDocuments({ ...openFilter, priority: 'Urgent' }),
       Ticket.countDocuments({ ...openFilter, ettrAt: { $lt: now } }),
@@ -82,6 +84,7 @@ router.get(
       serverTime: now,
       stats: {
         totalCustomers,
+        totalTickets,
         openTickets,
         urgentTickets,
         overdueTickets,
@@ -105,6 +108,7 @@ router.get(
         action: entry.action,
         entityType: entry.entityType,
         entityLabel: entry.entityLabel,
+        note: entry.meta?.note || '',
         createdAt: entry.createdAt,
       })),
     });

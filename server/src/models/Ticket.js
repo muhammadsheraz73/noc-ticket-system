@@ -55,6 +55,10 @@ const ticketSchema = new mongoose.Schema(
     assignedToName: { type: String, default: '' },
     assignedAt: { type: Date },
 
+    /** Optional second responder. Never mentioned in the generated ticket text. */
+    assignedHelper: { type: mongoose.Schema.Types.ObjectId, ref: 'FieldTeam', index: true },
+    assignedHelperName: { type: String, default: '' },
+
     resolvedAt: { type: Date },
     resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     resolutionRemarks: { type: String, default: '' },

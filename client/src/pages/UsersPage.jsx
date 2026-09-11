@@ -26,7 +26,7 @@ export default function UsersPage() {
   const [form, setForm] = useState(BLANK);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
-  const [deactivating, setDeactivating] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
   /** Set once the admin edits the username, so it stops tracking the name. */
   const [usernameTouched, setUsernameTouched] = useState(false);
@@ -136,15 +136,15 @@ export default function UsersPage() {
     }
   };
 
-  const deactivate = async () => {
+  const remove = async () => {
     setBusy(true);
     try {
-      await api.delete(`/users/${deactivating._id}`);
-      toast.success(`${deactivating.name} deactivated`);
-      setDeactivating(null);
+      await api.delete(`/users/${deleting._id}`);
+      toast.success(`${deleting.name} deleted`);
+      setDeleting(null);
       load();
     } catch (err) {
-      toast.error('Could not deactivate', errorMessage(err));
+      toast.error('Could not delete', errorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -223,12 +223,12 @@ export default function UsersPage() {
                           <button className="btn btn--ghost btn--sm" onClick={() => openReset(user)}>
                             Reset password
                           </button>
-                          {user._id !== me._id && user.isActive ? (
+                          {user._id !== me._id ? (
                             <button
                               className="btn btn--ghost btn--sm text-danger"
-                              onClick={() => setDeactivating(user)}
+                              onClick={() => setDeleting(user)}
                             >
-                              Deactivate
+                              Delete
                             </button>
                           ) : null}
                         </div>
@@ -387,13 +387,13 @@ export default function UsersPage() {
       />
 
       <ConfirmDialog
-        open={Boolean(deactivating)}
-        title="Deactivate this account?"
-        message={`${deactivating?.name} (${deactivating?.username}) will no longer be able to sign in. The action is audited.`}
-        confirmLabel="Deactivate"
+        open={Boolean(deleting)}
+        title="Permanently delete this account?"
+        message={`${deleting?.name} (${deleting?.username}) will be permanently deleted and can no longer sign in. This cannot be undone.`}
+        confirmLabel="Delete account"
         busy={busy}
-        onConfirm={deactivate}
-        onCancel={() => setDeactivating(null)}
+        onConfirm={remove}
+        onCancel={() => setDeleting(null)}
       />
     </>
   );

@@ -29,6 +29,19 @@ export async function requireActiveCustomer(customerIdOrRef) {
   return customer;
 }
 
+/** Resolve an assignee (primary or helper), requiring an active linked login. */
+async function resolveAssignee(id) {
+  const assignee = await FieldTeam.findOne({ _id: id, isActive: true }).populate('user', 'isActive');
+  if (!assignee) throw ApiError.badRequest('The selected field team/member is not available');
+  // A stale `user` reference (account since deleted) must not count as a login.
+  if (!assignee.user || assignee.user.isActive === false) {
+    throw ApiError.badRequest(
+      `${assignee.name} has no active login account linked — link one from Field Teams before assigning tickets to them`,
+    );
+  }
+  return assignee;
+}
+
 /**
  * Create a ticket.
  *
@@ -38,20 +51,12 @@ export async function requireActiveCustomer(customerIdOrRef) {
 export async function createTicket({ payload, user }) {
   const customer = await requireActiveCustomer(payload.customerId);
 
-  let assignee = null;
-  if (payload.assignedTo) {
-    assignee = await FieldTeam.findOne({ _id: payload.assignedTo, isActive: true }).populate(
-      'user',
-      'isActive',
-    );
-    if (!assignee) throw ApiError.badRequest('The selected field team/member is not available');
-    // A stale `user` reference (account since deleted) must not count as a login.
-    if (!assignee.user || assignee.user.isActive === false) {
-      throw ApiError.badRequest(
-        `${assignee.name} has no active login account linked — link one from Field Teams before assigning tickets to them`,
-      );
-    }
+  if (payload.assignedHelper && payload.assignedHelper === payload.assignedTo) {
+    throw ApiError.badRequest('The helper must be a different person from the primary assignee');
   }
+
+  const assignee = payload.assignedTo ? await resolveAssignee(payload.assignedTo) : null;
+  const helper = payload.assignedHelper ? await resolveAssignee(payload.assignedHelper) : null;
 
   const now = new Date();
   const ettrMinutes = Number(payload.ettrMinutes) || 60;
@@ -73,6 +78,8 @@ export async function createTicket({ payload, user }) {
     assignedTo: assignee?._id,
     assignedToName: assignee?.name || '',
     assignedAt: assignee ? now : undefined,
+    assignedHelper: helper?._id,
+    assignedHelperName: helper?.name || '',
     createdAt: now,
     history: [
       {
@@ -91,6 +98,7 @@ export async function createTicket({ payload, user }) {
               byName: user.name,
               action: 'assigned',
               to: assignee.name,
+              note: helper ? `Helper: ${helper.name}` : undefined,
             },
           ]
         : []),

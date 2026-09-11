@@ -1,7 +1,7 @@
 import AuditLog from '../models/AuditLog.js';
 import Ticket from '../models/Ticket.js';
 import { ROLES } from '../utils/constants.js';
-import { fieldEngineerScope } from './searchService.js';
+import { fieldEngineerScope, assigneeFilter } from './searchService.js';
 
 /**
  * Entity types each role may see in the dashboard activity feed.
@@ -50,7 +50,7 @@ export async function activityFilter(user) {
   if (user.role === ROLES.FIELD_ENGINEER) {
     const assigned = await Ticket.find({
       isDeleted: false,
-      assignedTo: await fieldEngineerScope(user),
+      ...assigneeFilter(await fieldEngineerScope(user)),
     })
       .sort({ updatedAt: -1 })
       .limit(FIELD_ENGINEER_TICKET_LIMIT)

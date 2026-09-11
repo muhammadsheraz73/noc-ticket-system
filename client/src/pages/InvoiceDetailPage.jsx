@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import api, { errorMessage } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -11,6 +11,7 @@ const STATUSES = ['Draft', 'Unpaid', 'Paid', 'Cancelled'];
 
 export default function InvoiceDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const toast = useToast();
   const { canManageInvoices, isAdmin } = useAuth();
 
@@ -102,12 +103,10 @@ export default function InvoiceDetailPage() {
     setBusy(true);
     try {
       await api.delete(`/invoices/${id}`);
-      toast.success('Invoice archived');
-      setDeleting(false);
-      await load();
+      toast.success('Invoice deleted');
+      navigate('/invoices');
     } catch (err) {
-      toast.error('Could not archive the invoice', errorMessage(err));
-    } finally {
+      toast.error('Could not delete the invoice', errorMessage(err));
       setBusy(false);
     }
   };
@@ -132,8 +131,6 @@ export default function InvoiceDetailPage() {
           </>
         }
       />
-
-      {invoice.isDeleted ? <Alert tone="warn" title="Archived">This invoice has been soft deleted.</Alert> : null}
 
       <div className="grid grid--detail">
         <div className="card">
@@ -184,9 +181,9 @@ export default function InvoiceDetailPage() {
                 </div>
               ) : null}
 
-              {isAdmin && !invoice.isDeleted ? (
+              {isAdmin ? (
                 <button className="btn btn--ghost btn--sm text-danger" style={{ marginTop: 12 }} onClick={() => setDeleting(true)}>
-                  Archive invoice
+                  Delete invoice
                 </button>
               ) : null}
             </div>
@@ -252,9 +249,9 @@ export default function InvoiceDetailPage() {
 
       <ConfirmDialog
         open={deleting}
-        title="Archive this invoice?"
-        message={`${invoice.invoiceNumber} will be soft deleted and hidden from listings. The action is audited.`}
-        confirmLabel="Archive invoice"
+        title="Permanently delete this invoice?"
+        message={`${invoice.invoiceNumber} will be permanently deleted. This cannot be undone.`}
+        confirmLabel="Delete invoice"
         busy={busy}
         onConfirm={remove}
         onCancel={() => setDeleting(false)}

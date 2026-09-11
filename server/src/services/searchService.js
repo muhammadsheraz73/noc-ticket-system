@@ -46,10 +46,13 @@ export async function globalSearch(rawQuery, { user, limit = 10 } = {}) {
     ],
   };
 
-  // Field engineers only ever see the tickets assigned to them.
+  // Field engineers only ever see tickets they're assigned to (as the
+  // primary handler or as the helper) — combined with the search text via
+  // $and, since a Mongo filter object can only hold one top-level $or.
   if (isFieldEngineer) {
-    const scope = await fieldEngineerScope(user);
-    ticketFilter.assignedTo = scope;
+    const ids = await fieldEngineerScope(user);
+    ticketFilter.$and = [{ $or: ticketFilter.$or }, assigneeFilter(ids)];
+    delete ticketFilter.$or;
   }
 
   const [customers, tickets, invoices, connections, devices, pops, vlans] = await Promise.all([
@@ -144,14 +147,24 @@ export async function globalSearch(rawQuery, { user, limit = 10 } = {}) {
 }
 
 /**
- * Which FieldTeam records a field engineer is allowed to see tickets for.
+ * Which FieldTeam record ids a field engineer is allowed to see tickets for.
  * Only their own linked record — not their whole team's tickets — so
  * "assigned to me" means tickets dispatched to them personally.
  */
 export async function fieldEngineerScope(user) {
   const { default: FieldTeam } = await import('../models/FieldTeam.js');
   const records = await FieldTeam.find({ user: user._id }).select('_id').lean();
-  return { $in: records.map((r) => r._id) };
+  return records.map((r) => r._id);
+}
+
+/**
+ * A ticket is in scope if any of `ids` is either the primary handler or the
+ * helper — a plain Mongo filter object can only carry one `$or`, so callers
+ * that already build their own must merge this in via `$and` instead of
+ * assigning it directly.
+ */
+export function assigneeFilter(ids) {
+  return { $or: [{ assignedTo: { $in: ids } }, { assignedHelper: { $in: ids } }] };
 }
 
 function emptyResult(query) {
