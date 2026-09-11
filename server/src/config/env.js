@@ -26,7 +26,7 @@ const list = (value, fallback) =>
     .filter(Boolean);
 
 const DEFAULT_MODELS = {
-  openrouter: 'nvidia/nemotron-3.5-lightning:free',
+  openrouter: 'inclusionai/ling-3.0-flash-vl:free',
   anthropic: 'claude-opus-5',
 };
 
