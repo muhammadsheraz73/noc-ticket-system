@@ -25,6 +25,47 @@ const list = (value, fallback) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
+const DEFAULT_MODELS = {
+  openrouter: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+  anthropic: 'claude-opus-5',
+};
+
+/**
+ * OpenRouter keys are `sk-or-v1-` followed by 64 hex characters. Keys are often
+ * copied without that prefix, which fails as an opaque 401, so add it back.
+ */
+const normalizeOpenRouterKey = (value) => {
+  const key = String(value || '').trim();
+  if (!key || key.startsWith('sk-or-')) return key;
+  return `sk-or-v1-${key}`;
+};
+
+/**
+ * The AI assistant can run against OpenRouter (default when an OpenRouter key
+ * is present) or directly against the Anthropic API. AI_PROVIDER forces one.
+ */
+function aiConfig() {
+  const openrouterApiKey = normalizeOpenRouterKey(process.env.OPENROUTER_API_KEY);
+  const anthropicApiKey = (process.env.ANTHROPIC_API_KEY || '').trim();
+
+  const provider = (
+    process.env.AI_PROVIDER || (openrouterApiKey ? 'openrouter' : 'anthropic')
+  ).toLowerCase();
+
+  return {
+    enabled: bool(process.env.AI_ENABLED, true),
+    provider,
+    apiKey: provider === 'openrouter' ? openrouterApiKey : anthropicApiKey,
+    keyName: provider === 'openrouter' ? 'OPENROUTER_API_KEY' : 'ANTHROPIC_API_KEY',
+    model: process.env.AI_MODEL || DEFAULT_MODELS[provider] || DEFAULT_MODELS.anthropic,
+    timeoutMs: int(process.env.AI_TIMEOUT_MS, 60000),
+    openrouterBaseUrl: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
+    // Optional attribution shown on openrouter.ai activity pages.
+    appUrl: process.env.APP_PUBLIC_URL || '',
+    appName: process.env.COMPANY_NAME || 'NOC Ticket Management System',
+  };
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   isProduction: process.env.NODE_ENV === 'production',
@@ -56,14 +97,10 @@ export const env = {
 
   corsOrigins: list(process.env.CORS_ORIGINS, 'http://localhost:5173,http://127.0.0.1:5173'),
 
-  ai: {
-    enabled: bool(process.env.AI_ENABLED, true),
-    apiKey: process.env.ANTHROPIC_API_KEY || '',
-    model: process.env.AI_MODEL || 'claude-opus-5',
-    timeoutMs: int(process.env.AI_TIMEOUT_MS, 30000),
-  },
+  ai: aiConfig(),
 
   seed: {
+    adminUsername: (process.env.SEED_ADMIN_USERNAME || 'admin').toLowerCase(),
     adminEmail: process.env.SEED_ADMIN_EMAIL || 'admin@noc.local',
     adminPassword: process.env.SEED_ADMIN_PASSWORD || 'Admin@123',
   },

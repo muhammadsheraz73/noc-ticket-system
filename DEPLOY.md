@@ -88,7 +88,8 @@ You should see the four demo accounts printed. If instead you get a timeout, rev
    service — press **Apply**.
 4. Render asks for the values marked `sync: false`. Fill in:
    - `MONGODB_URI` → the connection string from Step 1
-   - `ANTHROPIC_API_KEY` → leave **blank** unless you want the AI assistant
+   - `OPENROUTER_API_KEY` → leave **blank** unless you want the AI assistant
+     (a free key from [openrouter.ai/keys](https://openrouter.ai/keys) is enough)
 5. Press **Create**. The first build takes about 3–5 minutes.
 
 `JWT_SECRET` is generated automatically and stays stable across deploys — you never see or manage it.
@@ -99,7 +100,7 @@ When the build finishes you get a public URL:
 https://noc-ticket-system.onrender.com
 ```
 
-Open it and sign in with `admin@noc.local` / `Admin@123`.
+Open it and sign in with `admin` / `Admin@123` (the email works too).
 
 ---
 
@@ -107,10 +108,11 @@ Open it and sign in with `admin@noc.local` / `Admin@123`.
 
 The seeded accounts are public knowledge — they are in this repository.
 
-1. Sign in as `admin@noc.local`.
+1. Sign in as `admin`.
 2. **Settings → Change password** — set a real admin password.
-3. **Users & roles** → create real accounts for your team.
-4. **Users & roles** → deactivate `noc@noc.local`, `field@noc.local`, `accounts@noc.local`.
+3. **Users & roles** → create real accounts for your team: choose a username, assign the role,
+   press **Generate** for a strong password, then copy the credentials sheet and pass it on.
+4. **Users & roles** → deactivate `noc`, `field` and `accounts`.
 
 ---
 

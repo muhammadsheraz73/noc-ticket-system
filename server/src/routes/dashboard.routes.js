@@ -3,13 +3,13 @@ import Customer from '../models/Customer.js';
 import Ticket from '../models/Ticket.js';
 import Invoice from '../models/Invoice.js';
 import FieldTeam from '../models/FieldTeam.js';
-import AuditLog from '../models/AuditLog.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { requireAuth } from '../middleware/auth.js';
 import { startOfLocalDay } from '../utils/datetime.js';
 import { CLOSED_STATUSES, ROLES } from '../utils/constants.js';
 import { decorateTicket } from '../services/ticketService.js';
 import { fieldEngineerScope } from '../services/searchService.js';
+import { recentActivityFor, ACTIVITY_SCOPE_LABELS } from '../services/activityService.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -68,7 +68,7 @@ router.get(
         { $group: { _id: '$priority', count: { $sum: 1 } } },
       ]),
       Ticket.find(ticketScope).sort({ createdAt: -1 }).limit(8).populate('customer').lean(),
-      AuditLog.find().sort({ createdAt: -1 }).limit(12).lean(),
+      recentActivityFor(req.user, 12),
       canSeeInvoices
         ? Invoice.aggregate([
             { $match: { isDeleted: false, status: { $ne: 'Cancelled' } } },
@@ -98,6 +98,7 @@ router.get(
       },
       invoiceTotals,
       recentTickets: recentTickets.map((t) => decorateTicket(t, t.customer, now)),
+      activityScope: ACTIVITY_SCOPE_LABELS[req.user.role] || '',
       recentActivity: recentActivity.map((entry) => ({
         _id: entry._id,
         actorName: entry.actorName,

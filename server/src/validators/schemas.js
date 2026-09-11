@@ -7,6 +7,9 @@ import {
   FIELD_TEAM_KINDS,
   DEVICE_TYPES,
   CONNECTION_TYPES,
+  USERNAME_MAX,
+  USERNAME_MIN,
+  USERNAME_PATTERN,
 } from '../utils/constants.js';
 
 const trimmed = (max = 250) => z.string().trim().max(max);
@@ -21,11 +24,36 @@ const objectId = z
   .or(z.literal(''))
   .transform((v) => (v ? v : undefined));
 
+const username = z
+  .string({ required_error: 'Username is required' })
+  .trim()
+  .toLowerCase()
+  .min(USERNAME_MIN, `Username must be at least ${USERNAME_MIN} characters`)
+  .max(USERNAME_MAX, `Username must be at most ${USERNAME_MAX} characters`)
+  .regex(USERNAME_PATTERN, 'Use letters, digits, dot, underscore or hyphen only');
+
+const password = z.string().min(8, 'Password must be at least 8 characters');
+
 // ---------------------------------------------------------------- auth
-export const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().email('A valid email address is required'),
-  password: z.string().min(1, 'Password is required'),
-});
+/**
+ * Sign in with either the username or the email. `email`/`username` are still
+ * accepted as the field name so existing clients (the agent) keep working.
+ */
+export const loginSchema = z
+  .object({
+    identifier: z.string().trim().optional(),
+    email: z.string().trim().optional(),
+    username: z.string().trim().optional(),
+    password: z.string().min(1, 'Password is required'),
+  })
+  .transform((body) => ({
+    identifier: (body.identifier || body.email || body.username || '').toLowerCase(),
+    password: body.password,
+  }))
+  .refine((body) => body.identifier.length > 0, {
+    message: 'Username or email is required',
+    path: ['identifier'],
+  });
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -34,8 +62,9 @@ export const changePasswordSchema = z.object({
 
 export const createUserSchema = z.object({
   name: requiredText('Name'),
+  username,
   email: z.string().trim().toLowerCase().email('A valid email address is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password,
   role: z.enum(ROLE_VALUES, { errorMap: () => ({ message: 'Invalid role' }) }),
   phone: optionalText(40),
   isActive: z.boolean().optional().default(true),
@@ -44,7 +73,10 @@ export const createUserSchema = z.object({
 export const updateUserSchema = createUserSchema
   .partial()
   .omit({ password: true })
-  .extend({ password: z.string().min(8).optional() });
+  .extend({ password: password.optional() });
+
+/** Admin-issued password reset — no current password, the admin is the authority. */
+export const resetPasswordSchema = z.object({ password });
 
 // ------------------------------------------------------------ customers
 export const customerSchema = z.object({

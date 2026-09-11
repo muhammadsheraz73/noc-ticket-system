@@ -117,7 +117,9 @@ export default function SettingsPage() {
           <div className="card__body">
             {ai?.available ? (
               <>
-                <Alert tone="ok" title="AI is configured">Model: {ai.model}</Alert>
+                <Alert tone="ok" title="AI is configured">
+                  Model: <code>{ai.model}</code>{ai.provider ? ` (via ${ai.provider})` : ''}
+                </Alert>
                 <div className="small muted">
                   AI suggests an issue category, priority, summary, troubleshooting steps and a customer response.
                   It never blocks ticket creation and every suggestion can be overridden.
@@ -127,7 +129,8 @@ export default function SettingsPage() {
               <>
                 <Alert tone="info" title="AI is not active">{ai?.reason || 'Checking…'}</Alert>
                 <div className="small muted">
-                  Set <code>ANTHROPIC_API_KEY</code> in <code>server/.env</code> and restart the API to enable it.
+                  Set <code>OPENROUTER_API_KEY</code> in <code>server/.env</code> and restart the API to enable it.
+                  A free key from <code>openrouter.ai/keys</code> is enough — the default model costs nothing.
                   The key stays on the server and is never sent to the browser.
                 </div>
               </>

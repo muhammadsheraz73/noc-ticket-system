@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Search } from 'lucide-react';
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -75,7 +76,7 @@ export default function GlobalSearch() {
   return (
     <div className="gsearch" ref={boxRef}>
       <form onSubmit={submit}>
-        <span className="gsearch__icon">🔍</span>
+        <Search className="gsearch__icon" aria-hidden="true" />
         <input
           className="gsearch__input"
           placeholder="Search customer ID, name, TID, VLAN, port, POP…"

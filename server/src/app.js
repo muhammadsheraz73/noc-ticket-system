@@ -51,17 +51,26 @@ export function createApp() {
   );
   app.use(compression());
 
-  app.use(
-    cors({
+  app.use((req, res, next) => {
+    // The client always calls the relative `/api` path, so in every real
+    // deployment (Vercel, Render, ...) the API is served from the same host
+    // the page was loaded from — but browsers still attach an Origin header
+    // on same-origin fetch/XHR calls. Trust that self-origin automatically
+    // instead of requiring CORS_ORIGINS to be kept in sync with every
+    // Vercel preview URL; CORS_ORIGINS remains for genuinely cross-origin
+    // setups (e.g. a separately hosted frontend).
+    const selfOrigin = `${req.protocol}://${req.get('host')}`;
+    return cors({
       origin(origin, callback) {
         // Same-origin / server-to-server requests carry no Origin header.
         if (!origin) return callback(null, true);
+        if (origin === selfOrigin) return callback(null, true);
         if (env.corsOrigins.includes(origin)) return callback(null, true);
         return callback(new Error(`Origin ${origin} is not allowed by CORS`));
       },
       credentials: true,
-    }),
-  );
+    })(req, res, next);
+  });
 
   app.use(express.json({ limit: '25mb' }));
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));

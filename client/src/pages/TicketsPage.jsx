@@ -7,7 +7,7 @@ import Countdown from '../components/Countdown.jsx';
 import {
   Alert, Badge, EmptyState, Field, Pagination, Select, TableSkeleton, TextInput,
 } from '../components/ui.jsx';
-import { STATUS_TONE, PRIORITY_TONE, formatDateTime, ettrLabel } from '../utils/format.js';
+import { STATUS_TONE, PRIORITY_TONE, formatDateTime } from '../utils/format.js';
 
 const STATUSES = ['New', 'In Progress', 'On Hold', 'Resolved', 'Closed'];
 const PRIORITIES = ['Urgent', 'High', 'Medium', 'Low'];
@@ -160,7 +160,7 @@ export default function TicketsPage() {
                 <thead>
                   <tr>
                     <th>TID</th><th>Customer</th><th>Issue</th><th>Priority</th><th>Status</th>
-                    <th>Created</th><th>ETTR</th><th>Time Left</th><th>Assigned To</th>
+                    <th>Created</th><th>Time Left</th><th>Assigned To</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -182,10 +182,6 @@ export default function TicketsPage() {
                       <td><Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge></td>
                       <td><Badge tone={STATUS_TONE[ticket.status]} dot>{ticket.status}</Badge></td>
                       <td className="nowrap small">{formatDateTime(ticket.createdAt)}</td>
-                      <td className="nowrap small">
-                        {formatDateTime(ticket.ettrAt)}
-                        <div className="muted">{ettrLabel(ticket.ettrMinutes)}</div>
-                      </td>
                       <td className="nowrap">
                         <Countdown ettrAt={ticket.ettrAt} frozen={ticket.timeLeft.frozen} frozenAt={ticket.resolvedAt} short />
                       </td>

@@ -65,8 +65,9 @@ export function AuthProvider({ children }) {
   }, [applySession]);
 
   const login = useCallback(
-    async (email, password) => {
-      const { data } = await api.post('/auth/login', { email, password });
+    /** @param identifier the account's username or email */
+    async (identifier, password) => {
+      const { data } = await api.post('/auth/login', { identifier, password });
       localStorage.setItem(TOKEN_KEY, data.token);
       applySession(data.user, new Date().toISOString());
       return data.user;

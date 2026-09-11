@@ -6,7 +6,30 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { recordAudit } from '../utils/audit.js';
 import { ROLES, ROLE_LABELS, ROLE_VALUES } from '../utils/constants.js';
-import { createUserSchema, updateUserSchema } from '../validators/schemas.js';
+import { createUserSchema, updateUserSchema, resetPasswordSchema } from '../validators/schemas.js';
+
+/**
+ * Reject a username or email already taken by somebody else. Mongo's unique
+ * index is the last line of defence, but it is not built on serverless
+ * deployments (`autoIndex: false`), so the check has to be explicit.
+ */
+async function assertCredentialsFree({ username, email }, excludeId) {
+  const clashes = [];
+  if (username) clashes.push({ username });
+  if (email) clashes.push({ email });
+  if (!clashes.length) return;
+
+  const filter = { $or: clashes };
+  if (excludeId) filter._id = { $ne: excludeId };
+
+  const taken = await User.findOne(filter).select('username email').lean();
+  if (!taken) return;
+
+  if (username && taken.username === username) {
+    throw ApiError.conflict(`The username "${username}" is already taken`);
+  }
+  throw ApiError.conflict('A user with this email already exists');
+}
 
 const router = Router();
 router.use(requireAuth, requireRole(ROLES.ADMIN));
@@ -29,11 +52,11 @@ router.post(
   '/',
   validate(createUserSchema),
   asyncHandler(async (req, res) => {
-    const exists = await User.findOne({ email: req.body.email }).lean();
-    if (exists) throw ApiError.conflict('A user with this email already exists');
+    await assertCredentialsFree(req.body);
 
     const user = await User.create({
       name: req.body.name,
+      username: req.body.username,
       email: req.body.email,
       role: req.body.role,
       phone: req.body.phone,
@@ -46,7 +69,7 @@ router.post(
       action: 'create',
       entityType: 'User',
       entityId: user._id,
-      entityLabel: user.email,
+      entityLabel: user.username,
       after: user,
     });
 
@@ -65,6 +88,8 @@ router.put(
     const before = user.toObject();
     const { password, ...rest } = req.body;
 
+    await assertCredentialsFree(rest, user._id);
+
     // An admin must not lock themselves out.
     if (String(user._id) === String(req.user._id)) {
       if (rest.isActive === false) throw ApiError.badRequest('You cannot deactivate your own account');
@@ -82,12 +107,40 @@ router.put(
       action: 'update',
       entityType: 'User',
       entityId: user._id,
-      entityLabel: user.email,
+      entityLabel: user.username,
       before,
       after: user,
     });
 
     res.json({ success: true, user });
+  }),
+);
+
+/**
+ * POST /api/users/:id/reset-password — admin issues a new password.
+ *
+ * Separate from PUT so handing out fresh credentials never means re-submitting
+ * the whole profile, and so the audit trail names the action for what it is.
+ */
+router.post(
+  '/:id/reset-password',
+  validate(resetPasswordSchema),
+  asyncHandler(async (req, res) => {
+    const user = await User.findById(req.params.id);
+    if (!user) throw ApiError.notFound('User not found');
+
+    user.passwordHash = await User.hashPassword(req.body.password);
+    await user.save();
+
+    await recordAudit({
+      req,
+      action: 'change_password',
+      entityType: 'User',
+      entityId: user._id,
+      entityLabel: user.username,
+    });
+
+    res.json({ success: true, message: `Password reset for ${user.name}`, user });
   }),
 );
 
@@ -110,7 +163,7 @@ router.delete(
       action: 'deactivate',
       entityType: 'User',
       entityId: user._id,
-      entityLabel: user.email,
+      entityLabel: user.username,
     });
 
     res.json({ success: true, message: `${user.name} deactivated` });

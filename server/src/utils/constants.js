@@ -7,6 +7,15 @@ export const ROLES = {
 
 export const ROLE_VALUES = Object.values(ROLES);
 
+/**
+ * Login usernames: lowercase letters, digits, dot, underscore and hyphen, and
+ * they must start and end with a letter or a digit. Deliberately narrow so a
+ * username can never be confused with an email address at the login prompt.
+ */
+export const USERNAME_MIN = 3;
+export const USERNAME_MAX = 32;
+export const USERNAME_PATTERN = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/;
+
 export const ROLE_LABELS = {
   [ROLES.ADMIN]: 'Admin',
   [ROLES.NOC_OPERATOR]: 'NOC Operator',

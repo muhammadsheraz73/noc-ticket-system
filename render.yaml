@@ -32,5 +32,8 @@ services:
       - key: COMPANY_NAME
         value: NOC Network Services
       # Optional — enables the AI assistant. Set in the dashboard, never in git.
-      - key: ANTHROPIC_API_KEY
+      # A free OpenRouter key (openrouter.ai/keys) works with the default model.
+      - key: OPENROUTER_API_KEY
         sync: false
+      - key: AI_MODEL
+        value: nvidia/nemotron-3-ultra-550b-a55b:free

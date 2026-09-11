@@ -27,12 +27,14 @@ Then open **http://localhost:5173**.
 
 ### Demo accounts
 
-| Role | Email | Password |
-|---|---|---|
-| Admin | `admin@noc.local` | `Admin@123` |
-| NOC Operator | `noc@noc.local` | `Noc@12345` |
-| Field Engineer | `field@noc.local` | `Field@12345` |
-| Accounts | `accounts@noc.local` | `Accounts@123` |
+Sign in with either the username or the email.
+
+| Role | Username | Email | Password |
+|---|---|---|---|
+| Admin | `admin` | `admin@noc.local` | `Admin@123` |
+| NOC Operator | `noc` | `noc@noc.local` | `Noc@12345` |
+| Field Engineer | `field` | `field@noc.local` | `Field@12345` |
+| Accounts | `accounts` | `accounts@noc.local` | `Accounts@123` |
 
 Seed data includes customer **10255 (Abdul Rouf)** with full network fields and ticket **TID 4626**
 (Fiber Cut), matching the specification examples.
@@ -74,10 +76,13 @@ app also boots with no `.env` at all.
 | `INVOICE_DUE_DAYS` | `15` | Default gap between issue and due date |
 | `INVOICE_TAX_PERCENT` | `0` | Default tax percentage |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Allowed browser origins (comma separated) |
-| `ANTHROPIC_API_KEY` | *(empty)* | **Server-side only.** Enables the AI assistant. Never sent to the browser |
-| `AI_MODEL` | `claude-opus-5` | Model used for ticket analysis |
+| `AI_PROVIDER` | `openrouter` *(when a key is set)* | `openrouter` or `anthropic` |
+| `OPENROUTER_API_KEY` | *(empty)* | **Server-side only.** Enables the AI assistant. Never sent to the browser |
+| `ANTHROPIC_API_KEY` | *(empty)* | **Server-side only.** Used when `AI_PROVIDER=anthropic` |
+| `AI_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b:free` | Model used for ticket analysis (free tier on OpenRouter) |
 | `AI_ENABLED` | `true` | `false` disables AI entirely |
 | `AI_TIMEOUT_MS` | `30000` | AI request timeout |
+| `SEED_ADMIN_USERNAME` | `admin` | Username of the seeded admin account |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@noc.local` / `Admin@123` | Seeded admin account |
 
 ---
@@ -206,10 +211,11 @@ explicitly choose *Update*. A ready-to-fill template is downloadable from the sa
 
 ## 8. AI assistant (optional)
 
-On ticket creation the backend asks Claude for a suggested category, priority, one-line summary,
-troubleshooting steps and a customer-facing response.
+On ticket creation the backend asks the configured model (a free NVIDIA Nemotron 3 Ultra on
+OpenRouter by default) for a suggested category, priority, one-line summary, troubleshooting
+steps and a customer-facing response.
 
-- The API key lives **only** on the server (`ANTHROPIC_API_KEY`) and is never exposed to React.
+- The API key lives **only** on the server (`OPENROUTER_API_KEY`) and is never exposed to React.
 - AI **never blocks ticket creation** — the ticket is saved and returned first, analysis runs after.
 - If AI is unavailable the ticket still exists and its AI status becomes `unavailable`/`failed`,
   with a **Retry analysis** button on the ticket page.
@@ -280,7 +286,7 @@ NODE_ENV=production npm start # Express serves the API and the web app together
 | `JWT_SECRET` | A long random string — **the server refuses to boot without it** |
 | `MONGODB_URI` | Your MongoDB Atlas connection string |
 | `USE_EMBEDDED_MONGO` | `false` (never use the embedded database in production) |
-| `ANTHROPIC_API_KEY` | Optional — enables the AI assistant |
+| `OPENROUTER_API_KEY` | Optional — enables the AI assistant (free key works) |
 
 `CORS_ORIGINS` is not needed when the app is served from the same origin.
 
@@ -312,7 +318,7 @@ intact. Indexes are recreated on the target.
 ### Hosting
 
 - **Render** — `render.yaml` is included. Import the repo as a Blueprint, then set `MONGODB_URI`
-  (and optionally `ANTHROPIC_API_KEY`) in the dashboard. `JWT_SECRET` is generated automatically.
+  (and optionally `OPENROUTER_API_KEY`) in the dashboard. `JWT_SECRET` is generated automatically.
 - **Railway / Fly.io / Cloud Run / any container host** — a multi-stage `Dockerfile` is included.
 - **A VPS** — `npm install && npm run build`, then run `npm start` behind nginx with a process
   manager such as `pm2` or a systemd unit.
@@ -322,7 +328,8 @@ Health check endpoint for all of them: `GET /api/health`.
 ### After the first deploy
 
 1. Sign in as the seeded admin and **change the password immediately**.
-2. Create real users under *Users & roles* and deactivate the demo accounts.
+2. Create real users under *Users & roles* — pick a username, assign the role, use **Generate** for
+   the password and copy the hand-off sheet — then deactivate the demo accounts.
 3. Set `TICKET_NUMBER_START` before the first real ticket if you need TIDs to continue from an
    existing series.
 

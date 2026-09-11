@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, ROLES } from '../context/AuthContext.jsx';
 import GlobalSearch from './GlobalSearch.jsx';
-import { initials, ROLE_LABELS, formatDateTime } from '../utils/format.js';
+import { initials, ROLE_LABELS } from '../utils/format.js';
 
 const NAV = [
   {
@@ -39,20 +39,14 @@ const NAV = [
 ];
 
 export default function Layout() {
-  const { user, logout, serverNow } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [clock, setClock] = useState(() => serverNow());
   const menuRef = useRef(null);
 
   useEffect(() => setSidebarOpen(false), [location.pathname]);
-
-  useEffect(() => {
-    const id = setInterval(() => setClock(serverNow()), 1000);
-    return () => clearInterval(id);
-  }, [serverNow]);
 
   useEffect(() => {
     const onClickOutside = (event) => {
@@ -116,7 +110,6 @@ export default function Layout() {
 
           <GlobalSearch />
           <div className="topbar__spacer" />
-          <div className="topbar__clock">{formatDateTime(clock)}</div>
 
           <div className="usermenu" ref={menuRef}>
             <button className="usermenu__btn" onClick={() => setMenuOpen((open) => !open)}>

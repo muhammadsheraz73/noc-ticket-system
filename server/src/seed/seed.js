@@ -17,6 +17,7 @@ import AuditLog from '../models/AuditLog.js';
 
 import { ROLES, DEFAULT_ISSUE_TYPES } from '../utils/constants.js';
 import { addMinutes, addDays } from '../utils/datetime.js';
+import { backfillUsernames } from '../scripts/backfillUsernames.js';
 import { buildTicketText } from '../utils/ticketFormatter.js';
 import { calculateTotals, generateInvoiceNumber } from '../services/invoiceService.js';
 import { reserveTicketNumber, TICKET_SEQUENCE_KEY } from '../services/ticketService.js';
@@ -26,13 +27,23 @@ const RESET = process.argv.includes('--reset');
 const USERS = [
   {
     name: 'Mirza Arslan Shabbir',
+    username: env.seed.adminUsername,
     email: env.seed.adminEmail,
     password: env.seed.adminPassword,
     role: ROLES.ADMIN,
     phone: '0300-1112233',
   },
   {
+    name: 'Muhammad Sheraz',
+    username: 'sheraz',
+    email: 'sheraz@noc.local',
+    password: 'Sheraz@123',
+    role: ROLES.ADMIN,
+    phone: '0300-5556677',
+  },
+  {
     name: 'Usman Tariq',
+    username: 'noc',
     email: 'noc@noc.local',
     password: 'Noc@12345',
     role: ROLES.NOC_OPERATOR,
@@ -40,6 +51,7 @@ const USERS = [
   },
   {
     name: 'Sharafat Ali',
+    username: 'field',
     email: 'field@noc.local',
     password: 'Field@12345',
     role: ROLES.FIELD_ENGINEER,
@@ -47,6 +59,7 @@ const USERS = [
   },
   {
     name: 'Hina Batool',
+    username: 'accounts',
     email: 'accounts@noc.local',
     password: 'Accounts@123',
     role: ROLES.ACCOUNTS,
@@ -144,20 +157,27 @@ async function run() {
   }
 
   // ---------------------------------------------------------------- users
+  // Repair any account left without a username by an earlier version first,
+  // otherwise saving it below would fail schema validation.
+  await backfillUsernames();
+
   const users = {};
   for (const spec of USERS) {
-    let user = await User.findOne({ email: spec.email });
+    let user = await User.findOne({ $or: [{ email: spec.email }, { username: spec.username }] });
     if (!user) {
       user = await User.create({
         name: spec.name,
+        username: spec.username,
         email: spec.email,
         role: spec.role,
         phone: spec.phone,
         passwordHash: await User.hashPassword(spec.password),
       });
-      logger.info(`Created user ${spec.email} (${spec.role})`);
+      logger.info(`Created user ${spec.username} / ${spec.email} (${spec.role})`);
     }
-    users[spec.role] = user;
+    // Keep the first user seen per role (e.g. the original admin) as the one
+    // used to attribute the rest of the demo data below.
+    users[spec.role] = users[spec.role] || user;
   }
 
   // ---------------------------------------------------------- issue types
@@ -448,10 +468,12 @@ async function run() {
 function printSummary() {
   const line = '='.repeat(66);
   console.log(`\n${line}`);
-  console.log('  SEED COMPLETE — demo accounts');
+  console.log('  SEED COMPLETE — demo accounts (sign in with the username or the email)');
   console.log(line);
   for (const user of USERS) {
-    console.log(`  ${user.role.padEnd(15)} ${user.email.padEnd(22)} ${user.password}`);
+    console.log(
+      `  ${user.role.padEnd(15)} ${user.username.padEnd(10)} ${user.email.padEnd(22)} ${user.password}`,
+    );
   }
   console.log(line);
   console.log('  Demo customer : 10255 (Abdul Rouf)');

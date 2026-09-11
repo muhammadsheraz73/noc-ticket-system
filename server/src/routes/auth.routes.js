@@ -17,12 +17,16 @@ router.post(
   authLimiter,
   validate(loginSchema),
   asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
+    const { identifier, password } = req.body;
 
-    const user = await User.findOne({ email }).select('+passwordHash');
-    // Same message for unknown email and wrong password — no account enumeration.
+    // Admins hand out a username; the email works just as well as a login.
+    const user = await User.findOne({
+      $or: [{ username: identifier }, { email: identifier }],
+    }).select('+passwordHash');
+
+    // Same message for an unknown account and a wrong password — no enumeration.
     if (!user || !(await user.comparePassword(password))) {
-      throw ApiError.unauthorized('Invalid email or password');
+      throw ApiError.unauthorized('Invalid username or password');
     }
     if (!user.isActive) throw ApiError.forbidden('This account has been deactivated');
 

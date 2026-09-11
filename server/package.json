@@ -10,7 +10,8 @@
     "seed": "node src/seed/seed.js",
     "seed:reset": "node src/seed/seed.js --reset",
     "migrate": "node src/scripts/migrate.js",
-    "test": "node --test \"tests/**/*.test.js\""
+    "test": "node --test \"tests/**/*.test.js\"",
+    "backfill:usernames": "node src/scripts/backfillUsernames.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",

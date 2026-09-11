@@ -1,11 +1,17 @@
 import env from './config/env.js';
 import logger from './utils/logger.js';
 import { connectDatabase, disconnectDatabase } from './config/db.js';
+import { backfillUsernames } from './scripts/backfillUsernames.js';
 import { createApp } from './app.js';
 import { aiStatusInfo } from './services/aiService.js';
 
 async function main() {
   await connectDatabase();
+
+  // Accounts predating the username field cannot be saved until they have one,
+  // so an existing deployment repairs itself on the first start after upgrade.
+  const backfilled = await backfillUsernames();
+  if (backfilled) logger.info(`Assigned usernames to ${backfilled} existing account(s).`);
 
   const app = createApp();
   const server = app.listen(env.port, () => {

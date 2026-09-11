@@ -6,10 +6,10 @@ import { errorMessage } from '../api/client.js';
 import { Alert, Field, TextInput } from '../components/ui.jsx';
 
 const DEMO_ACCOUNTS = [
-  { role: 'Admin', email: 'admin@noc.local', password: 'Admin@123', icon: '🛡' },
-  { role: 'NOC Operator', email: 'noc@noc.local', password: 'Noc@12345', icon: '🎧' },
-  { role: 'Field Engineer', email: 'field@noc.local', password: 'Field@12345', icon: '🔧' },
-  { role: 'Accounts', email: 'accounts@noc.local', password: 'Accounts@123', icon: '🧾' },
+  { role: 'Admin', username: 'admin', password: 'Admin@123', icon: '🛡' },
+  { role: 'NOC Operator', username: 'noc', password: 'Noc@12345', icon: '🎧' },
+  { role: 'Field Engineer', username: 'field', password: 'Field@12345', icon: '🔧' },
+  { role: 'Accounts', username: 'accounts', password: 'Accounts@123', icon: '🧾' },
 ];
 
 export default function LoginPage() {
@@ -18,16 +18,16 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const signIn = async (nextEmail, nextPassword) => {
+  const signIn = async (nextIdentifier, nextPassword) => {
     setError('');
     setBusy(true);
     try {
-      const user = await login(nextEmail, nextPassword);
+      const user = await login(nextIdentifier, nextPassword);
       toast.success(`Welcome back, ${user.name.split(' ')[0]}`);
       navigate(location.state?.from?.pathname || '/', { replace: true });
     } catch (err) {
@@ -53,19 +53,26 @@ export default function LoginPage() {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            signIn(email, password);
+            signIn(identifier, password);
           }}
         >
-          <Field label="Email address" required htmlFor="email">
+          <Field
+            label="Username or email"
+            required
+            htmlFor="identifier"
+            hint="Use the username your administrator gave you."
+          >
             <TextInput
-              id="email"
-              type="email"
+              id="identifier"
+              type="text"
               autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
               autoFocus
               required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@noc.local"
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
+              placeholder="username"
             />
           </Field>
 
@@ -92,20 +99,20 @@ export default function LoginPage() {
           <div className="login-demo__grid">
             {DEMO_ACCOUNTS.map((account) => (
               <button
-                key={account.email}
+                key={account.username}
                 type="button"
                 className="login-demo__btn"
                 disabled={busy}
                 onClick={() => {
-                  setEmail(account.email);
+                  setIdentifier(account.username);
                   setPassword(account.password);
-                  signIn(account.email, account.password);
+                  signIn(account.username, account.password);
                 }}
               >
                 <span>{account.icon}</span>
                 <span>
                   <strong>{account.role}</strong>
-                  <span className="muted"> · {account.email}</span>
+                  <span className="muted"> · {account.username}</span>
                 </span>
               </button>
             ))}
