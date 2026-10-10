@@ -315,11 +315,11 @@ function SubscribersTab({ onNotice }) {
     }
   };
 
-  const generateBill = async (s) => {
+  const generateAll = async () => {
     try {
       const month = monthStr();
-      const { data } = await api.post('/billing/records/generate', { period: month, subscriberId: s._id });
-      onNotice(data.created ? `${s.username}: ${month} bill generated.` : `${s.username}: ${month} bill already exists.`);
+      const { data } = await api.post('/billing/records/generate', { period: month });
+      onNotice(`${month}: ${data.created} bills generated (${data.alreadyExisting} already existed).`);
     } catch (e) {
       setState((x) => ({ ...x, error: errorMessage(e) }));
     }
@@ -374,6 +374,7 @@ function SubscribersTab({ onNotice }) {
               <TextInput placeholder="Username, address, package…" value={query} onChange={(e) => setQuery(e.target.value)} />
             </Field>
           </div>
+          <button className="btn btn--secondary" onClick={generateAll}>Generate ALL BILLS</button>
           <button className="btn" onClick={() => { setError(''); setEditing({ ...EMPTY }); }}>＋ Add user</button>
           <button className="btn btn--secondary" onClick={() => fileRef.current?.click()} disabled={importing}>
             {importing ? 'Importing…' : '⭳ Import Excel'}
@@ -404,7 +405,6 @@ function SubscribersTab({ onNotice }) {
                       <td className="text-right num">{formatMoney(s.monthlyFee)}</td>
                       <td><Badge tone={s.status === 'Active' ? 'ok' : 'neutral'}>{s.status}</Badge></td>
                       <td className="text-right"><div className="row-actions">
-                        <button className="btn btn--sm" onClick={() => generateBill(s)}>Generate Bill</button>
                         <button className="btn btn--secondary btn--sm" onClick={() => { setError(''); setEditing({ ...s }); }}>Edit</button>
                         {user?.role === 'admin' ? (
                           <button className="btn btn--secondary btn--sm btn--delete" onClick={() => remove(s)}>Delete</button>
