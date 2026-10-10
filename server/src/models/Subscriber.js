@@ -1,0 +1,32 @@
+import mongoose from 'mongoose';
+
+/** A broadband user billed every month (one row of the old Excel billing sheet). */
+const subscriberSchema = new mongoose.Schema(
+  {
+    username: { type: String, required: true, trim: true },
+    usernameKey: { type: String, required: true, unique: true, index: true },
+    activationDate: { type: Date },
+    package: { type: String, trim: true, default: '' },
+    status: { type: String, enum: ['Active', 'Inactive'], default: 'Active', index: true },
+    address: { type: String, trim: true, default: '' },
+    contact: { type: String, trim: true, default: '' },
+    monthlyFee: { type: Number, required: true, min: 0, default: 0 },
+    notes: { type: String, trim: true, default: '' },
+  },
+  { timestamps: true },
+);
+
+subscriberSchema.pre('validate', function setKey(next) {
+  if (this.username) this.usernameKey = this.username.trim().toLowerCase();
+  next();
+});
+
+subscriberSchema.set('toJSON', {
+  virtuals: true,
+  transform(_doc, ret) {
+    delete ret.__v;
+    return ret;
+  },
+});
+
+export default mongoose.model('Subscriber', subscriberSchema, 'subscribers');

@@ -18,6 +18,7 @@ import SearchPage from './pages/SearchPage.jsx';
 import NetworkPage from './pages/NetworkPage.jsx';
 import UsersPage from './pages/UsersPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
+import BillingPage from './pages/BillingPage.jsx';
 
 /** Blocks unauthenticated access and, optionally, disallowed roles. */
 function Protected({ roles, children }) {
@@ -118,6 +119,14 @@ export default function App() {
           }
         />
 
+        <Route
+          path="billing"
+          element={
+            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
+              <BillingPage />
+            </Protected>
+          }
+        />
         <Route path="search" element={<SearchPage />} />
         <Route
           path="network"

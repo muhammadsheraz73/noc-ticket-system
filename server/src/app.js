@@ -21,6 +21,7 @@ import fieldTeamRoutes from './routes/fieldTeams.routes.js';
 import networkRoutes from './routes/network.routes.js';
 import userRoutes from './routes/users.routes.js';
 import aiRoutes from './routes/ai.routes.js';
+import billingRoutes from './routes/billing.routes.js';
 import metaRoutes from './routes/meta.routes.js';
 
 export function createApp() {
@@ -106,6 +107,7 @@ export function createApp() {
   app.use('/api/network', networkRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/ai', aiRoutes);
+  app.use('/api/billing', billingRoutes);
   app.use('/api/meta', metaRoutes);
 
   // Any /api path that reached this point does not exist.
