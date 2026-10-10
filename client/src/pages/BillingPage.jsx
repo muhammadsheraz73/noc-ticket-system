@@ -126,10 +126,10 @@ function BillsTab() {
               </Select>
             </Field>
           </div>
-          <button className="btn btn--secondary btn--sm" onClick={generate} disabled={busy}>
+          <button className="btn btn--sm" onClick={generate} disabled={busy}>
             ＋ Generate ALL BILLS
           </button>
-          <button className="btn btn--secondary btn--sm" onClick={download}>⭳ Excel</button>
+          <button className="btn btn--excel btn--sm" onClick={download}>⭳ Excel</button>
         </div>
 
         <div className="card__body card__body--flush">
