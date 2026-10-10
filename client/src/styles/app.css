@@ -811,3 +811,8 @@ a.stat:hover { border-color: var(--brand-accent); text-decoration: none; }
 .btn--delete:hover:not(:disabled) { background: var(--danger); color: #fff; }
 
 .table th.text-right, .table td.text-right { text-align: right; }
+
+.table--even { table-layout: fixed; width: 100%; min-width: 880px; }
+.table--even th, .table--even td { padding-left: 14px; padding-right: 14px; overflow-wrap: anywhere; vertical-align: middle; }
+.table--even th { white-space: nowrap; }
+.table--even td .btn { white-space: nowrap; }

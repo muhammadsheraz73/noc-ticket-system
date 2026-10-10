@@ -143,7 +143,7 @@ function BillsTab() {
             />
           ) : (
             <div className="table-wrap">
-              <table className="table">
+              <table className="table table--even">
                 <thead>
                   <tr>
                     <th>User</th><th>Unit</th><th>Address</th><th className="text-right">Fee</th>
@@ -381,7 +381,7 @@ function SubscribersTab({ onNotice }) {
             />
           ) : (
             <div className="table-wrap">
-              <table className="table table--users">
+              <table className="table table--users table--even">
                 <thead>
                   <tr><th>User</th><th>Unit</th><th>Address</th><th className="text-right">Monthly Fee</th><th>Status</th><th className="text-right">Actions</th></tr>
                 </thead>
