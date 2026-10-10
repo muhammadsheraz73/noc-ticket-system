@@ -127,7 +127,7 @@ function BillsTab() {
             </Field>
           </div>
           <button className="btn btn--secondary btn--sm" onClick={generate} disabled={busy}>
-            ＋ Generate {period} bills
+            ＋ Generate ALL BILLS
           </button>
           <button className="btn btn--secondary btn--sm" onClick={download}>⭳ Excel</button>
         </div>
