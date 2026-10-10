@@ -157,14 +157,14 @@ function BillsTab() {
                   {state.items.map((r) => (
                     <tr key={r._id}>
                       <td className="strong">{r.username}</td>
-                      <td className="nowrap small">{r.package}</td>
+                      <td className="small">{r.package}</td>
                       <td className="small">{r.address}</td>
                       <td className="text-right num">{formatMoney(r.fee)}</td>
                       <td><Badge tone={STATUS_TONE[r.paymentStatus]}>{r.paymentStatus}</Badge></td>
                       <td className="text-right num">{formatMoney(r.received)}</td>
                       <td className="text-right num">{r.arrears ? formatMoney(r.arrears) : '–'}</td>
                       <td className="small">{r.lastReceivedBy}</td>
-                      <td className="nowrap small">{r.lastReceivedAt ? formatDateTime(r.lastReceivedAt) : ''}</td>
+                      <td className="small">{r.lastReceivedAt ? formatDateTime(r.lastReceivedAt) : ''}</td>
                       <td className="nowrap">
                         <button className="btn btn--sm" onClick={() => setPaying(r)}>
                           {r.paymentStatus === 'Received' ? 'Details' : 'Receive'}
