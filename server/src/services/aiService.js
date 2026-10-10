@@ -189,7 +189,7 @@ async function requestOpenRouter(prompt, modelSlug) {
     signal: AbortSignal.timeout(env.ai.timeoutMs),
     body: JSON.stringify({
       model: modelSlug,
-      max_tokens: 8000,
+      max_tokens: 2000,
       // A triage classification is a simple task - low effort keeps it fast.
       reasoning: { effort: 'low' },
       tools: [
