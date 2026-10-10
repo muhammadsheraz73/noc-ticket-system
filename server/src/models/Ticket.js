@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import tenantScope from './plugins/tenantScope.js';
 import { TICKET_STATUSES, TICKET_PRIORITIES, AI_STATUSES } from '../utils/constants.js';
 
 const historySchema = new mongoose.Schema(
@@ -32,7 +33,7 @@ const aiSchema = new mongoose.Schema(
 const ticketSchema = new mongoose.Schema(
   {
     /** Server-generated unique TID. */
-    ticketNumber: { type: Number, required: true, unique: true, index: true },
+    ticketNumber: { type: Number, required: true },
 
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true, index: true },
     /** Denormalized business key so search/joins stay fast. */
@@ -86,5 +87,8 @@ ticketSchema.set('toJSON', {
     return ret;
   },
 });
+
+ticketSchema.plugin(tenantScope);
+ticketSchema.index({ tenant: 1, ticketNumber: 1 }, { unique: true });
 
 export default mongoose.model('Ticket', ticketSchema, 'tickets');

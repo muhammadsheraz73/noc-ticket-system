@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import tenantScope from './plugins/tenantScope.js';
 import { CONNECTION_TYPES } from '../utils/constants.js';
 
 /** Source device/port ➜ destination device/port link, optionally tied to a customer. */
@@ -38,5 +39,7 @@ connectionSchema.index({
   vlan: 'text',
   notes: 'text',
 });
+
+connectionSchema.plugin(tenantScope);
 
 export default mongoose.model('Connection', connectionSchema, 'connections');

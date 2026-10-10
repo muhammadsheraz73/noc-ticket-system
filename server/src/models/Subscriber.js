@@ -1,10 +1,11 @@
 import mongoose from 'mongoose';
+import tenantScope from './plugins/tenantScope.js';
 
 /** A broadband user billed every month (one row of the old Excel billing sheet). */
 const subscriberSchema = new mongoose.Schema(
   {
     username: { type: String, required: true, trim: true },
-    usernameKey: { type: String, required: true, unique: true, index: true },
+    usernameKey: { type: String, required: true },
     activationDate: { type: Date },
     package: { type: String, trim: true, default: '' },
     status: { type: String, enum: ['Active', 'Inactive'], default: 'Active', index: true },
@@ -28,5 +29,8 @@ subscriberSchema.set('toJSON', {
     return ret;
   },
 });
+
+subscriberSchema.plugin(tenantScope);
+subscriberSchema.index({ tenant: 1, usernameKey: 1 }, { unique: true });
 
 export default mongoose.model('Subscriber', subscriberSchema, 'subscribers');

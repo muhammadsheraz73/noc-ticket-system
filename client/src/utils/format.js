@@ -23,6 +23,7 @@ export const INVOICE_TONE = {
 };
 
 export const ROLE_LABELS = {
+  superadmin: 'Owner',
   admin: 'Admin',
   noc_operator: 'NOC Operator',
   field_engineer: 'Field Engineer',

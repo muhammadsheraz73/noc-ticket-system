@@ -32,7 +32,9 @@ const userSchema = new mongoose.Schema(
       index: true,
     },
     passwordHash: { type: String, required: true, select: false },
-    role: { type: String, enum: ROLE_VALUES, default: ROLES.NOC_OPERATOR, index: true },
+    role: { type: String, enum: ROLE_VALUES, default: ROLES.ADMIN, index: true },
+    /** The client this login belongs to. Absent only for the panel owner. */
+    tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
     phone: { type: String, trim: true, default: '' },
     isActive: { type: Boolean, default: true },
     lastLoginAt: { type: Date },

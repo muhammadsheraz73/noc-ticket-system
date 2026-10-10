@@ -3,7 +3,6 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, ROLES } from '../context/AuthContext.jsx';
 import GlobalSearch from './GlobalSearch.jsx';
 import { initials, ROLE_LABELS } from '../utils/format.js';
-import wellnetLogo from '../assets/wellnet-logo.png';
 import { ConfirmDialog } from './ui.jsx';
 
 const NAV = [
@@ -34,7 +33,18 @@ const NAV = [
   {
     group: 'Administration',
     items: [
-      { to: '/users', label: 'Users', icon: '🛡', roles: [ROLES.ADMIN] },
+      { to: '/settings', label: 'Settings', icon: '⚙' },
+    ],
+  },
+];
+
+/** The panel owner manages clients and their logins — there is no client data to browse. */
+const OWNER_NAV = [
+  {
+    group: 'Panel',
+    items: [
+      { to: '/clients', label: 'Clients', icon: '🏢' },
+      { to: '/users', label: 'Logins', icon: '🛡' },
       { to: '/settings', label: 'Settings', icon: '⚙' },
     ],
   },
@@ -60,7 +70,8 @@ export default function Layout() {
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
 
-  const visibleGroups = NAV.map((group) => ({
+  const navGroups = user?.role === ROLES.SUPERADMIN ? OWNER_NAV : NAV;
+  const visibleGroups = navGroups.map((group) => ({
     ...group,
     items: group.items.filter((item) => !item.roles || item.roles.includes(user?.role)),
   })).filter((group) => group.items.length > 0);
@@ -70,7 +81,9 @@ export default function Layout() {
       <aside className={`sidebar${sidebarOpen ? ' is-open' : ''}`}>
         <div className="sidebar__brand">
           <div className="sidebar__logo">
-            <img src={wellnetLogo} alt="Wellnet" className="sidebar__logo-img" />
+            <strong style={{ color: '#fff', fontSize: 18 }}>
+              {user?.role === ROLES.SUPERADMIN ? 'NOC Panel' : user?.tenantName || 'NOC Manager'}
+            </strong>
           </div>
         </div>
 

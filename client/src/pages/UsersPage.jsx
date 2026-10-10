@@ -1,23 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
 import api, { errorMessage, fieldErrors } from '../api/client.js';
-import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import {
   Alert, Badge, ConfirmDialog, EmptyState, Field, Loading, Modal, Select, TextInput,
 } from '../components/ui.jsx';
-import { ROLE_LABELS, formatDateTime } from '../utils/format.js';
+import { formatDateTime } from '../utils/format.js';
 
 const BLANK = {
-  name: '', username: '', email: '', password: '', role: 'noc_operator', phone: '', isActive: true,
+  tenant: '', name: '', username: '', email: '', password: '', phone: '', isActive: true,
 };
 
 export default function UsersPage() {
   const toast = useToast();
-  const { user: me } = useAuth();
 
   const [items, setItems] = useState([]);
-  const [roles, setRoles] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [clientFilter, setClientFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -45,16 +44,19 @@ export default function UsersPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/users');
-      setItems(data.items);
-      setRoles(data.roles);
+      const [users, tenants] = await Promise.all([
+        api.get('/users', { params: clientFilter ? { tenant: clientFilter } : {} }),
+        api.get('/tenants'),
+      ]);
+      setItems(users.data.items);
+      setClients(tenants.data.items);
       setError('');
     } catch (err) {
       setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [clientFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -62,15 +64,15 @@ export default function UsersPage() {
     setEditing(user || null);
     setForm(user
       ? {
+        tenant: user.tenant || '',
         name: user.name,
         username: user.username || '',
         email: user.email,
         password: '',
-        role: user.role,
         phone: user.phone || '',
         isActive: user.isActive,
       }
-      : { ...BLANK, password: generatePassword() });
+      : { ...BLANK, tenant: clientFilter, password: generatePassword() });
     setErrors({});
     setUsernameTouched(Boolean(user));
     setShowPassword(!user);
@@ -96,6 +98,7 @@ export default function UsersPage() {
     try {
       if (editing) {
         const payload = { ...form };
+        delete payload.tenant;
         if (!payload.password) delete payload.password;
         const { data } = await api.put(`/users/${editing._id}`, payload);
         toast.success('User updated', data.user.username);
@@ -104,7 +107,7 @@ export default function UsersPage() {
         if (form.password) handOver('Password updated', data.user, form.password);
       } else {
         const { data } = await api.post('/users', form);
-        toast.success('User created', `${data.user.name} — ${ROLE_LABELS[data.user.role]}`);
+        toast.success('Login created', `${data.user.name} — ${data.user.tenantName || 'client'}`);
         setFormOpen(false);
         handOver('User created', data.user, form.password);
       }
@@ -170,14 +173,22 @@ export default function UsersPage() {
     setForm((f) => ({ ...f, username: event.target.value.toLowerCase() }));
   };
 
-  if (loading) return <Loading label="Loading users…" />;
+  if (loading && items.length === 0 && !error) return <Loading label="Loading logins…" />;
 
   return (
     <>
       <PageHead
-        title="Users &amp; roles"
-        subtitle="Create accounts, assign a role and hand out the sign-in credentials."
-        actions={<button className="btn" onClick={() => openForm(null)}>＋ New user</button>}
+        title="Client logins"
+        subtitle="Every login belongs to one client, has full access to that client's data, and cannot add other users."
+        actions={(
+          <>
+            <Select value={clientFilter} onChange={(event) => setClientFilter(event.target.value)}>
+              <option value="">All clients</option>
+              {clients.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+            </Select>
+            <button className="btn" onClick={() => openForm(null)} disabled={clients.length === 0}>＋ New login</button>
+          </>
+        )}
       />
 
       {error ? <Alert tone="error" title="Could not load users">{error}</Alert> : null}
@@ -185,13 +196,13 @@ export default function UsersPage() {
       <div className="card">
         <div className="card__body card__body--flush">
           {items.length === 0 ? (
-            <EmptyState icon="🛡" title="No users yet" />
+            <EmptyState icon="🛡" title="No logins yet" message="Create a client first, then add its login." />
           ) : (
             <div className="table-wrap">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Name</th><th>Username</th><th>Email</th><th>Role</th>
+                    <th>Name</th><th>Client</th><th>Username</th><th>Email</th>
                     <th>Status</th><th>Last sign-in</th><th />
                   </tr>
                 </thead>
@@ -200,13 +211,11 @@ export default function UsersPage() {
                     <tr key={user._id}>
                       <td>
                         <div className="strong">{user.name}</div>
-                        <div className="small muted">
-                          {user._id === me._id ? 'that’s you' : user.phone || '—'}
-                        </div>
+                        <div className="small muted">{user.phone || '—'}</div>
                       </td>
+                      <td><Badge tone="info">{user.tenantName || '—'}</Badge></td>
                       <td className="mono strong">{user.username || '—'}</td>
                       <td className="mono small">{user.email}</td>
-                      <td><Badge tone={roleTone(user.role)}>{ROLE_LABELS[user.role]}</Badge></td>
                       <td>
                         <Badge tone={user.isActive ? 'ok' : 'neutral'}>
                           {user.isActive ? 'Active' : 'Inactive'}
@@ -223,14 +232,12 @@ export default function UsersPage() {
                           <button className="btn btn--ghost btn--sm" onClick={() => openReset(user)}>
                             Reset password
                           </button>
-                          {user._id !== me._id ? (
-                            <button
-                              className="btn btn--ghost btn--sm text-danger"
-                              onClick={() => setDeleting(user)}
-                            >
-                              Delete
-                            </button>
-                          ) : null}
+                          <button
+                            className="btn btn--ghost btn--sm text-danger"
+                            onClick={() => setDeleting(user)}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -244,7 +251,7 @@ export default function UsersPage() {
 
       <Modal
         open={formOpen}
-        title={editing ? `Edit ${editing.name}` : 'New user'}
+        title={editing ? `Edit ${editing.name}` : 'New login'}
         onClose={() => setFormOpen(false)}
         footer={
           <>
@@ -256,6 +263,12 @@ export default function UsersPage() {
         }
       >
         <div className="form-grid">
+          <Field label="Client" required error={errors.tenant} hint={editing ? 'A login cannot move to another client.' : ''} full>
+            <Select value={form.tenant} onChange={set('tenant')} error={errors.tenant} disabled={Boolean(editing)}>
+              <option value="">Select a client…</option>
+              {clients.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+            </Select>
+          </Field>
           <Field label="Full name" required error={errors.name}>
             <TextInput value={form.name} onChange={setName} error={errors.name} />
           </Field>
@@ -317,27 +330,13 @@ export default function UsersPage() {
             </div>
           </Field>
 
-          <Field label="Role" required error={errors.role} hint="Decides what the account can see and do.">
-            <Select value={form.role} onChange={set('role')} error={errors.role}>
-              {(roles.length ? roles : Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label })))
-                .map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}
-            </Select>
-          </Field>
           <Field label="Account status">
             <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={set('isActive')}
-                disabled={editing?._id === me._id}
-              />
+              <input type="checkbox" checked={form.isActive} onChange={set('isActive')} />
               Active — can sign in
             </label>
           </Field>
 
-          <div className="form-grid--full">
-            <Alert tone="info" title={`${ROLE_LABELS[form.role]} access`}>{ROLE_ACCESS[form.role]}</Alert>
-          </div>
         </div>
       </Modal>
 
@@ -493,15 +492,4 @@ function randomInt(max) {
   const buffer = new Uint32Array(1);
   window.crypto.getRandomValues(buffer);
   return buffer[0] % max;
-}
-
-const ROLE_ACCESS = {
-  admin: 'Everything — tickets, customers, network inventory, billing and user management.',
-  noc_operator: 'Tickets and customers (create, assign, resolve), field teams, network inventory, and invoices read-only.',
-  field_engineer: 'Only the tickets assigned to them, plus the field team directory. No billing, no network inventory.',
-  accounts: 'Invoices (create, edit, mark paid) and customer records. No tickets, no network inventory.',
-};
-
-function roleTone(role) {
-  return { admin: 'purple', noc_operator: 'info', field_engineer: 'warn', accounts: 'ok' }[role] || 'neutral';
 }

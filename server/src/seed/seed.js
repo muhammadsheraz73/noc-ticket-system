@@ -3,6 +3,8 @@ import logger from '../utils/logger.js';
 import { connectDatabase, disconnectDatabase } from '../config/db.js';
 
 import User from '../models/User.js';
+import Tenant from '../models/Tenant.js';
+import { enterTenant } from '../utils/tenantContext.js';
 import Customer from '../models/Customer.js';
 import Ticket from '../models/Ticket.js';
 import FieldTeam from '../models/FieldTeam.js';
@@ -30,7 +32,8 @@ const USERS = [
     username: env.seed.adminUsername,
     email: env.seed.adminEmail,
     password: env.seed.adminPassword,
-    role: ROLES.ADMIN,
+    // The panel owner: manages clients and their logins, has no client data.
+    role: ROLES.SUPERADMIN,
     phone: '0300-1112233',
   },
   {
@@ -142,6 +145,7 @@ async function run() {
     logger.warn('--reset supplied: clearing all collections.');
     await Promise.all([
       User.deleteMany({}),
+      Tenant.deleteMany({}),
       Customer.deleteMany({}),
       Ticket.deleteMany({}),
       FieldTeam.deleteMany({}),
@@ -161,6 +165,11 @@ async function run() {
   // otherwise saving it below would fail schema validation.
   await backfillUsernames();
 
+  // One demo client; everything below is created inside its scope.
+  let tenant = await Tenant.findOne({ name: 'Demo ISP' });
+  if (!tenant) tenant = await Tenant.create({ name: 'Demo ISP', contactName: 'Demo' });
+  enterTenant(tenant._id);
+
   const users = {};
   for (const spec of USERS) {
     let user = await User.findOne({ $or: [{ email: spec.email }, { username: spec.username }] });
@@ -170,6 +179,7 @@ async function run() {
         username: spec.username,
         email: spec.email,
         role: spec.role,
+        tenant: spec.role === ROLES.SUPERADMIN ? undefined : tenant._id,
         phone: spec.phone,
         passwordHash: await User.hashPassword(spec.password),
       });
@@ -317,7 +327,7 @@ async function run() {
   // -------------------------------------------------------------- tickets
   // Start the TID sequence at the value from the specification example.
   await Counter.updateOne(
-    { _id: TICKET_SEQUENCE_KEY },
+    { _id: `${tenant._id}:${TICKET_SEQUENCE_KEY}` },
     { $setOnInsert: { seq: env.ticketNumberStart - 1 } },
     { upsert: true },
   );

@@ -17,6 +17,7 @@ export async function recordAudit({
 }) {
   try {
     await AuditLog.create({
+      tenant: req?.user?.tenant,
       actor: req?.user?._id,
       actorName: req?.user?.name || 'system',
       actorRole: req?.user?.role || 'system',

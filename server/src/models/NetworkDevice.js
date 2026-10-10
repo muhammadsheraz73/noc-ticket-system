@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import tenantScope from './plugins/tenantScope.js';
 import { DEVICE_TYPES } from '../utils/constants.js';
 
 const portSchema = new mongoose.Schema(
@@ -32,5 +33,7 @@ const networkDeviceSchema = new mongoose.Schema(
 );
 
 networkDeviceSchema.index({ name: 'text', model: 'text', managementIp: 'text', notes: 'text' });
+
+networkDeviceSchema.plugin(tenantScope);
 
 export default mongoose.model('NetworkDevice', networkDeviceSchema, 'network_devices');

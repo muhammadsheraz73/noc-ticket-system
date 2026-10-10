@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import tenantScope from './plugins/tenantScope.js';
 import { FIELD_TEAM_KINDS } from '../utils/constants.js';
 
 /**
@@ -22,5 +23,7 @@ const fieldTeamSchema = new mongoose.Schema(
 );
 
 fieldTeamSchema.index({ name: 'text', phone: 'text', area: 'text' });
+
+fieldTeamSchema.plugin(tenantScope);
 
 export default mongoose.model('FieldTeam', fieldTeamSchema, 'field_teams');

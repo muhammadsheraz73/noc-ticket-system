@@ -3,18 +3,21 @@ import User from '../models/User.js';
 import FieldTeam from '../models/FieldTeam.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
-import { requireAuth, requireRole } from '../middleware/auth.js';
+import Tenant from '../models/Tenant.js';
+import { requireOwner } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { recordAudit } from '../utils/audit.js';
-import { ROLES, ROLE_LABELS, ROLE_VALUES } from '../utils/constants.js';
+import { ROLES, ROLE_LABELS } from '../utils/constants.js';
 import { createUserSchema, updateUserSchema, resetPasswordSchema } from '../validators/schemas.js';
 
 /**
  * A login account needs a FieldTeam record to be assignable to tickets.
- * Rather than making an admin create and link one by hand, keep it in sync
- * with the account automatically — every role is assignable — and mirror
- * the account's active state (never delete it — it may still carry ticket
- * history).
+ * Rather than making anybody create and link one by hand, keep it in sync
+ * with the account automatically and mirror the account's active state
+ * (never delete it — it may still carry ticket history).
+ *
+ * The owner works outside any client's scope, so the client is stamped on the
+ * record explicitly.
  */
 async function syncFieldTeamLink(user) {
   const existing = await FieldTeam.findOne({ user: user._id });
@@ -29,6 +32,7 @@ async function syncFieldTeamLink(user) {
 
   if (user.isActive) {
     await FieldTeam.create({
+      tenant: user.tenant,
       name: user.name,
       kind: 'member',
       phone: user.phone || '',
@@ -62,17 +66,26 @@ async function assertCredentialsFree({ username, email }, excludeId) {
 }
 
 const router = Router();
-router.use(requireAuth, requireRole(ROLES.ADMIN));
+// Logins are created and managed by the panel owner only — a client's own
+// users cannot add, edit or remove accounts.
+router.use(requireOwner);
 
 /** GET /api/users */
 router.get(
   '/',
-  asyncHandler(async (_req, res) => {
-    const users = await User.find().sort({ createdAt: -1 }).lean();
+  asyncHandler(async (req, res) => {
+    const filter = { role: { $ne: ROLES.SUPERADMIN } };
+    if (req.query.tenant) filter.tenant = req.query.tenant;
+
+    const users = await User.find(filter).sort({ createdAt: -1 }).populate('tenant', 'name').lean();
     res.json({
       success: true,
-      items: users.map((u) => ({ ...u, roleLabel: ROLE_LABELS[u.role] })),
-      roles: ROLE_VALUES.map((role) => ({ value: role, label: ROLE_LABELS[role] })),
+      items: users.map((u) => ({
+        ...u,
+        tenantName: u.tenant?.name || '',
+        tenant: u.tenant?._id,
+        roleLabel: ROLE_LABELS[u.role],
+      })),
     });
   }),
 );
@@ -84,11 +97,16 @@ router.post(
   asyncHandler(async (req, res) => {
     await assertCredentialsFree(req.body);
 
+    const tenant = await Tenant.findById(req.body.tenant).lean();
+    if (!tenant) throw ApiError.badRequest('Selected client does not exist');
+
     const user = await User.create({
+      tenant: tenant._id,
       name: req.body.name,
       username: req.body.username,
       email: req.body.email,
-      role: req.body.role,
+      // Every client login has full access to that client's own data.
+      role: ROLES.ADMIN,
       phone: req.body.phone,
       isActive: req.body.isActive,
       passwordHash: await User.hashPassword(req.body.password),
@@ -121,14 +139,6 @@ router.put(
     const { password, ...rest } = req.body;
 
     await assertCredentialsFree(rest, user._id);
-
-    // An admin must not lock themselves out.
-    if (String(user._id) === String(req.user._id)) {
-      if (rest.isActive === false) throw ApiError.badRequest('You cannot deactivate your own account');
-      if (rest.role && rest.role !== ROLES.ADMIN) {
-        throw ApiError.badRequest('You cannot remove your own admin role');
-      }
-    }
 
     Object.assign(user, rest);
     if (password) user.passwordHash = await User.hashPassword(password);

@@ -1,4 +1,7 @@
 export const ROLES = {
+  /** The panel owner: manages clients and their logins, never sees client data. */
+  SUPERADMIN: 'superadmin',
+  /** What every client login is: full access to that client's own data. */
   ADMIN: 'admin',
   NOC_OPERATOR: 'noc_operator',
   FIELD_ENGINEER: 'field_engineer',
@@ -17,6 +20,7 @@ export const USERNAME_MAX = 32;
 export const USERNAME_PATTERN = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/;
 
 export const ROLE_LABELS = {
+  [ROLES.SUPERADMIN]: 'Owner',
   [ROLES.ADMIN]: 'Admin',
   [ROLES.NOC_OPERATOR]: 'NOC Operator',
   [ROLES.FIELD_ENGINEER]: 'Field Engineer',

@@ -1,4 +1,11 @@
 import Counter from '../models/Counter.js';
+import { getTenantId } from './tenantContext.js';
+
+/** Every client counts its own tickets and invoices from the start. */
+function scoped(key) {
+  const tenantId = getTenantId();
+  return tenantId ? `${tenantId}:${key}` : key;
+}
 
 /**
  * Atomically reserve the next value of a named sequence.
@@ -8,7 +15,8 @@ import Counter from '../models/Counter.js';
  * twice — the uniqueness requirement is enforced server-side, never by the
  * client.
  */
-export async function nextSequence(key, startAt = 1) {
+export async function nextSequence(rawKey, startAt = 1) {
+  const key = scoped(rawKey);
   const existing = await Counter.findById(key).lean();
 
   if (!existing) {
@@ -32,7 +40,7 @@ export async function nextSequence(key, startAt = 1) {
 /** Raise a sequence so the next issued value is at least `value`. */
 export async function ensureSequenceAtLeast(key, value) {
   await Counter.updateOne(
-    { _id: key },
+    { _id: scoped(key) },
     { $max: { seq: value } },
     { upsert: true },
   );

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import tenantScope from './plugins/tenantScope.js';
 
 const auditLogSchema = new mongoose.Schema(
   {
@@ -18,5 +19,7 @@ const auditLogSchema = new mongoose.Schema(
 );
 
 auditLogSchema.index({ createdAt: -1 });
+
+auditLogSchema.plugin(tenantScope);
 
 export default mongoose.model('AuditLog', auditLogSchema, 'audit_logs');

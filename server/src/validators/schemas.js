@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import {
-  ROLE_VALUES,
   TICKET_PRIORITIES,
   TICKET_STATUSES,
   INVOICE_STATUSES,
@@ -60,20 +59,37 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8, 'New password must be at least 8 characters'),
 });
 
+/**
+ * Every login belongs to one client and has full access to that client's data,
+ * so there is no role to pick. Only the panel owner creates logins.
+ */
 export const createUserSchema = z.object({
+  tenant: z
+    .string({ required_error: 'Client is required' })
+    .regex(/^[0-9a-fA-F]{24}$/, 'Select a client'),
   name: requiredText('Name'),
   username,
   email: z.string().trim().toLowerCase().email('A valid email address is required'),
   password,
-  role: z.enum(ROLE_VALUES, { errorMap: () => ({ message: 'Invalid role' }) }),
   phone: optionalText(40),
   isActive: z.boolean().optional().default(true),
 });
 
+// A login never moves between clients, so `tenant` is not editable.
 export const updateUserSchema = createUserSchema
   .partial()
-  .omit({ password: true })
+  .omit({ password: true, tenant: true })
   .extend({ password: password.optional() });
+
+export const tenantSchema = z.object({
+  name: requiredText('Company name', 120),
+  contactName: optionalText(120),
+  phone: optionalText(40),
+  notes: optionalText(1000),
+  isActive: z.boolean().optional().default(true),
+});
+
+export const tenantUpdateSchema = tenantSchema.partial();
 
 /** Admin-issued password reset — no current password, the admin is the authority. */
 export const resetPasswordSchema = z.object({ password });

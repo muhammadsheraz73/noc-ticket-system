@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import tenantScope from './plugins/tenantScope.js';
 
 /**
  * Customer master data.
@@ -13,7 +14,6 @@ const customerSchema = new mongoose.Schema(
     customerReferenceNumber: {
       type: String,
       required: [true, 'Customer Reference Number is required'],
-      unique: true,
       trim: true,
       index: true,
     },
@@ -63,5 +63,8 @@ customerSchema.set('toJSON', {
     return ret;
   },
 });
+
+customerSchema.plugin(tenantScope);
+customerSchema.index({ tenant: 1, customerReferenceNumber: 1 }, { unique: true });
 
 export default mongoose.model('Customer', customerSchema, 'customers');

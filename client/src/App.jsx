@@ -17,16 +17,22 @@ import InvoiceDetailPage from './pages/InvoiceDetailPage.jsx';
 import SearchPage from './pages/SearchPage.jsx';
 import NetworkPage from './pages/NetworkPage.jsx';
 import UsersPage from './pages/UsersPage.jsx';
+import ClientsPage from './pages/ClientsPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import BillingPage from './pages/BillingPage.jsx';
 
-/** Blocks unauthenticated access and, optionally, disallowed roles. */
-function Protected({ roles, children }) {
+/**
+ * Blocks unauthenticated access and, optionally, disallowed roles.
+ * The panel owner has no client data, so everywhere except the pages marked
+ * `ownerOk` they are sent to the Clients page.
+ */
+function Protected({ roles, ownerOk, children }) {
   const { user, ready } = useAuth();
   const location = useLocation();
 
   if (!ready) return <Loading label="Restoring your session…" />;
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  if (user.role === ROLES.SUPERADMIN && !ownerOk) return <Navigate to="/clients" replace />;
 
   if (roles && !roles.includes(user.role)) {
     return (
@@ -51,7 +57,7 @@ export default function App() {
 
       <Route
         element={
-          <Protected>
+          <Protected ownerOk>
             <Layout />
           </Protected>
         }
@@ -137,9 +143,17 @@ export default function App() {
           }
         />
         <Route
+          path="clients"
+          element={
+            <Protected ownerOk roles={[ROLES.SUPERADMIN]}>
+              <ClientsPage />
+            </Protected>
+          }
+        />
+        <Route
           path="users"
           element={
-            <Protected roles={[ROLES.ADMIN]}>
+            <Protected ownerOk roles={[ROLES.SUPERADMIN]}>
               <UsersPage />
             </Protected>
           }

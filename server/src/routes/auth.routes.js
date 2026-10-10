@@ -1,15 +1,26 @@
 import { Router } from 'express';
 import User from '../models/User.js';
+import Tenant from '../models/Tenant.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
-import { requireAuth, signToken } from '../middleware/auth.js';
+import { requireAnyAuth, signToken } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { authLimiter } from '../middleware/rateLimit.js';
 import { loginSchema, changePasswordSchema } from '../validators/schemas.js';
 import { recordAudit } from '../utils/audit.js';
-import { ROLE_LABELS } from '../utils/constants.js';
+import { ROLE_LABELS, ROLES } from '../utils/constants.js';
 
 const router = Router();
+
+/** The account as the UI sees it, including the client company it belongs to. */
+async function sessionUser(user) {
+  const tenant = user.tenant ? await Tenant.findById(user.tenant).select('name isActive').lean() : null;
+  return {
+    ...user.toJSON(),
+    roleLabel: ROLE_LABELS[user.role],
+    tenantName: tenant?.name || '',
+  };
+}
 
 /** POST /api/auth/login */
 router.post(
@@ -30,6 +41,13 @@ router.post(
     }
     if (!user.isActive) throw ApiError.forbidden('This account has been deactivated');
 
+    if (user.role !== ROLES.SUPERADMIN) {
+      const tenant = user.tenant ? await Tenant.findById(user.tenant).select('isActive').lean() : null;
+      if (!tenant || !tenant.isActive) {
+        throw ApiError.forbidden('Your company account is inactive. Please contact support.');
+      }
+    }
+
     user.lastLoginAt = new Date();
     await user.save();
 
@@ -38,7 +56,7 @@ router.post(
     res.json({
       success: true,
       token: signToken(user),
-      user: { ...user.toJSON(), roleLabel: ROLE_LABELS[user.role] },
+      user: await sessionUser(user),
     });
   }),
 );
@@ -46,11 +64,11 @@ router.post(
 /** GET /api/auth/me */
 router.get(
   '/me',
-  requireAuth,
+  requireAnyAuth,
   asyncHandler(async (req, res) => {
     res.json({
       success: true,
-      user: { ...req.user.toJSON(), roleLabel: ROLE_LABELS[req.user.role] },
+      user: await sessionUser(req.user),
       serverTime: new Date(),
     });
   }),
@@ -59,7 +77,7 @@ router.get(
 /** POST /api/auth/logout — JWTs are stateless; this exists for the audit trail. */
 router.post(
   '/logout',
-  requireAuth,
+  requireAnyAuth,
   asyncHandler(async (req, res) => {
     await recordAudit({ req, action: 'logout', entityType: 'User', entityId: req.user._id });
     res.json({ success: true, message: 'Signed out' });
@@ -69,7 +87,7 @@ router.post(
 /** POST /api/auth/change-password */
 router.post(
   '/change-password',
-  requireAuth,
+  requireAnyAuth,
   validate(changePasswordSchema),
   asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id).select('+passwordHash');

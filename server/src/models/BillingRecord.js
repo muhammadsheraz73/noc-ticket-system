@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import tenantScope from './plugins/tenantScope.js';
 
 const paymentSchema = new mongoose.Schema({
   amount: { type: Number, required: true, min: 0.01 },
@@ -48,5 +49,7 @@ billingRecordSchema.set('toJSON', {
     return ret;
   },
 });
+
+billingRecordSchema.plugin(tenantScope);
 
 export default mongoose.model('BillingRecord', billingRecordSchema, 'billing_records');

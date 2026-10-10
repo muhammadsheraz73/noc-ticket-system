@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import tenantScope from './plugins/tenantScope.js';
 import { INVOICE_STATUSES } from '../utils/constants.js';
 
 const invoiceItemSchema = new mongoose.Schema(
@@ -14,7 +15,7 @@ const invoiceItemSchema = new mongoose.Schema(
 /** Invoices are always created FROM an existing ticket, and stay linked to both. */
 const invoiceSchema = new mongoose.Schema(
   {
-    invoiceNumber: { type: String, required: true, unique: true, index: true },
+    invoiceNumber: { type: String, required: true },
 
     ticket: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket', required: true, index: true },
     ticketNumber: { type: Number, required: true, index: true },
@@ -62,5 +63,8 @@ invoiceSchema.set('toJSON', {
     return ret;
   },
 });
+
+invoiceSchema.plugin(tenantScope);
+invoiceSchema.index({ tenant: 1, invoiceNumber: 1 }, { unique: true });
 
 export default mongoose.model('Invoice', invoiceSchema, 'invoices');

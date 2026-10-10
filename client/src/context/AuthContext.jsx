@@ -4,6 +4,7 @@ import api, { TOKEN_KEY, setUnauthorizedHandler } from '../api/client.js';
 const AuthContext = createContext(null);
 
 export const ROLES = {
+  SUPERADMIN: 'superadmin',
   ADMIN: 'admin',
   NOC_OPERATOR: 'noc_operator',
   FIELD_ENGINEER: 'field_engineer',
@@ -89,6 +90,7 @@ export function AuthProvider({ children }) {
       },
       hasRole: (...roles) => Boolean(user) && roles.flat().includes(user.role),
       isAdmin: user?.role === ROLES.ADMIN,
+      isOwner: user?.role === ROLES.SUPERADMIN,
       canManageTickets: [ROLES.ADMIN, ROLES.NOC_OPERATOR].includes(user?.role),
       canManageInvoices: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR].includes(user?.role),
       canViewInvoices: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER].includes(user?.role),
