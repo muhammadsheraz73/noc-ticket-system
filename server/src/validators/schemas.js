@@ -81,11 +81,20 @@ export const updateUserSchema = createUserSchema
   .omit({ password: true, tenant: true })
   .extend({ password: password.optional() });
 
+const logoDataUrl = z
+  .string()
+  .max(400_000, 'Logo is too large')
+  .refine((v) => v === '' || /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(v), 'Logo must be a PNG, JPEG or WebP image');
+
+const hexColor = z.string().refine((v) => v === '' || /^#[0-9a-fA-F]{6}$/.test(v), 'Colour must look like #1a56db');
+
 export const tenantSchema = z.object({
   name: requiredText('Company name', 120),
   contactName: optionalText(120),
   phone: optionalText(40),
   notes: optionalText(1000),
+  logo: logoDataUrl.optional().default(''),
+  themeColor: hexColor.optional().default(''),
   isActive: z.boolean().optional().default(true),
 });
 

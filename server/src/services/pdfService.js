@@ -5,7 +5,11 @@ import PDFDocument from 'pdfkit';
 import env from '../config/env.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const LOGO_PATH = path.resolve(here, '..', 'assets', 'wellnet-logo.png');
+/** Decode an uploaded `data:image/...;base64,` logo, or null when there is none. */
+export function dataUrlToBuffer(dataUrl) {
+  const match = /^data:image\/(?:png|jpeg|webp);base64,(.+)$/.exec(dataUrl || '');
+  return match ? Buffer.from(match[1], 'base64') : null;
+}
 
 const COLORS = {
   ink: '#111111',
@@ -38,7 +42,9 @@ const shortDate = (value) => {
  * live on the linked Ticket/Customer instead and are looked up by the caller.
  */
 export function streamInvoicePdf(invoice, stream, extra = {}) {
-  const { ticketCategory = '', supervisorName = '', connectedFrom = '' } = extra;
+  const { ticketCategory = '', supervisorName = '', connectedFrom = '', branding = {} } = extra;
+  const companyName = branding.name || env.company.name;
+  const bandColor = /^#[0-9a-fA-F]{6}$/.test(branding.color || '') ? branding.color : COLORS.ink;
 
   const doc = new PDFDocument({ size: 'A4', margin: 40 });
   doc.pipe(stream);
@@ -65,9 +71,10 @@ export function streamInvoicePdf(invoice, stream, extra = {}) {
 
   // ---------- Header: logo + INVOICE ----------
   try {
-    doc.image(LOGO_PATH, left, 38, { width: 118 });
+    if (!branding.logo) throw new Error('no logo');
+    doc.image(branding.logo, left, 38, { fit: [150, 48] });
   } catch {
-    doc.font('Helvetica-Bold').fontSize(16).fillColor(COLORS.ink).text(env.company.name, left, 42);
+    doc.font('Helvetica-Bold').fontSize(16).fillColor(COLORS.ink).text(companyName, left, 42, { width: 300 });
   }
   doc.font('Helvetica-Bold').fontSize(30).fillColor(COLORS.ink).text('INVOICE', left, 44, {
     width: contentWidth,
@@ -76,7 +83,7 @@ export function streamInvoicePdf(invoice, stream, extra = {}) {
 
   // ---------- Tagline band ----------
   let y = 96;
-  doc.rect(left, y, contentWidth, 20).fill(COLORS.ink);
+  doc.rect(left, y, contentWidth, 20).fill(bandColor);
   doc
     .font('Helvetica-Bold')
     .fontSize(8.5)
@@ -93,7 +100,7 @@ export function streamInvoicePdf(invoice, stream, extra = {}) {
   const fromLabelWidth = 96;
   const fromValueWidth = contentWidth - fromLabelWidth;
   const fromRows = [
-    ['NAME:', env.company.name],
+    ['NAME:', companyName],
     ['ADDRESS:', env.company.address],
     ['CONTACT INFO:', `${env.company.phone} | ${env.company.email.toUpperCase()}`],
     ['SUPERVISION BY:', supervisorName],

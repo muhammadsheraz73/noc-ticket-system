@@ -7,6 +7,9 @@ const tenantSchema = new mongoose.Schema(
     contactName: { type: String, trim: true, default: '' },
     phone: { type: String, trim: true, default: '' },
     notes: { type: String, trim: true, default: '' },
+    /** Branding shown to this client's users: a small image as a data URL, and an accent colour. */
+    logo: { type: String, default: '' },
+    themeColor: { type: String, default: '' },
     isActive: { type: Boolean, default: true, index: true },
   },
   { timestamps: true },

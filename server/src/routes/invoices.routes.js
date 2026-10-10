@@ -17,7 +17,7 @@ import {
   updateInvoiceStatusSchema,
 } from '../validators/schemas.js';
 import { calculateTotals, generateInvoiceNumber } from '../services/invoiceService.js';
-import { renderInvoicePdfBuffer } from '../services/pdfService.js';
+import { renderInvoicePdfBuffer, dataUrlToBuffer } from '../services/pdfService.js';
 import { addDays } from '../utils/datetime.js';
 import { decorateTicket } from '../services/ticketService.js';
 import { fieldEngineerScope, assigneeFilter } from '../services/searchService.js';
@@ -235,6 +235,11 @@ router.get(
       ticketCategory: ticket?.issueType || '',
       supervisorName: ticket?.assignedToName || '',
       connectedFrom: customer?.connectedFrom || '',
+      branding: {
+        name: req.tenant?.name,
+        color: req.tenant?.themeColor,
+        logo: dataUrlToBuffer(req.tenant?.logo),
+      },
     });
 
     // The preview fetch (no `download=true`) deliberately does NOT advertise

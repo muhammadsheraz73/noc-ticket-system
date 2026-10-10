@@ -4,6 +4,7 @@ import { useAuth, ROLES } from '../context/AuthContext.jsx';
 import GlobalSearch from './GlobalSearch.jsx';
 import { initials, ROLE_LABELS } from '../utils/format.js';
 import { ConfirmDialog } from './ui.jsx';
+import { applyTheme } from '../utils/theme.js';
 
 const NAV = [
   {
@@ -62,6 +63,12 @@ export default function Layout() {
 
   useEffect(() => setSidebarOpen(false), [location.pathname]);
 
+  // Each client sees the panel in its own colour; leaving restores the default.
+  useEffect(() => {
+    applyTheme(user?.tenantTheme);
+    return () => applyTheme('');
+  }, [user?.tenantTheme]);
+
   useEffect(() => {
     const onClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) setMenuOpen(false);
@@ -81,9 +88,18 @@ export default function Layout() {
       <aside className={`sidebar${sidebarOpen ? ' is-open' : ''}`}>
         <div className="sidebar__brand">
           <div className="sidebar__logo">
-            <strong style={{ color: '#fff', fontSize: 18 }}>
-              {user?.role === ROLES.SUPERADMIN ? 'NOC Panel' : user?.tenantName || 'NOC Manager'}
-            </strong>
+            {user?.tenantLogo ? (
+              <img
+                src={user.tenantLogo}
+                alt={user.tenantName}
+                className="sidebar__logo-img"
+                style={{ height: 'auto', maxHeight: 44, maxWidth: '100%' }}
+              />
+            ) : (
+              <strong style={{ color: '#111', fontSize: 16 }}>
+                {user?.role === ROLES.SUPERADMIN ? 'NOC Panel' : user?.tenantName || 'NOC Manager'}
+              </strong>
+            )}
           </div>
         </div>
 
