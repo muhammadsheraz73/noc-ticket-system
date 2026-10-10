@@ -315,16 +315,6 @@ function SubscribersTab({ onNotice }) {
     }
   };
 
-  const generateAll = async () => {
-    try {
-      const month = monthStr();
-      const { data } = await api.post('/billing/records/generate', { period: month });
-      onNotice(`${month}: ${data.created} bills generated (${data.alreadyExisting} already existed).`);
-    } catch (e) {
-      setState((x) => ({ ...x, error: errorMessage(e) }));
-    }
-  };
-
   const remove = async (s) => {
     if (!window.confirm(`Delete ${s.username} and all their billing history?`)) return;
     try {
@@ -374,7 +364,6 @@ function SubscribersTab({ onNotice }) {
               <TextInput placeholder="Username, address, package…" value={query} onChange={(e) => setQuery(e.target.value)} />
             </Field>
           </div>
-          <button className="btn btn--secondary" onClick={generateAll}>Generate ALL BILLS</button>
           <button className="btn" onClick={() => { setError(''); setEditing({ ...EMPTY }); }}>＋ Add user</button>
           <button className="btn btn--secondary" onClick={() => fileRef.current?.click()} disabled={importing}>
             {importing ? 'Importing…' : '⭳ Import Excel'}
