@@ -17,15 +17,30 @@ import {
   updateInvoiceStatusSchema,
 } from '../validators/schemas.js';
 import { calculateTotals, generateInvoiceNumber } from '../services/invoiceService.js';
-import { streamInvoicePdf } from '../services/pdfService.js';
+import { renderInvoicePdfBuffer } from '../services/pdfService.js';
 import { addDays } from '../utils/datetime.js';
 import { decorateTicket } from '../services/ticketService.js';
+import { fieldEngineerScope, assigneeFilter } from '../services/searchService.js';
 
 const router = Router();
 router.use(requireAuth);
 
-const canRead = requireRole(ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR);
+const canRead = requireRole(ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER);
 const canWrite = requireRole(ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR);
+
+/** Ticket ids a field engineer is assigned to (as handler or helper) — invoices are scoped to these. */
+async function assignedTicketIds(user) {
+  const ids = await fieldEngineerScope(user);
+  return Ticket.find({ isDeleted: false, ...assigneeFilter(ids) }).distinct('_id');
+}
+
+/** A field engineer may only ever see an invoice for a ticket assigned to them. */
+async function assertFieldEngineerScope(invoice, user) {
+  if (user.role !== ROLES.FIELD_ENGINEER) return;
+  const ticketIds = await assignedTicketIds(user);
+  const allowed = ticketIds.some((id) => String(id) === String(invoice.ticket));
+  if (!allowed) throw ApiError.notFound(`No invoice found for "${invoice.invoiceNumber}"`);
+}
 
 /**
  * GET /api/invoices/lookup/:ticketNumber
@@ -34,7 +49,7 @@ const canWrite = requireRole(ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR);
  */
 router.get(
   '/lookup/:ticketNumber',
-  canRead,
+  canWrite,
   asyncHandler(async (req, res) => {
     const ticketNumber = Number.parseInt(req.params.ticketNumber, 10);
     if (!Number.isFinite(ticketNumber)) throw ApiError.badRequest('Ticket ID must be a number');
@@ -53,6 +68,7 @@ router.get(
       defaults: {
         currency: env.invoice.currency,
         taxPercent: env.invoice.taxPercent,
+        withholdingTaxPercent: env.invoice.withholdingTaxPercent,
         dueDays: env.invoice.dueDays,
         issueDate: new Date(),
         dueDate: addDays(new Date(), env.invoice.dueDays),
@@ -71,6 +87,7 @@ router.post(
       discountType: req.body.discountType,
       discountValue: req.body.discountValue,
       taxPercent: req.body.taxPercent,
+      withholdingTaxPercent: req.body.withholdingTaxPercent,
     });
     res.json({ success: true, ...totals, currency: env.invoice.currency });
   }),
@@ -87,6 +104,11 @@ router.get(
     if (req.query.status) filter.status = { $in: String(req.query.status).split(',') };
     if (req.query.customer) filter.customerReferenceNumber = String(req.query.customer);
     if (req.query.ticketNumber) filter.ticketNumber = Number.parseInt(req.query.ticketNumber, 10);
+
+    // A field engineer only ever sees invoices for tickets assigned to them.
+    if (req.user.role === ROLES.FIELD_ENGINEER) {
+      filter.ticket = { $in: await assignedTicketIds(req.user) };
+    }
 
     if (req.query.q) {
       const q = String(req.query.q).trim();
@@ -161,6 +183,8 @@ router.post(
       discountAmount: totals.discountAmount,
       taxPercent: req.body.taxPercent,
       taxAmount: totals.taxAmount,
+      withholdingTaxPercent: req.body.withholdingTaxPercent,
+      withholdingTaxAmount: totals.withholdingTaxAmount,
       total: totals.total,
       currency: env.invoice.currency,
       status: req.body.status,
@@ -188,6 +212,7 @@ router.get(
   canRead,
   asyncHandler(async (req, res) => {
     const invoice = await findInvoice(req.params.id);
+    await assertFieldEngineerScope(invoice, req.user);
     const ticket = await Ticket.findById(invoice.ticket).lean();
     const customer = await Customer.findById(invoice.customer).lean();
     res.json({ success: true, invoice, ticket, customer });
@@ -200,11 +225,30 @@ router.get(
   canRead,
   asyncHandler(async (req, res) => {
     const invoice = await findInvoice(req.params.id);
-    const disposition = req.query.download === 'true' ? 'attachment' : 'inline';
+    await assertFieldEngineerScope(invoice, req.user);
+    const [ticket, customer] = await Promise.all([
+      Ticket.findById(invoice.ticket).lean(),
+      Customer.findById(invoice.customer).lean(),
+    ]);
+    const isDownload = req.query.download === 'true';
+    const buffer = await renderInvoicePdfBuffer(invoice, {
+      ticketCategory: ticket?.issueType || '',
+      supervisorName: ticket?.assignedToName || '',
+      connectedFrom: customer?.connectedFrom || '',
+    });
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `${disposition}; filename="${invoice.invoiceNumber}.pdf"`);
-    streamInvoicePdf(invoice, res);
+    // The preview fetch (no `download=true`) deliberately does NOT advertise
+    // itself as a PDF — some hosts (e.g. a VS Code webview) auto-download any
+    // application/pdf response the moment it arrives, even from a plain XHR
+    // the page never asked to be saved. pdf.js only cares about the bytes, so
+    // a generic content type is enough for the in-page preview; only the
+    // explicit "Download" click gets the real PDF content type + attachment.
+    res.setHeader('Content-Type', isDownload ? 'application/pdf' : 'application/octet-stream');
+    res.setHeader('Content-Length', buffer.length);
+    if (isDownload) {
+      res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoiceNumber}.pdf"`);
+    }
+    res.end(buffer);
   }),
 );
 
@@ -223,6 +267,7 @@ router.put(
       discountType: req.body.discountType ?? invoice.discountType,
       discountValue: req.body.discountValue ?? invoice.discountValue,
       taxPercent: req.body.taxPercent ?? invoice.taxPercent,
+      withholdingTaxPercent: req.body.withholdingTaxPercent ?? invoice.withholdingTaxPercent,
     };
     const totals = calculateTotals(merged);
 
@@ -232,6 +277,7 @@ router.put(
       subtotal: totals.subtotal,
       discountAmount: totals.discountAmount,
       taxAmount: totals.taxAmount,
+      withholdingTaxAmount: totals.withholdingTaxAmount,
       total: totals.total,
       issueDate: req.body.issueDate ?? invoice.issueDate,
       dueDate: req.body.dueDate ?? invoice.dueDate,

@@ -8,7 +8,13 @@ const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
  * Compute every money field from the line items.
  * Totals are always recalculated server-side — the client's numbers are hints only.
  */
-export function calculateTotals({ items = [], discountType = 'none', discountValue = 0, taxPercent = 0 }) {
+export function calculateTotals({
+  items = [],
+  discountType = 'none',
+  discountValue = 0,
+  taxPercent = 0,
+  withholdingTaxPercent = 0,
+}) {
   const normalizedItems = items.map((item) => {
     const quantity = Math.max(0, Number(item.quantity) || 0);
     const rate = Math.max(0, Number(item.rate) || 0);
@@ -31,9 +37,10 @@ export function calculateTotals({ items = [], discountType = 'none', discountVal
 
   const taxable = round2(subtotal - discountAmount);
   const taxAmount = round2((taxable * Math.max(0, Number(taxPercent) || 0)) / 100);
-  const total = round2(taxable + taxAmount);
+  const withholdingTaxAmount = round2((taxable * Math.max(0, Number(withholdingTaxPercent) || 0)) / 100);
+  const total = round2(taxable + taxAmount - withholdingTaxAmount);
 
-  return { items: normalizedItems, subtotal, discountAmount, taxAmount, total };
+  return { items: normalizedItems, subtotal, discountAmount, taxAmount, withholdingTaxAmount, total };
 }
 
 /** `INV-2026-0001` — year-scoped, gap-free, generated server-side. */

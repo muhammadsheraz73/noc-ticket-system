@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { errorMessage } from '../api/client.js';
 import { Alert, Field, TextInput } from '../components/ui.jsx';
+import wellnetLogo from '../assets/wellnet-logo.png';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -34,11 +35,7 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-card__brand">
-          <div className="login-card__logo">NOC</div>
-          <div>
-            <h1 className="login-card__title">NOC Manager</h1>
-            <div className="small muted">Ticket &amp; Customer Network System</div>
-          </div>
+          <img src={wellnetLogo} alt="Wellnet" className="login-card__logo-img" />
         </div>
 
         <div className="login-card__intro">

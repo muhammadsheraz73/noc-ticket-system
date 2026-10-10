@@ -26,6 +26,7 @@ export default function CreateInvoicePage() {
   const [discountType, setDiscountType] = useState('none');
   const [discountValue, setDiscountValue] = useState(0);
   const [taxPercent, setTaxPercent] = useState(0);
+  const [withholdingTaxPercent, setWithholdingTaxPercent] = useState(0);
   const [status, setStatus] = useState('Unpaid');
   const [notes, setNotes] = useState('');
   const [issueDate, setIssueDate] = useState(today());
@@ -44,6 +45,7 @@ export default function CreateInvoicePage() {
       const { data } = await api.get(`/invoices/lookup/${number}`);
       setLookup(data);
       setTaxPercent(data.defaults.taxPercent ?? 0);
+      setWithholdingTaxPercent(data.defaults.withholdingTaxPercent ?? 0);
       setIssueDate(toInput(data.defaults.issueDate));
       setDueDate(toInput(data.defaults.dueDate));
       if (data.existingInvoices?.length) {
@@ -80,8 +82,16 @@ export default function CreateInvoicePage() {
     }
     const taxable = round2(subtotal - discountAmount);
     const taxAmount = round2((taxable * Math.max(0, Number(taxPercent) || 0)) / 100);
-    return { normalized, subtotal, discountAmount, taxAmount, total: round2(taxable + taxAmount) };
-  }, [items, discountType, discountValue, taxPercent]);
+    const withholdingTaxAmount = round2((taxable * Math.max(0, Number(withholdingTaxPercent) || 0)) / 100);
+    return {
+      normalized,
+      subtotal,
+      discountAmount,
+      taxAmount,
+      withholdingTaxAmount,
+      total: round2(taxable + taxAmount - withholdingTaxAmount),
+    };
+  }, [items, discountType, discountValue, taxPercent, withholdingTaxPercent]);
 
   const setItem = (index, key, value) =>
     setItems((current) => current.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
@@ -112,6 +122,7 @@ export default function CreateInvoicePage() {
         discountType,
         discountValue: Number(discountValue) || 0,
         taxPercent: Number(taxPercent) || 0,
+        withholdingTaxPercent: Number(withholdingTaxPercent) || 0,
         status,
         notes,
         issueDate: issueDate || undefined,
@@ -273,9 +284,13 @@ export default function CreateInvoicePage() {
                         <TextInput type="number" min="0" step="any" value={discountValue} disabled={discountType === 'none'}
                           onChange={(event) => setDiscountValue(event.target.value)} />
                       </Field>
-                      <Field label="Tax %" error={errors.taxPercent}>
+                      <Field label="Sales Tax %" error={errors.taxPercent}>
                         <TextInput type="number" min="0" max="100" step="any" value={taxPercent}
                           onChange={(event) => setTaxPercent(event.target.value)} />
+                      </Field>
+                      <Field label="Withholding Tax %" error={errors.withholdingTaxPercent}>
+                        <TextInput type="number" min="0" max="100" step="any" value={withholdingTaxPercent}
+                          onChange={(event) => setWithholdingTaxPercent(event.target.value)} />
                       </Field>
                       <Field label="Status">
                         <Select value={status} onChange={(event) => setStatus(event.target.value)}>
@@ -304,7 +319,10 @@ export default function CreateInvoicePage() {
                         </div>
                       ) : null}
                       {totals.taxAmount > 0 ? (
-                        <div className="totals__row"><span>Tax ({taxPercent}%)</span><span className="num">{formatMoney(totals.taxAmount, currency)}</span></div>
+                        <div className="totals__row"><span>Sales Tax ({taxPercent}%)</span><span className="num">{formatMoney(totals.taxAmount, currency)}</span></div>
+                      ) : null}
+                      {totals.withholdingTaxAmount > 0 ? (
+                        <div className="totals__row"><span>Withholding Tax ({withholdingTaxPercent}%)</span><span className="num">− {formatMoney(totals.withholdingTaxAmount, currency)}</span></div>
                       ) : null}
                       <div className="totals__row totals__row--total"><span>Total</span><span className="num">{formatMoney(totals.total, currency)}</span></div>
                     </div>

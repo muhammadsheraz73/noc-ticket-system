@@ -156,6 +156,7 @@ export const createInvoiceSchema = z.object({
   discountType: z.enum(['none', 'percent', 'amount']).default('none'),
   discountValue: z.coerce.number().min(0).default(0),
   taxPercent: z.coerce.number().min(0).max(100).default(0),
+  withholdingTaxPercent: z.coerce.number().min(0).max(100).default(0),
   status: z.enum(INVOICE_STATUSES).default('Draft'),
   notes: optionalText(1000),
 });

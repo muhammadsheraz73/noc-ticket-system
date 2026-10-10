@@ -146,7 +146,7 @@ export default function TicketsPage() {
 
         <div className="card__body card__body--flush">
           {state.loading ? (
-            <TableSkeleton rows={7} cols={8} />
+            <TableSkeleton rows={7} cols={10} />
           ) : state.items.length === 0 ? (
             <EmptyState
               icon="🎫"
@@ -160,7 +160,7 @@ export default function TicketsPage() {
                 <thead>
                   <tr>
                     <th>TID</th><th>Customer</th><th>Issue</th><th>Priority</th><th>Status</th>
-                    <th>Created</th><th>Time Left</th><th>Assigned To</th>
+                    <th>Created</th><th>Time Left</th><th>Assigned To</th><th>Helper</th><th>Assigned By</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -186,6 +186,8 @@ export default function TicketsPage() {
                         <Countdown ettrAt={ticket.ettrAt} frozen={ticket.timeLeft.frozen} frozenAt={ticket.resolvedAt} short />
                       </td>
                       <td className="nowrap">{ticket.assignedToName || <span className="muted">Unassigned</span>}</td>
+                      <td className="nowrap">{ticket.assignedHelperName || <span className="muted">—</span>}</td>
+                      <td className="nowrap">{ticket.assignedByName || <span className="muted">—</span>}</td>
                     </tr>
                   ))}
                 </tbody>

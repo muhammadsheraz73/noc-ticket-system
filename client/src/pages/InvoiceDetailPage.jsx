@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api, { errorMessage } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -6,6 +6,20 @@ import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import { Alert, Badge, ConfirmDialog, DefItem, Loading, Select } from '../components/ui.jsx';
 import { INVOICE_TONE, STATUS_TONE, formatDate, formatDateTime, formatMoney } from '../utils/format.js';
+
+/** pdf.js is ~1MB — loaded on demand rather than bundled into the main chunk. */
+let pdfjsReady;
+function loadPdfjs() {
+  if (!pdfjsReady) {
+    pdfjsReady = Promise.all([import('pdfjs-dist'), import('pdfjs-dist/build/pdf.worker.min.mjs?url')]).then(
+      ([pdfjsLib, worker]) => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = worker.default;
+        return pdfjsLib;
+      },
+    );
+  }
+  return pdfjsReady;
+}
 
 const STATUSES = ['Draft', 'Unpaid', 'Paid', 'Cancelled'];
 
@@ -20,8 +34,11 @@ export default function InvoiceDetailPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [pdfUrl, setPdfUrl] = useState('');
+  const [pdfBytes, setPdfBytes] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [previewError, setPreviewError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const previewRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
@@ -45,12 +62,15 @@ export default function InvoiceDetailPage() {
     setPdfLoading(true);
     try {
       const response = await api.get(`/invoices/${id}/pdf`, { responseType: 'blob' });
-      const url = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const url = URL.createObjectURL(blob);
       setPdfUrl(url);
-      return url;
+      setPdfBytes(bytes);
+      return { url, bytes };
     } catch (err) {
       toast.error('Could not generate the PDF', errorMessage(err));
-      return '';
+      return { url: '', bytes: null };
     } finally {
       setPdfLoading(false);
     }
@@ -59,27 +79,71 @@ export default function InvoiceDetailPage() {
   useEffect(() => {
     if (!data) return undefined;
     let created = '';
-    fetchPdf().then((url) => { created = url; });
+    fetchPdf().then(({ url }) => { created = url; });
     return () => {
       if (created) URL.revokeObjectURL(created);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?._id ?? data?.invoice?._id]);
 
+  /**
+   * Rendered to <canvas> with pdf.js rather than embedded via <iframe> — some
+   * hosts (e.g. a VS Code webview) have no native PDF viewer, so an iframe'd
+   * blob silently fails and can trigger an unwanted browser download instead.
+   */
+  useEffect(() => {
+    if (!pdfBytes) return undefined;
+    let cancelled = false;
+    setPreviewError('');
+    const container = previewRef.current;
+    if (container) container.innerHTML = '';
+
+    (async () => {
+      try {
+        const pdfjsLib = await loadPdfjs();
+        const pdf = await pdfjsLib.getDocument({ data: pdfBytes.slice() }).promise;
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          if (cancelled) return;
+          const page = await pdf.getPage(pageNumber);
+          const viewport = page.getViewport({ scale: 1.4 });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          canvas.style.width = '100%';
+          canvas.style.height = 'auto';
+          canvas.style.display = 'block';
+          canvas.style.marginBottom = '10px';
+          canvas.style.boxShadow = '0 1px 4px rgba(15, 23, 42, 0.12)';
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+          if (!cancelled && container) container.appendChild(canvas);
+        }
+      } catch (err) {
+        if (!cancelled) setPreviewError(err?.message || 'Could not render the PDF preview');
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [pdfBytes]);
+
   const download = async () => {
-    const url = pdfUrl || (await fetchPdf());
-    if (!url) return;
+    // Reuses the bytes already fetched for the preview — no extra request,
+    // and no network response for the browser/host to intercept mid-flight.
+    const bytes = pdfBytes || (await fetchPdf()).bytes;
+    if (!bytes) return;
+
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
     const link = document.createElement('a');
     link.href = url;
     link.download = `${data.invoice.invoiceNumber}.pdf`;
     document.body.appendChild(link);
     link.click();
     link.remove();
+    URL.revokeObjectURL(url);
     toast.success('Invoice downloaded', `${data.invoice.invoiceNumber}.pdf`);
   };
 
   const print = async () => {
-    const url = pdfUrl || (await fetchPdf());
+    const url = pdfUrl || (await fetchPdf()).url;
     if (!url) return;
     const win = window.open(url, '_blank');
     if (win) win.addEventListener('load', () => win.print());
@@ -139,11 +203,19 @@ export default function InvoiceDetailPage() {
             <div className="card__head-actions"><Badge tone={INVOICE_TONE[invoice.status]}>{invoice.status}</Badge></div>
           </div>
           <div className="card__body">
-            {pdfUrl ? (
-              <iframe
-                title={`Invoice ${invoice.invoiceNumber}`}
-                src={pdfUrl}
-                style={{ width: '100%', height: 620, border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)' }}
+            {previewError ? <Alert tone="error" title="Could not render the preview">{previewError}</Alert> : null}
+            {pdfBytes ? (
+              <div
+                ref={previewRef}
+                style={{
+                  width: '100%',
+                  maxHeight: 620,
+                  overflowY: 'auto',
+                  border: '1px solid var(--line)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: 10,
+                  background: '#f1f5f9',
+                }}
               />
             ) : (
               <Loading label="Generating PDF preview…" />
@@ -217,7 +289,10 @@ export default function InvoiceDetailPage() {
                   </div>
                 ) : null}
                 {invoice.taxAmount > 0 ? (
-                  <div className="totals__row"><span>Tax ({invoice.taxPercent}%)</span><span className="num">{formatMoney(invoice.taxAmount, invoice.currency)}</span></div>
+                  <div className="totals__row"><span>Sales Tax ({invoice.taxPercent}%)</span><span className="num">{formatMoney(invoice.taxAmount, invoice.currency)}</span></div>
+                ) : null}
+                {invoice.withholdingTaxAmount > 0 ? (
+                  <div className="totals__row"><span>Withholding Tax ({invoice.withholdingTaxPercent}%)</span><span className="num">− {formatMoney(invoice.withholdingTaxAmount, invoice.currency)}</span></div>
                 ) : null}
                 <div className="totals__row totals__row--total"><span>Total</span><span className="num">{formatMoney(invoice.total, invoice.currency)}</span></div>
               </div>

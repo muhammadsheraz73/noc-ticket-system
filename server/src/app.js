@@ -49,7 +49,14 @@ export function createApp() {
       },
     }),
   );
-  app.use(compression());
+  app.use(
+    compression({
+      // A PDF response is sent with an exact Content-Length so clients that
+      // mishandle chunked binary bodies (some embedded webviews) still get a
+      // complete file; gzip re-streaming it as chunked would undo that.
+      filter: (req, res) => (req.path.endsWith('/pdf') ? false : compression.filter(req, res)),
+    }),
+  );
 
   app.use((req, res, next) => {
     // The client always calls the relative `/api` path, so in every real

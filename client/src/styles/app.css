@@ -11,10 +11,10 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --brand: #0e4f8f;
-  --brand-dark: #0a3a6b;
-  --brand-light: #eaf2fb;
-  --brand-accent: #1a76d2;
+  --brand: #e35a00;
+  --brand-dark: #b84800;
+  --brand-light: #fff1e6;
+  --brand-accent: #ff6b00;
 
   --ink: #0f172a;
   --ink-2: #334155;
@@ -110,8 +110,8 @@ a:hover { text-decoration: underline; }
 .sidebar {
   width: var(--sidebar-w);
   flex: 0 0 var(--sidebar-w);
-  background: linear-gradient(180deg, #0d2c4f 0%, #0a2340 100%);
-  color: #cbd9e8;
+  background: linear-gradient(180deg, #1c1c1c 0%, #0c0c0c 100%);
+  color: #cfc9c2;
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -123,20 +123,18 @@ a:hover { text-decoration: underline; }
 .sidebar__brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: var(--topbar-h);
-  padding: 0 18px;
+  justify-content: center;
+  padding: 16px 2px;
+  margin: 6px;
+  border-radius: 10px;
+  background: #fff;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex: 0 0 auto;
 }
 .sidebar__logo {
-  width: 30px; height: 30px; border-radius: 8px;
-  background: var(--brand-accent); color: #fff;
-  display: grid; place-items: center;
-  font-weight: 800; font-size: 13px; letter-spacing: -0.5px;
+  display: grid; place-items: center; width: 100%;
 }
-.sidebar__title { color: #fff; font-weight: 700; font-size: 14px; line-height: 1.1; }
-.sidebar__subtitle { font-size: 10.5px; color: #7f9cbb; letter-spacing: 0.4px; text-transform: uppercase; }
+.sidebar__logo-img { height: 26px; width: auto; display: block; }
 
 .sidebar__nav {
   flex: 1 1 auto; overflow-y: auto; padding: 12px 10px 24px;
@@ -146,13 +144,13 @@ a:hover { text-decoration: underline; }
 .sidebar__group { margin-top: 16px; }
 .sidebar__group-label {
   font-size: 10px; letter-spacing: 0.9px; text-transform: uppercase;
-  color: #5f7d9c; padding: 0 10px 6px; font-weight: 700;
+  color: #857c70; padding: 0 10px 6px; font-weight: 700;
 }
 .sidebar__link {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 10px; margin-bottom: 2px;
   border-radius: var(--radius-sm);
-  color: #cbd9e8; font-weight: 500; font-size: 13.5px;
+  color: #cfc9c2; font-weight: 500; font-size: 13.5px;
   transition: background 0.15s, color 0.15s;
 }
 .sidebar__link:hover { background: rgba(255, 255, 255, 0.07); color: #fff; text-decoration: none; }
@@ -166,7 +164,7 @@ a:hover { text-decoration: underline; }
 
 .sidebar__footer {
   padding: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 11.5px; color: #7f9cbb;
+  font-size: 11.5px; color: #a39a8f;
 }
 
 .main {
@@ -347,7 +345,7 @@ a.stat:hover { border-color: var(--brand-accent); text-decoration: none; }
 }
 .input:focus, .select:focus, .textarea:focus {
   outline: none; border-color: var(--brand-accent);
-  box-shadow: 0 0 0 3px rgba(26, 118, 210, 0.15);
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.16);
 }
 .input:disabled, .select:disabled, .textarea:disabled { background: var(--bg); color: var(--muted); }
 .input.has-error, .select.has-error, .textarea.has-error { border-color: var(--danger); }
@@ -494,7 +492,7 @@ a.stat:hover { border-color: var(--brand-accent); text-decoration: none; }
   border: 1px solid var(--line-strong); border-radius: 20px;
   font: inherit; font-size: 13.5px; background: var(--bg);
 }
-.gsearch__input:focus { outline: none; background: #fff; border-color: var(--brand-accent); box-shadow: 0 0 0 3px rgba(26, 118, 210, 0.13); }
+.gsearch__input:focus { outline: none; background: #fff; border-color: var(--brand-accent); box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.14); }
 .gsearch__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--ink); pointer-events: none; }
 .gsearch__panel {
   position: absolute; top: calc(100% + 6px); left: 0; right: 0;
@@ -586,30 +584,22 @@ a.stat:hover { border-color: var(--brand-accent); text-decoration: none; }
 .login-page {
   min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 18px; padding: 20px;
-  background:
-    radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.08), transparent 40%),
-    radial-gradient(circle at 85% 85%, rgba(26, 118, 210, 0.35), transparent 45%),
-    linear-gradient(135deg, #0a2440 0%, #0e4f8f 55%, #1a76d2 100%);
+  background: var(--bg);
 }
 .login-card {
-  width: 100%; max-width: 408px; background: var(--surface);
-  border: 1px solid rgba(15, 23, 42, 0.04);
-  border-radius: 16px; box-shadow: var(--shadow-lg); padding: 32px 30px;
+  width: 100%; max-width: 396px; background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--brand-accent);
+  border-radius: 12px; box-shadow: var(--shadow); padding: 36px 32px 32px;
 }
-.login-card__brand { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
-.login-card__logo {
-  width: 44px; height: 44px; border-radius: 12px;
-  background: linear-gradient(135deg, var(--brand-accent), var(--brand-dark));
-  color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 16px;
-  box-shadow: 0 4px 10px rgba(14, 79, 143, 0.35);
-}
-.login-card__title { font-size: 18px; font-weight: 750; margin: 0; color: var(--ink); }
-.login-card__intro { margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
-.login-card__heading { font-size: 16px; font-weight: 750; margin: 0 0 3px; color: var(--ink); }
+.login-card__brand { display: flex; align-items: center; justify-content: center; margin-bottom: 26px; }
+.login-card__logo-img { height: 46px; width: auto; display: block; }
+.login-card__intro { margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); text-align: center; }
+.login-card__heading { font-size: 17px; font-weight: 700; margin: 0 0 4px; color: var(--ink); }
 .login-card__footer {
-  margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); text-align: center;
+  margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); text-align: center;
 }
-.login-page__footer { color: rgba(255, 255, 255, 0.72); text-align: center; }
+.login-page__footer { color: var(--muted); text-align: center; }
 
 /* ----------------------------------------------------------- misc blocks */
 .filters {

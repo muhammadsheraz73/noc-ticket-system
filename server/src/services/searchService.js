@@ -28,8 +28,13 @@ export async function globalSearch(rawQuery, { user, limit = 10 } = {}) {
   const asNumber = Number.parseInt(q, 10);
   const isNumeric = Number.isFinite(asNumber) && /^\d+$/.test(q);
 
-  const canSeeInvoices = [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR].includes(user.role);
+  const canSeeInvoices = [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER].includes(
+    user.role,
+  );
   const isFieldEngineer = user.role === ROLES.FIELD_ENGINEER;
+  const scopedTicketIds = isFieldEngineer
+    ? await Ticket.find({ isDeleted: false, ...assigneeFilter(await fieldEngineerScope(user)) }).distinct('_id')
+    : null;
 
   const ticketFilter = {
     isDeleted: false,
@@ -50,8 +55,7 @@ export async function globalSearch(rawQuery, { user, limit = 10 } = {}) {
   // primary handler or as the helper) — combined with the search text via
   // $and, since a Mongo filter object can only hold one top-level $or.
   if (isFieldEngineer) {
-    const ids = await fieldEngineerScope(user);
-    ticketFilter.$and = [{ $or: ticketFilter.$or }, assigneeFilter(ids)];
+    ticketFilter.$and = [{ $or: ticketFilter.$or }, { _id: { $in: scopedTicketIds } }];
     delete ticketFilter.$or;
   }
 
@@ -79,6 +83,7 @@ export async function globalSearch(rawQuery, { user, limit = 10 } = {}) {
     canSeeInvoices
       ? Invoice.find({
           isDeleted: false,
+          ...(isFieldEngineer ? { ticket: { $in: scopedTicketIds } } : {}),
           $or: [
             { invoiceNumber: rx },
             { customerReferenceNumber: rx },

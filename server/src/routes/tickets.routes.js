@@ -291,6 +291,8 @@ router.post(
     const helper = req.body.assignedHelper ? await resolveAssignee(req.body.assignedHelper) : null;
 
     const previous = ticket.assignedToName || 'unassigned';
+    ticket.assignedBy = req.user._id;
+    ticket.assignedByName = req.user.name;
     ticket.assignedTo = assignee._id;
     ticket.assignedToName = assignee.name;
     ticket.assignedAt = new Date();

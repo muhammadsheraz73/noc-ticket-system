@@ -3,6 +3,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, ROLES } from '../context/AuthContext.jsx';
 import GlobalSearch from './GlobalSearch.jsx';
 import { initials, ROLE_LABELS } from '../utils/format.js';
+import wellnetLogo from '../assets/wellnet-logo.png';
+import { ConfirmDialog } from './ui.jsx';
 
 const NAV = [
   {
@@ -17,7 +19,7 @@ const NAV = [
   {
     group: 'Billing',
     items: [
-      { to: '/invoices', label: 'Invoices', icon: '🧾', roles: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR] },
+      { to: '/invoices', label: 'Invoices', icon: '🧾', roles: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER] },
       { to: '/invoices/new', label: 'Create Invoice', icon: '＋', roles: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR] },
     ],
   },
@@ -43,6 +45,8 @@ export default function Layout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => setSidebarOpen(false), [location.pathname]);
@@ -64,10 +68,8 @@ export default function Layout() {
     <div className="app-shell">
       <aside className={`sidebar${sidebarOpen ? ' is-open' : ''}`}>
         <div className="sidebar__brand">
-          <div className="sidebar__logo">NOC</div>
-          <div>
-            <div className="sidebar__title">NOC Manager</div>
-            <div className="sidebar__subtitle">Ticket &amp; Network</div>
+          <div className="sidebar__logo">
+            <img src={wellnetLogo} alt="Wellnet" className="sidebar__logo-img" />
           </div>
         </div>
 
@@ -137,10 +139,9 @@ export default function Layout() {
                 </button>
                 <button
                   className="usermenu__item usermenu__item--danger"
-                  onClick={async () => {
+                  onClick={() => {
                     setMenuOpen(false);
-                    await logout();
-                    navigate('/login');
+                    setLogoutOpen(true);
                   }}
                 >
                   ⏻ Sign out
@@ -154,6 +155,21 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      <ConfirmDialog
+        open={logoutOpen}
+        title="Sign out?"
+        message="You'll need to sign in again to access the operations console."
+        confirmLabel="Sign out"
+        tone="danger"
+        busy={loggingOut}
+        onCancel={() => setLogoutOpen(false)}
+        onConfirm={async () => {
+          setLoggingOut(true);
+          await logout();
+          navigate('/login');
+        }}
+      />
     </div>
   );
 }

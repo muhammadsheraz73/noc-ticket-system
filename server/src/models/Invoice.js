@@ -36,6 +36,8 @@ const invoiceSchema = new mongoose.Schema(
     discountAmount: { type: Number, default: 0, min: 0 },
     taxPercent: { type: Number, default: 0, min: 0 },
     taxAmount: { type: Number, default: 0, min: 0 },
+    withholdingTaxPercent: { type: Number, default: 0, min: 0 },
+    withholdingTaxAmount: { type: Number, default: 0, min: 0 },
     total: { type: Number, required: true, default: 0 },
     currency: { type: String, default: 'PKR' },
 

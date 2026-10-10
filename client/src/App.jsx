@@ -96,7 +96,7 @@ export default function App() {
         <Route
           path="invoices"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
+            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER]}>
               <InvoicesPage />
             </Protected>
           }
@@ -112,7 +112,7 @@ export default function App() {
         <Route
           path="invoices/:id"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
+            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER]}>
               <InvoiceDetailPage />
             </Protected>
           }
