@@ -315,6 +315,16 @@ function SubscribersTab({ onNotice }) {
     }
   };
 
+  const generateBill = async (s) => {
+    try {
+      const month = monthStr();
+      const { data } = await api.post('/billing/records/generate', { period: month, subscriberId: s._id });
+      onNotice(data.created ? `${s.username}: ${month} bill generated.` : `${s.username}: ${month} bill already exists.`);
+    } catch (e) {
+      setState((x) => ({ ...x, error: errorMessage(e) }));
+    }
+  };
+
   const remove = async (s) => {
     if (!window.confirm(`Delete ${s.username} and all their billing history?`)) return;
     try {
@@ -394,6 +404,7 @@ function SubscribersTab({ onNotice }) {
                       <td className="text-right num">{formatMoney(s.monthlyFee)}</td>
                       <td><Badge tone={s.status === 'Active' ? 'ok' : 'neutral'}>{s.status}</Badge></td>
                       <td className="text-right"><div className="row-actions">
+                        <button className="btn btn--sm" onClick={() => generateBill(s)}>Generate Bill</button>
                         <button className="btn btn--secondary btn--sm" onClick={() => { setError(''); setEditing({ ...s }); }}>Edit</button>
                         {user?.role === 'admin' ? (
                           <button className="btn btn--secondary btn--sm btn--delete" onClick={() => remove(s)}>Delete</button>

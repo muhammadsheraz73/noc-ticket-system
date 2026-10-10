@@ -218,7 +218,10 @@ router.post(
   '/records/generate',
   asyncHandler(async (req, res) => {
     const p = period(req.body.period);
-    const subscribers = await Subscriber.find({ status: 'Active' }).lean();
+    const only = req.body.subscriberId;
+    if (only && !mongoose.isValidObjectId(only)) throw ApiError.badRequest('Invalid subscriber');
+    const subscribers = await Subscriber.find(only ? { _id: only } : { status: 'Active' }).lean();
+    if (only && !subscribers.length) throw ApiError.notFound('Subscriber not found');
     const existing = new Set((await BillingRecord.find({ period: p }).distinct('subscriber')).map(String));
     const fresh = subscribers.filter((s) => !existing.has(String(s._id)));
     if (fresh.length) {
