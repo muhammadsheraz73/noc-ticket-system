@@ -26,7 +26,7 @@ const list = (value, fallback) =>
     .filter(Boolean);
 
 const DEFAULT_MODELS = {
-  openrouter: 'inclusionai/ling-3.0-flash-vl:free',
+  openrouter: 'openrouter/free',
   anthropic: 'claude-opus-5',
 };
 

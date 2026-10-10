@@ -155,7 +155,26 @@ export async function analyzeTicket(input) {
 /* OpenRouter (OpenAI-compatible)                                             */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Free OpenRouter models come and go. `openrouter/free` is OpenRouter's own
+ * router over whatever free models are live (with tool support), so it is the
+ * always-available fallback when the configured model is retired or paid-only.
+ */
+const FALLBACK_MODEL = 'openrouter/free';
+
 async function callOpenRouter(prompt) {
+  try {
+    return await requestOpenRouter(prompt, env.ai.model);
+  } catch (error) {
+    const retryable =
+      error instanceof OpenRouterError || error?.name === 'TimeoutError' || error?.name === 'AbortError';
+    if (!retryable || env.ai.model === FALLBACK_MODEL) throw error;
+    console.warn(`AI model ${env.ai.model} failed (${error.message}); retrying with ${FALLBACK_MODEL}`);
+    return requestOpenRouter(prompt, FALLBACK_MODEL);
+  }
+}
+
+async function requestOpenRouter(prompt, modelSlug) {
   const headers = {
     Authorization: `Bearer ${env.ai.apiKey}`,
     'Content-Type': 'application/json',
@@ -169,7 +188,7 @@ async function callOpenRouter(prompt) {
     headers,
     signal: AbortSignal.timeout(env.ai.timeoutMs),
     body: JSON.stringify({
-      model: env.ai.model,
+      model: modelSlug,
       max_tokens: 8000,
       // A triage classification is a simple task - low effort keeps it fast.
       reasoning: { effort: 'low' },
@@ -211,7 +230,7 @@ async function callOpenRouter(prompt) {
     ? safeJsonParse(toolCall.function.arguments)
     : extractJsonFromText(message.content);
 
-  return { parsed, model: body.model || env.ai.model };
+  return { parsed, model: body.model || modelSlug };
 }
 
 class OpenRouterError extends Error {
