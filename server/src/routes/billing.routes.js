@@ -18,7 +18,6 @@ router.use(requireAuth);
 router.use(requireRole(ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR));
 
 const PERIOD = /^\d{4}-(0[1-9]|1[0-2])$/;
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: env.timezone }).format(new Date());
 const currentPeriod = () => today().slice(0, 7);
 const period = (value) => {
@@ -283,73 +282,6 @@ router.delete(
     await record.save();
     await recordAudit({ req, action: 'delete', entityType: 'Billing', entityId: record._id, entityLabel: `payment ${record.username} ${record.period}` });
     res.json({ success: true, record });
-  }),
-);
-
-/* -------------------------------- recovery -------------------------------- */
-
-/** GET /api/billing/recovery?date=YYYY-MM-DD — what was collected that day + the month so far. */
-router.get(
-  '/recovery',
-  asyncHandler(async (req, res) => {
-    const date = String(req.query.date || today());
-    if (!DAY.test(date)) throw ApiError.badRequest('Date must look like 2026-10-10');
-    const p = date.slice(0, 7);
-    const dayOf = { $dateToString: { format: '%Y-%m-%d', date: '$payments.receivedAt', timezone: env.timezone } };
-
-    const [payments, daily, month] = await Promise.all([
-      BillingRecord.aggregate([
-        { $unwind: '$payments' },
-        { $addFields: { day: dayOf } },
-        { $match: { day: date } },
-        { $sort: { 'payments.receivedAt': 1 } },
-        {
-          $project: {
-            _id: 0,
-            recordId: '$_id',
-            paymentId: '$payments._id',
-            username: 1,
-            period: 1,
-            amount: '$payments.amount',
-            receivedBy: '$payments.receivedBy',
-            receivedAt: '$payments.receivedAt',
-            note: '$payments.note',
-          },
-        },
-      ]),
-      BillingRecord.aggregate([
-        { $unwind: '$payments' },
-        { $addFields: { day: dayOf } },
-        { $match: { day: { $regex: `^${p}` } } },
-        { $group: { _id: '$day', amount: { $sum: '$payments.amount' }, count: { $sum: 1 } } },
-        { $sort: { _id: 1 } },
-      ]),
-      BillingRecord.aggregate([
-        { $match: { period: p } },
-        { $group: { _id: null, fee: { $sum: '$fee' }, received: { $sum: '$received' }, arrears: { $sum: '$arrears' } } },
-      ]),
-    ]);
-
-    const byReceiver = {};
-    for (const x of payments) {
-      const key = x.receivedBy || 'Unknown';
-      byReceiver[key] = (byReceiver[key] || 0) + x.amount;
-    }
-    res.json({
-      success: true,
-      date,
-      total: payments.reduce((sum, x) => sum + x.amount, 0),
-      count: payments.length,
-      byReceiver: Object.entries(byReceiver)
-        .map(([name, amount]) => ({ name, amount }))
-        .sort((a, b) => b.amount - a.amount),
-      payments,
-      month: {
-        period: p,
-        daily: daily.map((d) => ({ date: d._id, amount: d.amount, count: d.count })),
-        ...(month[0] || { fee: 0, received: 0, arrears: 0 }),
-      },
-    });
   }),
 );
 

@@ -22,13 +22,12 @@ export default function BillingPage() {
     <>
       <PageHead
         title="Billing"
-        subtitle="Monthly bills, payments received and daily recovery — replaces the Excel sheet."
+        subtitle="Monthly bills, payments received — replaces the Excel sheet."
       />
       {notice ? <Alert tone="success" title="Done">{notice}</Alert> : null}
       <Tabs
         tabs={[
           { key: 'bills', label: 'Monthly Bills' },
-          { key: 'recovery', label: 'Daily Recovery' },
           { key: 'subscribers', label: 'Users' },
         ]}
         active={tab}
@@ -36,7 +35,6 @@ export default function BillingPage() {
       />
       <div className="stack" style={{ marginTop: 16 }}>
         {tab === 'bills' && <BillsTab />}
-        {tab === 'recovery' && <RecoveryTab />}
         {tab === 'subscribers' && <SubscribersTab onNotice={setNotice} />}
       </div>
     </>
@@ -274,101 +272,6 @@ function PaymentModal({ record, defaultReceiver, onClose, onChanged }) {
         </>
       ) : null}
     </Modal>
-  );
-}
-
-/* ------------------------------ Daily recovery ----------------------------- */
-
-function RecoveryTab() {
-  const [date, setDate] = useState(todayStr());
-  const [state, setState] = useState({ data: null, loading: true, error: '' });
-
-  useEffect(() => {
-    let cancelled = false;
-    setState((s) => ({ ...s, loading: true }));
-    api.get('/billing/recovery', { params: { date } })
-      .then(({ data }) => !cancelled && setState({ data, loading: false, error: '' }))
-      .catch((e) => !cancelled && setState({ data: null, loading: false, error: errorMessage(e) }));
-    return () => { cancelled = true; };
-  }, [date]);
-
-  const d = state.data;
-  return (
-    <>
-      {state.error ? <Alert tone="error" title="Could not load recovery">{state.error}</Alert> : null}
-      <div className="card">
-        <div className="filters">
-          <div className="filters__item">
-            <Field label="Day">
-              <TextInput type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
-            </Field>
-          </div>
-        </div>
-      </div>
-
-      {d ? (
-        <>
-          <div className="grid grid--stats">
-            <Stat label={`Recovered on ${d.date}`} value={formatMoney(d.total)} hint={`${d.count} payments`} tone="ok" />
-            <Stat label={`${d.month.period} recovered`} value={formatMoney(d.month.received)} hint={`of ${formatMoney(d.month.fee)} billed`} />
-            <Stat label={`${d.month.period} outstanding`} value={formatMoney(d.month.arrears)} tone="danger" />
-          </div>
-
-          {d.byReceiver.length ? (
-            <div className="card">
-              <div className="card__body">
-                <h4>By receiver</h4>
-                {d.byReceiver.map((r) => (
-                  <div key={r.name} className="row-between"><span>{r.name}</span><strong>{formatMoney(r.amount)}</strong></div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="card">
-            <div className="card__body card__body--flush">
-              {d.payments.length === 0 ? (
-                <EmptyState icon="💰" title="No payments on this day" />
-              ) : (
-                <div className="table-wrap">
-                  <table className="table">
-                    <thead><tr><th>Time</th><th>User</th><th>Month</th><th className="text-right">Amount</th><th>Rec. By</th></tr></thead>
-                    <tbody>
-                      {d.payments.map((p) => (
-                        <tr key={p.paymentId}>
-                          <td className="nowrap small">{formatDateTime(p.receivedAt)}</td>
-                          <td className="strong">{p.username}</td>
-                          <td className="small">{p.period}</td>
-                          <td className="text-right num">{formatMoney(p.amount)}</td>
-                          <td className="small">{p.receivedBy}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card__body card__body--flush">
-              <div className="table-wrap">
-                <table className="table">
-                  <thead><tr><th>Day ({d.month.period})</th><th>Payments</th><th className="text-right">Recovered</th></tr></thead>
-                  <tbody>
-                    {d.month.daily.map((x) => (
-                      <tr key={x.date} style={{ cursor: 'pointer' }} onClick={() => setDate(x.date)}>
-                        <td>{x.date}</td><td>{x.count}</td><td className="text-right num">{formatMoney(x.amount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </>
-      ) : state.loading ? <TableSkeleton rows={4} cols={4} /> : null}
-    </>
   );
 }
 
