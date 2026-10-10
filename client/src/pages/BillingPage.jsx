@@ -393,12 +393,12 @@ function SubscribersTab({ onNotice }) {
                       <td className="small">{s.address}</td>
                       <td className="text-right num">{formatMoney(s.monthlyFee)}</td>
                       <td><Badge tone={s.status === 'Active' ? 'ok' : 'neutral'}>{s.status}</Badge></td>
-                      <td className="row-actions">
+                      <td className="text-right"><div className="row-actions">
                         <button className="btn btn--secondary btn--sm" onClick={() => { setError(''); setEditing({ ...s }); }}>Edit</button>
                         {user?.role === 'admin' ? (
                           <button className="btn btn--secondary btn--sm btn--delete" onClick={() => remove(s)}>Delete</button>
                         ) : null}
-                      </td>
+                      </div></td>
                     </tr>
                   ))}
                 </tbody>
