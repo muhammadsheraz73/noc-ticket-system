@@ -346,9 +346,17 @@ function SubscribersTab({ onNotice }) {
     }
   };
 
+  const activeCount = state.items.filter((s) => s.status === 'Active').length;
+  const monthlyTotal = state.items.filter((s) => s.status === 'Active').reduce((sum, s) => sum + s.monthlyFee, 0);
+
   return (
     <>
       {state.error ? <Alert tone="error" title="Error">{state.error}</Alert> : null}
+      <div className="grid grid--stats grid--stats-3">
+        <Stat label="Total Users" value={state.items.length} hint="registered subscribers" />
+        <Stat label="Active" value={activeCount} hint={`${state.items.length - activeCount} inactive`} tone="ok" />
+        <Stat label="Monthly Billing" value={formatMoney(monthlyTotal)} hint="from active users" />
+      </div>
       <div className="card">
         <div className="filters">
           <div className="filters__item filters__item--grow">
@@ -373,9 +381,9 @@ function SubscribersTab({ onNotice }) {
             />
           ) : (
             <div className="table-wrap">
-              <table className="table">
+              <table className="table table--users">
                 <thead>
-                  <tr><th>User</th><th>Unit</th><th>Address</th><th className="text-right">Monthly Fee</th><th>Status</th><th /></tr>
+                  <tr><th>User</th><th>Unit</th><th>Address</th><th className="text-right">Monthly Fee</th><th>Status</th><th className="text-right">Actions</th></tr>
                 </thead>
                 <tbody>
                   {state.items.map((s) => (
@@ -385,10 +393,10 @@ function SubscribersTab({ onNotice }) {
                       <td className="small">{s.address}</td>
                       <td className="text-right num">{formatMoney(s.monthlyFee)}</td>
                       <td><Badge tone={s.status === 'Active' ? 'ok' : 'neutral'}>{s.status}</Badge></td>
-                      <td className="nowrap">
-                        <button className="btn btn--ghost btn--sm" onClick={() => { setError(''); setEditing({ ...s }); }}>Edit</button>
+                      <td className="row-actions">
+                        <button className="btn btn--secondary btn--sm" onClick={() => { setError(''); setEditing({ ...s }); }}>Edit</button>
                         {user?.role === 'admin' ? (
-                          <button className="btn btn--ghost btn--sm" onClick={() => remove(s)}>Delete</button>
+                          <button className="btn btn--secondary btn--sm btn--delete" onClick={() => remove(s)}>Delete</button>
                         ) : null}
                       </td>
                     </tr>

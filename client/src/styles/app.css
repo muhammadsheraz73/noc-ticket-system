@@ -802,3 +802,9 @@ a.stat:hover { border-color: var(--brand-accent); text-decoration: none; }
     @apply font-sans;
   }
 }
+.table--users td, .table--users th { vertical-align: middle; }
+.table--users th:first-child, .table--users td:first-child { padding-left: 20px; }
+.row-actions { display: flex; gap: 8px; justify-content: flex-end; padding-right: 20px; }
+.table--users th:last-child { padding-right: 20px; }
+.btn--delete { color: var(--danger); border-color: var(--danger); }
+.btn--delete:hover:not(:disabled) { background: var(--danger); color: #fff; }
