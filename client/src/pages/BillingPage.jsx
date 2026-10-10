@@ -98,7 +98,7 @@ function BillsTab() {
       {state.error ? <Alert tone="error" title="Billing error">{state.error}</Alert> : null}
       {info ? <Alert tone="success" title="Done">{info}</Alert> : null}
 
-      <div className="grid grid--stats">
+      <div className="grid grid--stats grid--stats-3">
         <Stat label="Total Billed" value={formatMoney(t?.fee || 0)} hint={`${t?.count || 0} bills`} />
         <Stat label="Received" value={formatMoney(t?.received || 0)} hint={`${t?.byStatus?.Received || 0} paid`} tone="ok" />
         <Stat label="Arrears" value={formatMoney(t?.arrears || 0)} hint={`${(t?.byStatus?.Pending || 0) + (t?.byStatus?.Partial || 0)} unpaid`} tone="danger" />

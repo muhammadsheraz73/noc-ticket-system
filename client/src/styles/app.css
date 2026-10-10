@@ -247,6 +247,9 @@ a:hover { text-decoration: underline; }
 
 .grid { display: grid; gap: 16px; }
 .grid--stats { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.grid--stats-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid--stats-3 .stat__value { white-space: nowrap; font-size: clamp(20px, 2.2vw, 28px); }
+@media (max-width: 640px) { .grid--stats-3 { grid-template-columns: 1fr; } }
 .grid--2 { grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
 .grid--3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 .grid--detail { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); align-items: start; }
