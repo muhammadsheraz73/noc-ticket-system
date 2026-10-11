@@ -5,11 +5,6 @@ import PDFDocument from 'pdfkit';
 import env from '../config/env.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-/** Decode an uploaded `data:image/...;base64,` logo, or null when there is none. */
-export function dataUrlToBuffer(dataUrl) {
-  const match = /^data:image\/(?:png|jpeg|webp);base64,(.+)$/.exec(dataUrl || '');
-  return match ? Buffer.from(match[1], 'base64') : null;
-}
 
 const COLORS = {
   ink: '#111111',
@@ -70,12 +65,7 @@ export function streamInvoicePdf(invoice, stream, extra = {}) {
   };
 
   // ---------- Header: logo + INVOICE ----------
-  try {
-    if (!branding.logo) throw new Error('no logo');
-    doc.image(branding.logo, left, 38, { fit: [150, 48] });
-  } catch {
-    doc.font('Helvetica-Bold').fontSize(16).fillColor(COLORS.ink).text(companyName, left, 42, { width: 300 });
-  }
+  doc.font('Helvetica-Bold').fontSize(16).fillColor(COLORS.ink).text(companyName, left, 42, { width: 300 });
   doc.font('Helvetica-Bold').fontSize(30).fillColor(COLORS.ink).text('INVOICE', left, 44, {
     width: contentWidth,
     align: 'right',

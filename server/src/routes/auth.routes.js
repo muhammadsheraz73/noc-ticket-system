@@ -14,12 +14,11 @@ const router = Router();
 
 /** The account as the UI sees it, including the client company it belongs to. */
 async function sessionUser(user) {
-  const tenant = user.tenant ? await Tenant.findById(user.tenant).select('name isActive logo themeColor').lean() : null;
+  const tenant = user.tenant ? await Tenant.findById(user.tenant).select('name isActive themeColor').lean() : null;
   return {
     ...user.toJSON(),
     roleLabel: ROLE_LABELS[user.role],
     tenantName: tenant?.name || '',
-    tenantLogo: tenant?.logo || '',
     tenantTheme: tenant?.themeColor || '',
   };
 }

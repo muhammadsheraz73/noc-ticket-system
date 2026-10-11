@@ -88,13 +88,9 @@ export default function Layout() {
       <aside className={`sidebar${sidebarOpen ? ' is-open' : ''}`}>
         <div className="sidebar__brand">
           <div className="sidebar__logo">
-            {user?.tenantLogo ? (
-              <img src={user.tenantLogo} alt={user.tenantName} className="sidebar__logo-img" />
-            ) : (
-              <strong className="sidebar__logo-text">
-                {user?.role === ROLES.SUPERADMIN ? 'NOC Panel' : user?.tenantName || 'NOC Manager'}
-              </strong>
-            )}
+            <strong className="sidebar__logo-text">
+              {user?.role === ROLES.SUPERADMIN ? 'NOC Panel' : user?.tenantName || 'NOC Manager'}
+            </strong>
           </div>
         </div>
 

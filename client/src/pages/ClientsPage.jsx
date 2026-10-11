@@ -7,10 +7,10 @@ import {
   Alert, Badge, EmptyState, Field, Loading, Modal, Textarea, TextInput,
 } from '../components/ui.jsx';
 import { formatDateTime } from '../utils/format.js';
-import { THEME_PRESETS, fileToLogoDataUrl } from '../utils/theme.js';
+import { THEME_PRESETS } from '../utils/theme.js';
 
 const BLANK = {
-  name: '', contactName: '', phone: '', notes: '', logo: '', themeColor: '', isActive: true,
+  name: '', contactName: '', phone: '', notes: '', themeColor: '', isActive: true,
 };
 
 /** Owner-only: the companies this panel has been sold to. */
@@ -50,7 +50,6 @@ export default function ClientsPage() {
         contactName: client.contactName || '',
         phone: client.phone || '',
         notes: client.notes || '',
-        logo: client.logo || '',
         themeColor: client.themeColor || '',
         isActive: client.isActive,
       }
@@ -80,18 +79,6 @@ export default function ClientsPage() {
     }
   };
 
-  const pickLogo = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    try {
-      const logo = await fileToLogoDataUrl(file);
-      setForm((f) => ({ ...f, logo }));
-    } catch (err) {
-      toast.error('Logo not added', err.message);
-    }
-  };
-
   const set = (key) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     setForm((f) => ({ ...f, [key]: value }));
@@ -118,7 +105,7 @@ export default function ClientsPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Company</th><th>Branding</th><th>Contact</th><th>Logins</th><th>Status</th><th>Added</th><th />
+                    <th>Company</th><th>Theme</th><th>Contact</th><th>Logins</th><th>Status</th><th>Added</th><th />
                   </tr>
                 </thead>
                 <tbody>
@@ -126,20 +113,15 @@ export default function ClientsPage() {
                     <tr key={client._id}>
                       <td className="strong">{client.name}</td>
                       <td>
-                        <div className="row" style={{ flexWrap: 'nowrap', gap: 8, alignItems: 'center' }}>
-                          {client.logo
-                            ? <img src={client.logo} alt="" style={{ height: 28, maxWidth: 80, objectFit: 'contain' }} />
-                            : <span className="small muted">no logo</span>}
-                          {client.themeColor ? (
-                            <span
-                              title={client.themeColor}
-                              style={{
-                                width: 18, height: 18, borderRadius: 4, background: client.themeColor,
-                                border: '1px solid var(--line)',
-                              }}
-                            />
-                          ) : null}
-                        </div>
+                        {client.themeColor ? (
+                          <span
+                            title={client.themeColor}
+                            style={{
+                              display: 'inline-block', width: 22, height: 22, borderRadius: 5,
+                              background: client.themeColor, border: '1px solid var(--line)',
+                            }}
+                          />
+                        ) : <span className="small muted">default</span>}
                       </td>
                       <td>
                         <div>{client.contactName || '—'}</div>
@@ -191,43 +173,6 @@ export default function ClientsPage() {
           </Field>
           <Field label="Phone" error={errors.phone}>
             <TextInput value={form.phone} onChange={set('phone')} error={errors.phone} />
-          </Field>
-          <Field
-            label="Logo"
-            error={errors.logo}
-            hint="PNG, JPEG or WebP. Shown in the sidebar and on invoices; it is shrunk automatically."
-            full
-          >
-            <div className="row" style={{ flexWrap: 'nowrap', alignItems: 'center', gap: 12 }}>
-              <div
-                style={{
-                  width: 120, height: 56, border: '1px dashed var(--line-strong)', borderRadius: 8,
-                  display: 'grid', placeItems: 'center', background: '#fff',
-                }}
-              >
-                {form.logo
-                  ? <img src={form.logo} alt="Logo preview" style={{ maxWidth: 110, maxHeight: 48 }} />
-                  : <span className="small muted">No logo</span>}
-              </div>
-              <label className="btn btn--secondary btn--sm" style={{ cursor: 'pointer' }}>
-                Upload logo
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={pickLogo}
-                  style={{ display: 'none' }}
-                />
-              </label>
-              {form.logo ? (
-                <button
-                  type="button"
-                  className="btn btn--ghost btn--sm"
-                  onClick={() => setForm((f) => ({ ...f, logo: '' }))}
-                >
-                  Remove
-                </button>
-              ) : null}
-            </div>
           </Field>
           <Field
             label="Colour theme"
