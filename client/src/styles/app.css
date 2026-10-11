@@ -595,26 +595,26 @@ a.stat:hover { border-color: var(--brand-accent); text-decoration: none; }
   background: var(--surface);
 }
 .login-hero {
-  position: relative; overflow: hidden; color: #e2e8f0;
+  position: relative; overflow: hidden; color: #fff;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; padding: 48px 40px;
   background:
-    radial-gradient(900px 500px at 15% 10%, rgba(45, 212, 191, 0.16), transparent 60%),
-    radial-gradient(700px 480px at 90% 95%, rgba(59, 130, 246, 0.18), transparent 60%),
-    linear-gradient(160deg, #0b1220 0%, #0f1b33 100%);
+    radial-gradient(900px 500px at 15% 10%, rgba(255, 255, 255, 0.18), transparent 60%),
+    radial-gradient(700px 480px at 90% 95%, rgba(0, 0, 0, 0.22), transparent 60%),
+    linear-gradient(160deg, var(--brand-accent) 0%, var(--brand-dark) 100%);
 }
-.login-hero__icon { width: 64px; height: 64px; color: #2dd4bf; margin-bottom: 22px; }
+.login-hero__icon { width: 64px; height: 64px; color: #fff; margin-bottom: 22px; }
 .login-hero__name { margin: 0; font-size: 42px; font-weight: 800; letter-spacing: -0.02em; color: #fff; }
-.login-hero__tagline { margin: 12px 0 0; font-size: 18px; font-weight: 600; color: #b6c4dc; }
+.login-hero__tagline { margin: 12px 0 0; font-size: 18px; font-weight: 600; color: rgba(255, 255, 255, 0.92); }
 .login-hero__features {
   margin: 26px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap;
   justify-content: center; gap: 8px 10px;
 }
 .login-hero__features li {
-  font-size: 13px; font-weight: 600; color: #8fa3c2; padding: 6px 12px;
-  border: 1px solid rgba(143, 163, 194, 0.28); border-radius: 999px;
+  font-size: 13px; font-weight: 600; color: #fff; padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 999px;
 }
-.login-hero__footer { position: absolute; left: 0; right: 0; bottom: 20px; font-size: 12px; color: #6b7f9f; }
+.login-hero__footer { position: absolute; left: 0; right: 0; bottom: 20px; font-size: 12px; color: rgba(255, 255, 255, 0.8); }
 
 .login-panel { display: flex; align-items: center; justify-content: center; padding: 32px 24px; background: var(--bg); }
 .login-card { width: 100%; max-width: 380px; }
@@ -635,7 +635,7 @@ a.stat:hover { border-color: var(--brand-accent); text-decoration: none; }
     display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 22px;
     font-size: 24px; font-weight: 800; color: var(--ink);
   }
-  .login-card__mobile-brand svg { width: 34px; height: 34px; color: #14b8a6; }
+  .login-card__mobile-brand svg { width: 34px; height: 34px; color: var(--brand); }
 }
 
 /* ----------------------------------------------------------- misc blocks */

@@ -57,13 +57,13 @@ export default function LoginPage() {
     <div className="login-page">
       <aside className="login-hero">
         <BrandIcon className="login-hero__icon" />
-        <h1 className="login-hero__name">WellNetrix</h1>
+        <h1 className="login-hero__name">ISP MATRIX</h1>
         <p className="login-hero__tagline">ISP Billing &amp; Network Operations</p>
         <ul className="login-hero__features">
           {FEATURES.map((feature) => <li key={feature}>{feature}</li>)}
         </ul>
         <div className="login-hero__footer">
-          © {new Date().getFullYear()} WellNetrix. All rights reserved.
+          © {new Date().getFullYear()} ISP MATRIX. All rights reserved.
         </div>
       </aside>
 
@@ -71,7 +71,7 @@ export default function LoginPage() {
         <div className="login-card">
           <div className="login-card__mobile-brand">
             <BrandIcon />
-            WellNetrix
+            ISP MATRIX
           </div>
 
           <div className="login-card__intro">
