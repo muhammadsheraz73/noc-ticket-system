@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { errorMessage } from '../api/client.js';
 import { Alert, Field, TextInput } from '../components/ui.jsx';
-import wellnetLogo from '../assets/wellnet-logo.png';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -34,10 +33,6 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-card__brand">
-          <img src={wellnetLogo} alt="Wellnet" className="login-card__logo-img" />
-        </div>
-
         <div className="login-card__intro">
           <h2 className="login-card__heading">Sign in</h2>
           <p className="small muted">Enter your credentials to access the operations console.</p>
