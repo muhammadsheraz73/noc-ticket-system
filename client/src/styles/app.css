@@ -127,7 +127,7 @@ a:hover { text-decoration: underline; }
   padding: 2px;
   margin: 2px;
   border-radius: 0;
-  background: #fff;
+  background: transparent;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex: 0 0 auto;
 }
@@ -142,7 +142,7 @@ a:hover { text-decoration: underline; }
 }
 .sidebar__logo-text {
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: 15px; font-weight: 800; color: #111;
+  font-size: 15px; font-weight: 800; color: #fff;
 }
 
 .sidebar__nav {
