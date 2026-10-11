@@ -12,10 +12,10 @@ import {
 export const IMPORTABLE_FIELDS = [
   { field: 'customerReferenceNumber', label: 'Customer Reference Number', required: true },
   { field: 'name', label: 'Customer Name', required: true },
-  { field: 'address', label: 'Address', required: true },
-  { field: 'connectedFrom', label: 'Connected From', required: true },
-  { field: 'type', label: 'Type (COR/Area Corporate/Home User)', required: true },
-  { field: 'contactNumber', label: 'Contact Number', required: true },
+  { field: 'address', label: 'Address', required: false },
+  { field: 'connectedFrom', label: 'Connected From', required: false },
+  { field: 'type', label: 'Type (COR/Area Corporate/Home User)', required: false },
+  { field: 'contactNumber', label: 'Contact Number', required: false },
   { field: 'status', label: 'Status (Active/Non Active/Free)', required: false },
   { field: 'bandwidth', label: 'Bandwidth', required: false },
   { field: 'location', label: 'Location (Maps URL)', required: false },
@@ -91,6 +91,11 @@ export function suggestMapping(headers) {
   }
 
   return mapping;
+}
+
+/** Drop empty cells so they neither overwrite existing data nor block defaults. */
+function filledOnly(data) {
+  return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== ''));
 }
 
 function applyMapping(row, mapping) {
@@ -232,7 +237,8 @@ export async function importRows({ rows, mapping, duplicateStrategy = 'skip', us
       if (row.status === 'existing') {
         await Customer.updateOne(
           { customerReferenceNumber: row.data.customerReferenceNumber },
-          { $set: { ...row.data, updatedBy: user?._id } },
+          // Blank cells leave the existing value alone instead of wiping it.
+          { $set: { ...filledOnly(row.data), updatedBy: user?._id } },
         );
         report.updated += 1;
         report.details.push({
@@ -242,7 +248,8 @@ export async function importRows({ rows, mapping, duplicateStrategy = 'skip', us
           message: 'Existing customer updated from file',
         });
       } else {
-        await Customer.create({ ...row.data, createdBy: user?._id });
+        // Only Customer ID and Name are required in a file; a missing Type defaults to Home User.
+        await Customer.create({ type: 'Home User', ...filledOnly(row.data), createdBy: user?._id });
         report.imported += 1;
         report.details.push({
           rowNumber: row.rowNumber,

@@ -19,11 +19,13 @@ const customerSchema = new mongoose.Schema(
       index: true,
     },
     name: { type: String, required: [true, 'Customer Name is required'], trim: true, index: true },
-    address: { type: String, required: [true, 'Address is required'], trim: true },
-    connectedFrom: { type: String, required: [true, 'Connected From is required'], trim: true, index: true },
+    // Address, Connected From and Contact are required by the customer form
+    // (validators/schemas.js) but may be blank on rows brought in by Excel import.
+    address: { type: String, trim: true, default: '' },
+    connectedFrom: { type: String, trim: true, default: '', index: true },
     type: { type: String, required: [true, 'Type is required'], trim: true, set: normalizeCustomerType, index: true },
     status: { type: String, enum: CUSTOMER_STATUSES, default: 'Active', index: true },
-    contactNumber: { type: String, required: [true, 'Contact Number is required'], trim: true, index: true },
+    contactNumber: { type: String, trim: true, default: '', index: true },
 
     // --- Optional master data ---
     location: { type: String, trim: true, default: '' },
