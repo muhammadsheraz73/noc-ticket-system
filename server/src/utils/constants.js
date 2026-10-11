@@ -28,7 +28,7 @@ export const ROLE_LABELS = {
 };
 
 /** The customer types a new or edited customer can have. */
-export const CUSTOMER_TYPES = ['COR', 'Home User'];
+export const CUSTOMER_TYPES = ['COR', 'Area Corporate', 'Home User'];
 
 /** Match a typed/imported value to its canonical spelling ("home user" → "Home User"). */
 export function normalizeCustomerType(value) {

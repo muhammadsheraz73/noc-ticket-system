@@ -4,7 +4,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { Alert, Field, Modal, Select, TextInput, Textarea } from '../components/ui.jsx';
 
 /** Old PUM/PMB customers must be moved to one of these when they are next edited. */
-const CUSTOMER_TYPES = ['COR', 'Home User'];
+const CUSTOMER_TYPES = ['COR', 'Area Corporate', 'Home User'];
 
 const BLANK = {
   customerReferenceNumber: '',
@@ -91,7 +91,7 @@ export default function CustomerFormModal({ open, customer, onClose, onSaved }) 
             <Field label="Contact Number" required error={errors.contactNumber}>
               <TextInput value={form.contactNumber} onChange={set('contactNumber')} error={errors.contactNumber} required placeholder="0333-4458420" />
             </Field>
-            <Field label="Type" required error={errors.type} hint="COR / Home User">
+            <Field label="Type" required error={errors.type} hint="COR / Area Corporate / Home User">
               <Select value={form.type} onChange={set('type')} error={errors.type} required>
                 {CUSTOMER_TYPES.includes(form.type) ? null : <option value="">Select type</option>}
                 {CUSTOMER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
