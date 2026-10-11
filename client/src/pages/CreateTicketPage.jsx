@@ -9,7 +9,7 @@ import { Alert, Badge, DefItem, Field, Select, TextInput, Textarea } from '../co
 import { PRIORITY_TONE } from '../utils/format.js';
 
 const PRIORITIES = ['Urgent', 'High', 'Medium', 'Low'];
-const STATUSES = ['New', 'In Progress'];
+const STATUSES = ['In Progress'];
 
 /**
  * Select a customer, enter the issue, and the standardized ticket is generated
@@ -37,7 +37,7 @@ export default function CreateTicketPage() {
     issueType: 'Fiber Cut',
     remarks: '',
     priority: 'Urgent',
-    status: 'New',
+    status: 'In Progress',
     ettrMinutes: 60,
     assignedTo: '',
     assignedHelper: '',

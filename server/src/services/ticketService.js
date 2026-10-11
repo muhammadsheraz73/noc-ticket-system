@@ -70,7 +70,7 @@ export async function createTicket({ payload, user }) {
     issueType: payload.issueType,
     remarks: payload.remarks || '',
     priority: payload.priority || 'Medium',
-    status: payload.status || 'New',
+    status: payload.status || 'In Progress',
     ettrMinutes,
     ettrAt: addMinutes(now, ettrMinutes),
     assignedBy: user._id,
@@ -87,7 +87,7 @@ export async function createTicket({ payload, user }) {
         by: user._id,
         byName: user.name,
         action: 'created',
-        to: payload.status || 'New',
+        to: payload.status || 'In Progress',
         note: `Ticket raised for customer ${customer.customerReferenceNumber}`,
       },
       ...(assignee

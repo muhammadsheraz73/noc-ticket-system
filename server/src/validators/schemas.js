@@ -131,7 +131,7 @@ export const createTicketSchema = z.object({
   issueType: requiredText('Issue Type', 80),
   remarks: optionalText(2000),
   priority: z.enum(TICKET_PRIORITIES).default('Medium'),
-  status: z.enum(TICKET_STATUSES).default('New'),
+  status: z.enum(['In Progress']).default('In Progress'),
   ettrMinutes: z.coerce.number().int().min(5, 'ETTR must be at least 5 minutes').max(20160).default(60),
   assignedTo: objectId,
   assignedHelper: objectId,
