@@ -126,7 +126,7 @@ a:hover { text-decoration: underline; }
   justify-content: center;
   padding: 2px;
   margin: 2px;
-  border-radius: 10px;
+  border-radius: 0;
   background: #fff;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex: 0 0 auto;
