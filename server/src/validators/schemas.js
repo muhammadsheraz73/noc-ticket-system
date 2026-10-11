@@ -8,6 +8,7 @@ import {
   CONNECTION_TYPES,
   CUSTOMER_TYPES,
   normalizeCustomerType,
+  CUSTOMER_STATUSES,
   INVENTORY_UNITS,
   STOCK_MOVEMENT_TYPES,
   USERNAME_MAX,
@@ -110,6 +111,7 @@ export const customerSchema = z.object({
   type: requiredText('Type', 20)
     .transform(normalizeCustomerType)
     .refine((v) => CUSTOMER_TYPES.includes(v), { message: `Type must be ${CUSTOMER_TYPES.join(' or ')}` }),
+  status: z.enum(CUSTOMER_STATUSES).default('Active'),
   contactNumber: requiredText('Contact Number', 60),
   location: optionalText(500),
   destinationPort: optionalText(120),

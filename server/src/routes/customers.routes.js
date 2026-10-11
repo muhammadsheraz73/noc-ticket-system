@@ -11,8 +11,8 @@ import { validate } from '../middleware/validate.js';
 import { uploadSpreadsheet } from '../middleware/upload.js';
 import { customerSchema, customerUpdateSchema, importCommitSchema, importPreviewSchema } from '../validators/schemas.js';
 import { recordAudit } from '../utils/audit.js';
-import { containsRegex, parsePagination, parseSort } from '../utils/search.js';
-import { ROLES, CUSTOMER_TYPES } from '../utils/constants.js';
+import { containsRegex, escapeRegex, parsePagination, parseSort } from '../utils/search.js';
+import { ROLES, CUSTOMER_TYPES, CUSTOMER_STATUSES, normalizeCustomerType } from '../utils/constants.js';
 import {
   parseWorkbook,
   suggestMapping,
@@ -35,7 +35,8 @@ router.get(
     const types = await Customer.distinct('type', { isDeleted: false });
     res.json({
       success: true,
-      types: [...new Set([...CUSTOMER_TYPES, ...types.filter(Boolean)])],
+      types: [...new Set([...CUSTOMER_TYPES, ...types.filter(Boolean).map(normalizeCustomerType)])],
+      statuses: CUSTOMER_STATUSES,
       importableFields: IMPORTABLE_FIELDS,
     });
   }),
@@ -137,7 +138,10 @@ router.get(
         { destinationPort: rx },
       ];
     }
-    if (req.query.type) filter.type = String(req.query.type).toUpperCase();
+    // Case-insensitive so records saved as "HOME USER" still match "Home User".
+    if (req.query.type) filter.type = new RegExp(`^${escapeRegex(req.query.type)}$`, 'i');
+    if (req.query.status === 'Active') filter.status = { $in: ['Active', null] };
+    else if (req.query.status) filter.status = String(req.query.status);
     if (req.query.connectedFrom) filter.connectedFrom = containsRegex(req.query.connectedFrom);
 
     const sort = parseSort(req.query.sort, { createdAt: -1 }, [

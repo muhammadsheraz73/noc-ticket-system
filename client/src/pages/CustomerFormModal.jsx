@@ -5,6 +5,8 @@ import { Alert, Field, Modal, Select, TextInput, Textarea } from '../components/
 
 /** Old PUM/PMB customers must be moved to one of these when they are next edited. */
 const CUSTOMER_TYPES = ['COR', 'Area Corporate', 'Home User'];
+export const CUSTOMER_STATUSES = ['Active', 'Non Active', 'Free'];
+export const CUSTOMER_STATUS_TONE = { Active: 'ok', 'Non Active': 'danger', Free: 'info' };
 
 const BLANK = {
   customerReferenceNumber: '',
@@ -12,6 +14,7 @@ const BLANK = {
   address: '',
   connectedFrom: '',
   type: 'Home User',
+  status: 'Active',
   contactNumber: '',
   location: '',
   sourcePort: '',
@@ -32,7 +35,8 @@ export default function CustomerFormModal({ open, customer, onClose, onSaved }) 
     setErrors({});
     setError('');
     const values = customer ? { ...BLANK, ...pick(customer) } : BLANK;
-    setForm(CUSTOMER_TYPES.includes(values.type) ? values : { ...values, type: '' });
+    const type = CUSTOMER_TYPES.find((t) => t.toLowerCase() === String(values.type).toLowerCase()) || '';
+    setForm({ ...values, type, status: values.status || 'Active' });
   }, [open, customer]);
 
   const set = (key) => (event) => setForm((f) => ({ ...f, [key]: event.target.value }));
@@ -95,6 +99,11 @@ export default function CustomerFormModal({ open, customer, onClose, onSaved }) 
               <Select value={form.type} onChange={set('type')} error={errors.type} required>
                 {CUSTOMER_TYPES.includes(form.type) ? null : <option value="">Select type</option>}
                 {CUSTOMER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </Select>
+            </Field>
+            <Field label="Status" required error={errors.status} hint="Active / Non Active / Free">
+              <Select value={form.status} onChange={set('status')} error={errors.status} required>
+                {CUSTOMER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
               </Select>
             </Field>
             <Field label="Connected From (POP)" required error={errors.connectedFrom}>

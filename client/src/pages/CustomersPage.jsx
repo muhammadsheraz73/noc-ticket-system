@@ -4,7 +4,7 @@ import api, { errorMessage } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
-import CustomerFormModal from './CustomerFormModal.jsx';
+import CustomerFormModal, { CUSTOMER_STATUSES, CUSTOMER_STATUS_TONE } from './CustomerFormModal.jsx';
 import {
   Alert, Badge, ConfirmDialog, EmptyState, Pagination, TableSkeleton, Field, TextInput, Select,
 } from '../components/ui.jsx';
@@ -19,6 +19,7 @@ export default function CustomersPage() {
   const [state, setState] = useState({ items: [], pagination: null, loading: true, error: '' });
   const [query, setQuery] = useState(params.get('q') || '');
   const [type, setType] = useState(params.get('type') || '');
+  const [status, setStatus] = useState(params.get('status') || '');
   const [page, setPage] = useState(1);
   const [types, setTypes] = useState([]);
 
@@ -35,13 +36,13 @@ export default function CustomersPage() {
     setState((s) => ({ ...s, loading: true }));
     try {
       const { data } = await api.get('/customers', {
-        params: { q: query || undefined, type: type || undefined, page, limit: 20 },
+        params: { q: query || undefined, type: type || undefined, status: status || undefined, page, limit: 20 },
       });
       setState({ items: data.items, pagination: data.pagination, loading: false, error: '' });
     } catch (error) {
       setState({ items: [], pagination: null, loading: false, error: errorMessage(error) });
     }
-  }, [query, type, page]);
+  }, [query, type, status, page]);
 
   // Debounce the search box so typing does not fire a request per keystroke.
   useEffect(() => {
@@ -53,8 +54,9 @@ export default function CustomersPage() {
     const next = new URLSearchParams();
     if (query) next.set('q', query);
     if (type) next.set('type', type);
+    if (status) next.set('status', status);
     setParams(next, { replace: true });
-  }, [query, type, setParams]);
+  }, [query, type, status, setParams]);
 
   const confirmDelete = async () => {
     setDeleteBusy(true);
@@ -108,8 +110,16 @@ export default function CustomersPage() {
               </Select>
             </Field>
           </div>
-          {query || type ? (
-            <button className="btn btn--ghost btn--sm" onClick={() => { setQuery(''); setType(''); setPage(1); }}>
+          <div className="filters__item">
+            <Field label="Status">
+              <Select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
+                <option value="">All statuses</option>
+                {CUSTOMER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </Select>
+            </Field>
+          </div>
+          {query || type || status ? (
+            <button className="btn btn--ghost btn--sm" onClick={() => { setQuery(''); setType(''); setStatus(''); setPage(1); }}>
               Clear
             </button>
           ) : null}
@@ -117,12 +127,12 @@ export default function CustomersPage() {
 
         <div className="card__body card__body--flush">
           {state.loading ? (
-            <TableSkeleton rows={6} cols={7} />
+            <TableSkeleton rows={6} cols={8} />
           ) : state.items.length === 0 ? (
             <EmptyState
               icon="👥"
               title="No customers found"
-              message={query || type ? 'Try a different search or filter.' : 'Add your first customer or import from Excel.'}
+              message={query || type || status ? 'Try a different search or filter.' : 'Add your first customer or import from Excel.'}
               action={
                 canManageTickets ? (
                   <button className="btn" onClick={() => { setEditing(null); setFormOpen(true); }}>＋ New Customer</button>
@@ -137,6 +147,7 @@ export default function CustomersPage() {
                     <th>Customer ID</th>
                     <th>Name</th>
                     <th>Type</th>
+                    <th>Status</th>
                     <th>Connected From</th>
                     <th>Contact</th>
                     <th>VLAN / Ports</th>
@@ -153,6 +164,9 @@ export default function CustomersPage() {
                         <div className="small muted truncate" title={customer.address}>{customer.address}</div>
                       </td>
                       <td><Badge tone="outline">{customer.type}</Badge></td>
+                      <td>
+                        <Badge tone={CUSTOMER_STATUS_TONE[customer.status || 'Active']}>{customer.status || 'Active'}</Badge>
+                      </td>
                       <td className="nowrap">{customer.connectedFrom}</td>
                       <td className="nowrap mono">{customer.contactNumber}</td>
                       <td className="small mono">

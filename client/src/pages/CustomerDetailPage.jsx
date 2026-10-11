@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import api, { errorMessage } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
-import CustomerFormModal from './CustomerFormModal.jsx';
+import CustomerFormModal, { CUSTOMER_STATUS_TONE } from './CustomerFormModal.jsx';
 import Countdown from '../components/Countdown.jsx';
 import { Alert, Badge, DefItem, EmptyState, Loading, Stat, Tabs } from '../components/ui.jsx';
 import {
@@ -81,6 +81,9 @@ export default function CustomerDetailPage() {
                 <DefItem label="Customer ID" value={customer.customerReferenceNumber} mono />
                 <DefItem label="Name" value={customer.name} />
                 <DefItem label="Type" ><Badge tone="outline">{customer.type}</Badge></DefItem>
+                <DefItem label="Status">
+                  <Badge tone={CUSTOMER_STATUS_TONE[customer.status || 'Active']}>{customer.status || 'Active'}</Badge>
+                </DefItem>
                 <DefItem label="Contact" value={customer.contactNumber} mono />
                 <DefItem label="Connected From" value={customer.connectedFrom} />
                 <DefItem label="Location">

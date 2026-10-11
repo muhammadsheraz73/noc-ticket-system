@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import tenantScope from './plugins/tenantScope.js';
+import { CUSTOMER_STATUSES, normalizeCustomerType } from '../utils/constants.js';
 
 /**
  * Customer master data.
@@ -20,7 +21,8 @@ const customerSchema = new mongoose.Schema(
     name: { type: String, required: [true, 'Customer Name is required'], trim: true, index: true },
     address: { type: String, required: [true, 'Address is required'], trim: true },
     connectedFrom: { type: String, required: [true, 'Connected From is required'], trim: true, index: true },
-    type: { type: String, required: [true, 'Type is required'], trim: true, uppercase: true, index: true },
+    type: { type: String, required: [true, 'Type is required'], trim: true, set: normalizeCustomerType, index: true },
+    status: { type: String, enum: CUSTOMER_STATUSES, default: 'Active', index: true },
     contactNumber: { type: String, required: [true, 'Contact Number is required'], trim: true, index: true },
 
     // --- Optional master data ---

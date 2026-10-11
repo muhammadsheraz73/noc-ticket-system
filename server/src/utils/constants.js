@@ -30,10 +30,23 @@ export const ROLE_LABELS = {
 /** The customer types a new or edited customer can have. */
 export const CUSTOMER_TYPES = ['COR', 'Area Corporate', 'Home User'];
 
-/** Match a typed/imported value to its canonical spelling ("home user" → "Home User"). */
-export function normalizeCustomerType(value) {
+/** Service status of a customer; records saved before this field existed count as Active. */
+export const CUSTOMER_STATUSES = ['Active', 'Non Active', 'Free'];
+
+/** Match a typed/imported value to its canonical spelling ("home user" / "HOME-USER" → "Home User"). */
+function matchOption(options, value) {
   const text = String(value ?? '').trim();
-  return CUSTOMER_TYPES.find((t) => t.toLowerCase() === text.toLowerCase()) || text;
+  const key = (v) => v.toLowerCase().replace(/[\s_-]+/g, '');
+  return options.find((o) => key(o) === key(text)) || text;
+}
+
+export function normalizeCustomerType(value) {
+  return matchOption(CUSTOMER_TYPES, value);
+}
+
+export function normalizeCustomerStatus(value) {
+  const text = String(value ?? '').trim();
+  return /^in-?active$/i.test(text) ? 'Non Active' : matchOption(CUSTOMER_STATUSES, text);
 }
 
 export const TICKET_STATUSES = ['New', 'In Progress', 'On Hold', 'Resolved', 'Closed'];

@@ -1,7 +1,12 @@
 import xlsx from 'xlsx';
 import Customer from '../models/Customer.js';
 import ApiError from '../utils/ApiError.js';
-import { CUSTOMER_TYPES, normalizeCustomerType } from '../utils/constants.js';
+import {
+  CUSTOMER_TYPES,
+  CUSTOMER_STATUSES,
+  normalizeCustomerType,
+  normalizeCustomerStatus,
+} from '../utils/constants.js';
 
 /** Customer fields an Excel column can be mapped onto. */
 export const IMPORTABLE_FIELDS = [
@@ -11,6 +16,7 @@ export const IMPORTABLE_FIELDS = [
   { field: 'connectedFrom', label: 'Connected From', required: true },
   { field: 'type', label: 'Type (COR/Area Corporate/Home User)', required: true },
   { field: 'contactNumber', label: 'Contact Number', required: true },
+  { field: 'status', label: 'Status (Active/Non Active/Free)', required: false },
   { field: 'location', label: 'Location (Maps URL)', required: false },
   { field: 'destinationPort', label: 'Destination Port', required: false },
   { field: 'sourcePort', label: 'Source Port', required: false },
@@ -25,6 +31,7 @@ const HEADER_HINTS = {
   address: ['address', 'site address', 'location address'],
   connectedFrom: ['connected from', 'pop', 'source pop', 'connected', 'from'],
   type: ['type', 'customer type', 'connection type', 'pum/pmb/cor', 'cor/home user', 'cor/area corporate/home user'],
+  status: ['status', 'customer status', 'service status', 'state'],
   contactNumber: ['contact number', 'contact', 'contact #', 'phone', 'mobile', 'cell'],
   location: ['location', 'maps', 'google maps', 'map link', 'coordinates', 'geo'],
   destinationPort: ['destination port', 'dest port', 'dst port', 'destination'],
@@ -91,6 +98,9 @@ function applyMapping(row, mapping) {
     record[field] = column ? String(row[column] ?? '').trim() : '';
   }
   if (record.type) record.type = normalizeCustomerType(record.type);
+  // A blank status keeps the default (Active) on create and leaves an update untouched.
+  if (record.status) record.status = normalizeCustomerStatus(record.status);
+  else delete record.status;
   return record;
 }
 
@@ -118,6 +128,10 @@ export async function validateRows(rows, mapping) {
 
     for (const { field, label, required } of IMPORTABLE_FIELDS) {
       if (required && !data[field]) errors.push(`${label} is required`);
+    }
+
+    if (data.status && !CUSTOMER_STATUSES.includes(data.status)) {
+      errors.push(`Status must be one of ${CUSTOMER_STATUSES.join(', ')} (found "${data.status}")`);
     }
 
     if (data.type && !CUSTOMER_TYPES.includes(data.type)) {
@@ -259,6 +273,7 @@ export function buildTemplateWorkbook() {
     'Gajjumata Pop',
     'Home User',
     '0333-4458420',
+    'Active',
     'https://maps.app.goo.gl/EXwFUHbbik4spH5s8',
     'GE0/0/1',
     'GPON0/1/3',
