@@ -6,6 +6,8 @@ import {
   FIELD_TEAM_KINDS,
   DEVICE_TYPES,
   CONNECTION_TYPES,
+  INVENTORY_UNITS,
+  STOCK_MOVEMENT_TYPES,
   USERNAME_MAX,
   USERNAME_MIN,
   USERNAME_PATTERN,
@@ -260,6 +262,38 @@ export const vlanSchema = z.object({
   subnet: optionalText(60),
   isActive: z.boolean().optional().default(true),
 });
+
+// ------------------------------------------------------------ inventory
+const amount = z.coerce.number().min(0, 'Cannot be negative').max(1e9);
+
+export const inventoryItemSchema = z.object({
+  sku: requiredText('SKU', 60).transform((v) => v.toUpperCase()),
+  name: requiredText('Item name', 160),
+  category: optionalText(80),
+  unit: z.enum(INVENTORY_UNITS).default('pcs'),
+  /** Opening stock on create only — later changes go through stock movements. */
+  quantity: amount.default(0),
+  minStock: amount.default(0),
+  costPrice: amount.default(0),
+  salePrice: amount.default(0),
+  location: optionalText(120),
+  supplier: optionalText(120),
+  notes: optionalText(500),
+  isActive: z.boolean().optional().default(true),
+});
+
+export const inventoryItemUpdateSchema = inventoryItemSchema.omit({ quantity: true }).partial();
+
+export const stockMovementSchema = z
+  .object({
+    type: z.enum(STOCK_MOVEMENT_TYPES),
+    quantity: amount,
+    note: optionalText(300),
+  })
+  .refine((body) => body.type === 'adjust' || body.quantity > 0, {
+    message: 'Quantity must be more than 0',
+    path: ['quantity'],
+  });
 
 export const issueTypeSchema = z.object({
   name: requiredText('Issue type name', 80),

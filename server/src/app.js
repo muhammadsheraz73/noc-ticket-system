@@ -19,6 +19,7 @@ import searchRoutes from './routes/search.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import fieldTeamRoutes from './routes/fieldTeams.routes.js';
 import networkRoutes from './routes/network.routes.js';
+import inventoryRoutes from './routes/inventory.routes.js';
 import userRoutes from './routes/users.routes.js';
 import tenantRoutes from './routes/tenants.routes.js';
 import aiRoutes from './routes/ai.routes.js';
@@ -106,6 +107,7 @@ export function createApp() {
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/field-teams', fieldTeamRoutes);
   app.use('/api/network', networkRoutes);
+  app.use('/api/inventory', inventoryRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/tenants', tenantRoutes);
   app.use('/api/ai', aiRoutes);

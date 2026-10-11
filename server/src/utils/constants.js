@@ -72,6 +72,12 @@ export const DEVICE_TYPES = ['OLT', 'Switch', 'Router', 'ONU', 'Splitter', 'Medi
 
 export const CONNECTION_TYPES = ['Fiber', 'Copper', 'PON', 'Wireless', 'Uplink', 'Other'];
 
+/** Units a stock item (SKU) can be counted in. */
+export const INVENTORY_UNITS = ['pcs', 'meter', 'roll', 'box', 'set', 'kg'];
+
+/** in = received, out = issued/used, adjust = physical count sets the balance. */
+export const STOCK_MOVEMENT_TYPES = ['in', 'out', 'adjust'];
+
 export const AI_STATUSES = ['pending', 'completed', 'failed', 'unavailable', 'disabled'];
 
 /**
