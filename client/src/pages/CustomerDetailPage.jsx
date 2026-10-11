@@ -133,7 +133,7 @@ export default function CustomerDetailPage() {
               ) : null}
 
               <Alert tone="info" title="Visibility rule">
-                Address, PUM/PMB/COR type, ports and VLAN are searchable here but are never printed on a generated ticket.
+                Address, customer type, ports and VLAN are searchable here but are never printed on a generated ticket.
               </Alert>
             </div>
           </div>

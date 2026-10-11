@@ -6,6 +6,8 @@ import {
   FIELD_TEAM_KINDS,
   DEVICE_TYPES,
   CONNECTION_TYPES,
+  CUSTOMER_TYPES,
+  normalizeCustomerType,
   INVENTORY_UNITS,
   STOCK_MOVEMENT_TYPES,
   USERNAME_MAX,
@@ -105,7 +107,9 @@ export const customerSchema = z.object({
   name: requiredText('Customer Name', 160),
   address: requiredText('Address', 400),
   connectedFrom: requiredText('Connected From', 160),
-  type: requiredText('Type', 20).transform((v) => v.toUpperCase()),
+  type: requiredText('Type', 20)
+    .transform(normalizeCustomerType)
+    .refine((v) => CUSTOMER_TYPES.includes(v), { message: `Type must be ${CUSTOMER_TYPES.join(' or ')}` }),
   contactNumber: requiredText('Contact Number', 60),
   location: optionalText(500),
   destinationPort: optionalText(120),

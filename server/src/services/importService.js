@@ -1,7 +1,7 @@
 import xlsx from 'xlsx';
 import Customer from '../models/Customer.js';
 import ApiError from '../utils/ApiError.js';
-import { CUSTOMER_TYPES } from '../utils/constants.js';
+import { CUSTOMER_TYPES, normalizeCustomerType } from '../utils/constants.js';
 
 /** Customer fields an Excel column can be mapped onto. */
 export const IMPORTABLE_FIELDS = [
@@ -9,7 +9,7 @@ export const IMPORTABLE_FIELDS = [
   { field: 'name', label: 'Customer Name', required: true },
   { field: 'address', label: 'Address', required: true },
   { field: 'connectedFrom', label: 'Connected From', required: true },
-  { field: 'type', label: 'Type (PUM/PMB/COR)', required: true },
+  { field: 'type', label: 'Type (COR/Home User)', required: true },
   { field: 'contactNumber', label: 'Contact Number', required: true },
   { field: 'location', label: 'Location (Maps URL)', required: false },
   { field: 'destinationPort', label: 'Destination Port', required: false },
@@ -24,7 +24,7 @@ const HEADER_HINTS = {
   name: ['customer name', 'name', 'site name', 'site', 'customer'],
   address: ['address', 'site address', 'location address'],
   connectedFrom: ['connected from', 'pop', 'source pop', 'connected', 'from'],
-  type: ['type', 'customer type', 'connection type', 'pum/pmb/cor'],
+  type: ['type', 'customer type', 'connection type', 'pum/pmb/cor', 'cor/home user'],
   contactNumber: ['contact number', 'contact', 'contact #', 'phone', 'mobile', 'cell'],
   location: ['location', 'maps', 'google maps', 'map link', 'coordinates', 'geo'],
   destinationPort: ['destination port', 'dest port', 'dst port', 'destination'],
@@ -90,7 +90,7 @@ function applyMapping(row, mapping) {
     const column = mapping[field];
     record[field] = column ? String(row[column] ?? '').trim() : '';
   }
-  if (record.type) record.type = record.type.toUpperCase();
+  if (record.type) record.type = normalizeCustomerType(record.type);
   return record;
 }
 
@@ -257,7 +257,7 @@ export function buildTemplateWorkbook() {
     'Abdul Rouf',
     'Shahid Town, Gajjumata, Lahore',
     'Gajjumata Pop',
-    'PUM',
+    'Home User',
     '0333-4458420',
     'https://maps.app.goo.gl/EXwFUHbbik4spH5s8',
     'GE0/0/1',

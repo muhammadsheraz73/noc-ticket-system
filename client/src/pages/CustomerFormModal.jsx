@@ -3,12 +3,15 @@ import api, { errorMessage, fieldErrors } from '../api/client.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { Alert, Field, Modal, Select, TextInput, Textarea } from '../components/ui.jsx';
 
+/** Old PUM/PMB customers must be moved to one of these when they are next edited. */
+const CUSTOMER_TYPES = ['COR', 'Home User'];
+
 const BLANK = {
   customerReferenceNumber: '',
   name: '',
   address: '',
   connectedFrom: '',
-  type: 'PUM',
+  type: 'Home User',
   contactNumber: '',
   location: '',
   sourcePort: '',
@@ -17,7 +20,7 @@ const BLANK = {
   notes: '',
 };
 
-export default function CustomerFormModal({ open, customer, types = [], onClose, onSaved }) {
+export default function CustomerFormModal({ open, customer, onClose, onSaved }) {
   const toast = useToast();
   const [form, setForm] = useState(BLANK);
   const [errors, setErrors] = useState({});
@@ -28,7 +31,8 @@ export default function CustomerFormModal({ open, customer, types = [], onClose,
     if (!open) return;
     setErrors({});
     setError('');
-    setForm(customer ? { ...BLANK, ...pick(customer) } : BLANK);
+    const values = customer ? { ...BLANK, ...pick(customer) } : BLANK;
+    setForm(CUSTOMER_TYPES.includes(values.type) ? values : { ...values, type: '' });
   }, [open, customer]);
 
   const set = (key) => (event) => setForm((f) => ({ ...f, [key]: event.target.value }));
@@ -55,7 +59,6 @@ export default function CustomerFormModal({ open, customer, types = [], onClose,
     }
   };
 
-  const typeOptions = [...new Set([...types, 'PUM', 'PMB', 'COR', form.type].filter(Boolean))];
 
   return (
     <Modal
@@ -88,9 +91,10 @@ export default function CustomerFormModal({ open, customer, types = [], onClose,
             <Field label="Contact Number" required error={errors.contactNumber}>
               <TextInput value={form.contactNumber} onChange={set('contactNumber')} error={errors.contactNumber} required placeholder="0333-4458420" />
             </Field>
-            <Field label="Type" required error={errors.type} hint="PUM / PMB / COR">
+            <Field label="Type" required error={errors.type} hint="COR / Home User">
               <Select value={form.type} onChange={set('type')} error={errors.type} required>
-                {typeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                {CUSTOMER_TYPES.includes(form.type) ? null : <option value="">Select type</option>}
+                {CUSTOMER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </Select>
             </Field>
             <Field label="Connected From (POP)" required error={errors.connectedFrom}>

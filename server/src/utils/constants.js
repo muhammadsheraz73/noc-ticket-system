@@ -27,8 +27,14 @@ export const ROLE_LABELS = {
   [ROLES.ACCOUNTS]: 'Accounts',
 };
 
-/** PUM / PMB / COR — extendable by an Admin through the customer-types endpoint. */
-export const CUSTOMER_TYPES = ['PUM', 'PMB', 'COR'];
+/** The customer types a new or edited customer can have. */
+export const CUSTOMER_TYPES = ['COR', 'Home User'];
+
+/** Match a typed/imported value to its canonical spelling ("home user" → "Home User"). */
+export function normalizeCustomerType(value) {
+  const text = String(value ?? '').trim();
+  return CUSTOMER_TYPES.find((t) => t.toLowerCase() === text.toLowerCase()) || text;
+}
 
 export const TICKET_STATUSES = ['New', 'In Progress', 'On Hold', 'Resolved', 'Closed'];
 
