@@ -22,17 +22,12 @@ router.get(
     if (req.query.kind) filter.kind = req.query.kind;
     if (req.query.active !== 'all') filter.isActive = true;
 
-    let items = await FieldTeam.find(filter)
+    // Every active employee is assignable — a login account is optional.
+    const items = await FieldTeam.find(filter)
       .sort({ kind: 1, name: 1 })
       .populate('team', 'name')
       .populate('user', 'name email role isActive')
       .lean();
-
-    // A stale `user` reference (account since deleted) must not count as a
-    // login — only an actually-resolved, active account is assignable.
-    if (req.query.assignable === 'true') {
-      items = items.filter((item) => item.user && item.user.isActive !== false);
-    }
 
     const workload = await Ticket.aggregate([
       { $match: { isDeleted: false, status: { $nin: CLOSED_STATUSES }, assignedTo: { $ne: null } } },
@@ -98,6 +93,7 @@ router.put(
     // Keep the denormalized name on open tickets in step.
     if (before.name !== member.name) {
       await Ticket.updateMany({ assignedTo: member._id }, { $set: { assignedToName: member.name } });
+      await Ticket.updateMany({ assignedHelper: member._id }, { $set: { assignedHelperName: member.name } });
     }
 
     await recordAudit({

@@ -29,16 +29,14 @@ export async function requireActiveCustomer(customerIdOrRef) {
   return customer;
 }
 
-/** Resolve an assignee (primary or helper), requiring an active linked login. */
+/**
+ * Resolve an assignee (primary or helper). Any active employee qualifies — a
+ * login account is optional. Deactivating a login deactivates its employee
+ * record too, so the isActive check covers that case.
+ */
 async function resolveAssignee(id) {
-  const assignee = await FieldTeam.findOne({ _id: id, isActive: true }).populate('user', 'isActive');
-  if (!assignee) throw ApiError.badRequest('The selected field team/member is not available');
-  // A stale `user` reference (account since deleted) must not count as a login.
-  if (!assignee.user || assignee.user.isActive === false) {
-    throw ApiError.badRequest(
-      `${assignee.name} has no active login account linked — link one from Field Teams before assigning tickets to them`,
-    );
-  }
+  const assignee = await FieldTeam.findOne({ _id: id, isActive: true });
+  if (!assignee) throw ApiError.badRequest('The selected employee is not available');
   return assignee;
 }
 

@@ -27,6 +27,7 @@ const NAV = [
   {
     group: 'Internal',
     items: [
+      { to: '/employees', label: 'Employees', icon: '🧑‍🔧', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
       { to: '/inventory', label: 'Inventory', icon: '📦', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
       { to: '/customers/import', label: 'Import Excel', icon: '⭳', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
     ],

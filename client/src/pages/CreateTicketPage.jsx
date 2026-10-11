@@ -48,7 +48,7 @@ export default function CreateTicketPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    Promise.all([api.get('/meta'), api.get('/field-teams?assignable=true'), api.get('/ai/status')])
+    Promise.all([api.get('/meta'), api.get('/field-teams?kind=member'), api.get('/ai/status')])
       .then(([metaRes, teamRes, aiRes]) => {
         setMeta(metaRes.data);
         setTeams(teamRes.data.items);
@@ -252,7 +252,7 @@ export default function CreateTicketPage() {
                     </Select>
                   </Field>
 
-                  <Field label="Assign To (team member)" error={errors.assignedTo} hint="Only members with a login account can be assigned.">
+                  <Field label="Assign To (team member)" error={errors.assignedTo} hint="Add or edit people from Internal → Employees.">
                     <Select value={form.assignedTo} onChange={set('assignedTo')} error={errors.assignedTo}>
                       <option value="">Assign later</option>
                       {teams.map((t) => (

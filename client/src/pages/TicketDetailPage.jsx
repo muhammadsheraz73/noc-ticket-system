@@ -64,7 +64,7 @@ export default function TicketDetailPage() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    if (canManageTickets) api.get('/field-teams?assignable=true').then(({ data: d }) => setTeams(d.items)).catch(() => {});
+    if (canManageTickets) api.get('/field-teams?kind=member').then(({ data: d }) => setTeams(d.items)).catch(() => {});
   }, [canManageTickets]);
 
   useEffect(() => {
@@ -476,7 +476,7 @@ export default function TicketDetailPage() {
         <Field label="Remarks" hint="What the NOC operator observed — appears on the generated ticket.">
           <Textarea value={editForm.remarks} onChange={(event) => setEditForm((f) => ({ ...f, remarks: event.target.value }))} rows={3} />
         </Field>
-        <Field label="Assigned to" hint="Only members with a login account can be assigned. This is the name shown on the ticket.">
+        <Field label="Assigned to" hint="Add or edit people from Internal → Employees. This is the name shown on the ticket.">
           <Select value={editForm.assignedTo} onChange={(event) => setEditForm((f) => ({ ...f, assignedTo: event.target.value }))}>
             <option value="">Unassigned</option>
             {teams.map((t) => (
@@ -511,7 +511,7 @@ export default function TicketDetailPage() {
           </>
         }
       >
-        <Field label="Assigned to" required hint="Only members with a login account can be assigned. This is the name shown on the ticket.">
+        <Field label="Assigned to" required hint="Add or edit people from Internal → Employees. This is the name shown on the ticket.">
           <Select value={assignTo} onChange={(event) => setAssignTo(event.target.value)}>
             <option value="">Select…</option>
             {teams.map((t) => (

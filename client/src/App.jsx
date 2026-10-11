@@ -16,6 +16,7 @@ import CreateInvoicePage from './pages/CreateInvoicePage.jsx';
 import InvoiceDetailPage from './pages/InvoiceDetailPage.jsx';
 import SearchPage from './pages/SearchPage.jsx';
 import InventoryPage from './pages/InventoryPage.jsx';
+import EmployeesPage from './pages/EmployeesPage.jsx';
 import UsersPage from './pages/UsersPage.jsx';
 import ClientsPage from './pages/ClientsPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
@@ -135,6 +136,14 @@ export default function App() {
         />
         <Route path="search" element={<SearchPage />} />
         <Route path="network" element={<Navigate to="/inventory" replace />} />
+        <Route
+          path="employees"
+          element={
+            <Protected roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
+              <EmployeesPage />
+            </Protected>
+          }
+        />
         <Route
           path="inventory"
           element={
