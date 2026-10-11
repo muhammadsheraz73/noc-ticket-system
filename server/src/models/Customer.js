@@ -27,6 +27,7 @@ const customerSchema = new mongoose.Schema(
 
     // --- Optional master data ---
     location: { type: String, trim: true, default: '' },
+    bandwidth: { type: String, trim: true, default: '' },
 
     // --- Internal network data ---
     destinationPort: { type: String, trim: true, default: '', index: true },

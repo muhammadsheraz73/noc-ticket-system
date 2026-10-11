@@ -114,6 +114,7 @@ export const customerSchema = z.object({
   status: z.enum(CUSTOMER_STATUSES).default('Active'),
   contactNumber: requiredText('Contact Number', 60),
   location: optionalText(500),
+  bandwidth: optionalText(40),
   destinationPort: optionalText(120),
   sourcePort: optionalText(120),
   vlan: optionalText(60),

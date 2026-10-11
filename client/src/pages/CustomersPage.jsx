@@ -127,7 +127,7 @@ export default function CustomersPage() {
 
         <div className="card__body card__body--flush">
           {state.loading ? (
-            <TableSkeleton rows={6} cols={8} />
+            <TableSkeleton rows={6} cols={9} />
           ) : state.items.length === 0 ? (
             <EmptyState
               icon="👥"
@@ -148,6 +148,7 @@ export default function CustomersPage() {
                     <th>Name</th>
                     <th>Type</th>
                     <th>Status</th>
+                    <th>Bandwidth</th>
                     <th>Connected From</th>
                     <th>Contact</th>
                     <th>VLAN / Ports</th>
@@ -167,6 +168,7 @@ export default function CustomersPage() {
                       <td>
                         <Badge tone={CUSTOMER_STATUS_TONE[customer.status || 'Active']}>{customer.status || 'Active'}</Badge>
                       </td>
+                      <td className="nowrap">{customer.bandwidth || <span className="muted">—</span>}</td>
                       <td className="nowrap">{customer.connectedFrom}</td>
                       <td className="nowrap mono">{customer.contactNumber}</td>
                       <td className="small mono">

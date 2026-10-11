@@ -84,6 +84,7 @@ export default function CustomerDetailPage() {
                 <DefItem label="Status">
                   <Badge tone={CUSTOMER_STATUS_TONE[customer.status || 'Active']}>{customer.status || 'Active'}</Badge>
                 </DefItem>
+                <DefItem label="Bandwidth" value={customer.bandwidth} />
                 <DefItem label="Contact" value={customer.contactNumber} mono />
                 <DefItem label="Connected From" value={customer.connectedFrom} />
                 <DefItem label="Location">

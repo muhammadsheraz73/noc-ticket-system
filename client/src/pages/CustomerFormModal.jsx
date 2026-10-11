@@ -17,6 +17,7 @@ const BLANK = {
   status: 'Active',
   contactNumber: '',
   location: '',
+  bandwidth: '',
   sourcePort: '',
   destinationPort: '',
   vlan: '',
@@ -108,6 +109,9 @@ export default function CustomerFormModal({ open, customer, onClose, onSaved }) 
             </Field>
             <Field label="Connected From (POP)" required error={errors.connectedFrom}>
               <TextInput value={form.connectedFrom} onChange={set('connectedFrom')} error={errors.connectedFrom} required placeholder="Gajjumata Pop" />
+            </Field>
+            <Field label="Bandwidth" error={errors.bandwidth} hint="Package speed, e.g. 10MB, 50MB">
+              <TextInput value={form.bandwidth} onChange={set('bandwidth')} error={errors.bandwidth} placeholder="50MB" />
             </Field>
             <Field label="Location (Google Maps URL)" error={errors.location} hint="Shown on the generated ticket">
               <TextInput value={form.location} onChange={set('location')} error={errors.location} placeholder="https://maps.app.goo.gl/…" />
