@@ -89,14 +89,9 @@ export default function Layout() {
         <div className="sidebar__brand">
           <div className="sidebar__logo">
             {user?.tenantLogo ? (
-              <img
-                src={user.tenantLogo}
-                alt={user.tenantName}
-                className="sidebar__logo-img"
-                style={{ height: 'auto', maxHeight: 44, maxWidth: '100%' }}
-              />
+              <img src={user.tenantLogo} alt={user.tenantName} className="sidebar__logo-img" />
             ) : (
-              <strong style={{ color: '#111', fontSize: 16 }}>
+              <strong className="sidebar__logo-text">
                 {user?.role === ROLES.SUPERADMIN ? 'NOC Panel' : user?.tenantName || 'NOC Manager'}
               </strong>
             )}
