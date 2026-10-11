@@ -132,8 +132,12 @@ a:hover { text-decoration: underline; }
   flex: 0 0 auto;
 }
 .sidebar__logo {
-  display: flex; align-items: center; justify-content: center; width: 100%;
-  height: 56px; padding: 0 10px; box-sizing: border-box; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  width: 100%; height: 64px; padding: 0 10px; box-sizing: border-box; overflow: hidden;
+}
+/* Short accent bar under the name so the text reads as a wordmark. */
+.sidebar__logo::after {
+  content: ''; width: 28px; height: 3px; border-radius: 3px; background: var(--brand-accent);
 }
 /* Any logo shape (wide, tall, square) is scaled down to fit the box without distortion. */
 .sidebar__logo-img {
@@ -142,7 +146,10 @@ a:hover { text-decoration: underline; }
 }
 .sidebar__logo-text {
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: 15px; font-weight: 800; color: #fff;
+  font-family: 'Poppins', var(--font); font-size: 22px; font-weight: 800;
+  letter-spacing: 0.4px; line-height: 1.2; color: #fff;
+  background: linear-gradient(90deg, #fff 0%, #fff 45%, var(--brand-accent) 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
 }
 
 .sidebar__nav {
