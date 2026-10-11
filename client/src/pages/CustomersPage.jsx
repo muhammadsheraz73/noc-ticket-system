@@ -191,7 +191,6 @@ export default function CustomersPage() {
       <CustomerFormModal
         open={formOpen}
         customer={editing}
-        types={types}
         onClose={() => { setFormOpen(false); setEditing(null); }}
         onSaved={() => { setFormOpen(false); setEditing(null); load(); }}
       />
