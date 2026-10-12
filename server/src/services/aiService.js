@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import env from '../config/env.js';
 import logger from '../utils/logger.js';
-import { TICKET_PRIORITIES } from '../utils/constants.js';
+import { DEFAULT_ISSUE_TYPES, TICKET_PRIORITIES } from '../utils/constants.js';
 
 /**
  * AI assistant for NOC staff.
@@ -32,7 +32,7 @@ const ANALYSIS_SCHEMA = {
     category: {
       type: 'string',
       description:
-        'The most likely issue category, e.g. Fiber Cut, LOS, Internet Connectivity, Power, Configuration, Other.',
+        `The most likely issue category, one of: ${DEFAULT_ISSUE_TYPES.join(', ')}.`,
     },
     suggestedPriority: {
       type: 'string',

@@ -75,12 +75,26 @@ export const PRIORITY_MESSAGES = {
 };
 
 export const DEFAULT_ISSUE_TYPES = [
+  'Configurations',
+  'Electrical Failures & Planning',
+  'Equipment Collection',
+  'Equipment Replacement',
   'Fiber Cut',
-  'LOS',
-  'Internet Connectivity',
-  'Power',
-  'Configuration',
-  'Other',
+  'Internal Area Issues (ISP)',
+  'New Deployments & Planning',
+  'Optical Power Value (+/-)',
+  'P-Services (Fiber Routing)',
+  'P-Services (General Support)',
+  'P-Services (Technical)',
+  'P-Services (Wireless)',
+  'Slow Browsing & Ping Timeout',
+  'Static IP’s Issue',
+  'Wireless Connectivity Issue',
+  'Maintenance',
+  'Internet service Down',
+  'Cat 6 Wire',
+  'Administrative Task',
+  'Re-activation',
 ];
 
 export const INVOICE_STATUSES = ['Draft', 'Unpaid', 'Paid', 'Cancelled'];

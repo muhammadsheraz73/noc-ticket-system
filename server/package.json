@@ -12,7 +12,8 @@
     "migrate": "node src/scripts/migrate.js",
     "test": "node --test \"tests/**/*.test.js\"",
     "backfill:usernames": "node src/scripts/backfillUsernames.js",
-    "migrate:tenants": "node src/scripts/multiTenant.js"
+    "migrate:tenants": "node src/scripts/multiTenant.js",
+    "sync:issue-types": "node src/scripts/syncIssueTypes.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
