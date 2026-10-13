@@ -104,7 +104,7 @@ export default function ClientsPage() {
                     <th>Company</th>
                     <th>Health</th>
                     <th className="text-right">Customers</th>
-                    <th className="text-right">Open tickets</th>
+                    <th className="text-right">Resolved tickets</th>
                     <th className="text-right">Logins</th>
                     <th className="text-right">Employees</th>
                     <th>Last active</th>
@@ -131,7 +131,7 @@ export default function ClientsPage() {
                         <td><HealthBadge health={client.health} /></td>
                         <td className="text-right mono">{formatNumber(m.customers.total)}</td>
                         <td className="text-right mono">
-                          {formatNumber(m.tickets.open)}
+                          {formatNumber(m.tickets.resolvedTotal)}
                           {m.tickets.overdue ? <div className="small text-danger strong">{m.tickets.overdue} overdue</div> : null}
                         </td>
                         <td className="text-right mono">{m.logins.active}<span className="muted"> / {m.logins.total}</span></td>

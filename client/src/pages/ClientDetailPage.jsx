@@ -126,10 +126,10 @@ export default function ClientDetailPage() {
 
         <div className="grid grid--stats">
           <Stat
-            label="Open tickets"
-            value={formatNumber(m.tickets.open)}
-            tone={m.tickets.overdue ? 'danger' : 'warn'}
-            hint={m.tickets.overdue ? `${m.tickets.overdue} past ETTR · ${m.tickets.urgent} urgent` : `${m.tickets.urgent} urgent · none overdue`}
+            label="Resolved tickets"
+            value={formatNumber(m.tickets.resolvedTotal)}
+            tone={m.tickets.overdue ? 'danger' : 'ok'}
+            hint={`all time · ${m.tickets.open} open${m.tickets.overdue ? `, ${m.tickets.overdue} past ETTR` : ''}`}
           />
           <Stat label={`Tickets · ${range}`} value={formatNumber(m.tickets.created)} hint={`${formatNumber(m.tickets.resolved)} resolved`} />
           <Stat
