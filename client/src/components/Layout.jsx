@@ -38,13 +38,15 @@ const NAV = [
   },
 ];
 
-/** The panel owner manages clients and their logins — there is no client data to browse. */
+/** The panel owner monitors and manages clients and their logins — it never edits client data. */
 const OWNER_NAV = [
   {
     group: 'Panel',
     items: [
+      { to: '/', label: 'Overview', icon: '▤', end: true },
       { to: '/clients', label: 'Clients', icon: '🏢' },
       { to: '/users', label: 'Logins', icon: '🛡' },
+      { to: '/activity', label: 'Activity', icon: '🕘' },
       { to: '/settings', label: 'Settings', icon: '⚙' },
     ],
   },

@@ -19,6 +19,9 @@ import InventoryPage from './pages/InventoryPage.jsx';
 import EmployeesPage from './pages/EmployeesPage.jsx';
 import UsersPage from './pages/UsersPage.jsx';
 import ClientsPage from './pages/ClientsPage.jsx';
+import ClientDetailPage from './pages/ClientDetailPage.jsx';
+import OwnerOverviewPage from './pages/OwnerOverviewPage.jsx';
+import OwnerActivityPage from './pages/OwnerActivityPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import BillingPage from './pages/BillingPage.jsx';
 
@@ -63,7 +66,7 @@ export default function App() {
           </Protected>
         }
       >
-        <Route index element={<DashboardPage />} />
+        <Route index element={user?.role === ROLES.SUPERADMIN ? <OwnerOverviewPage /> : <DashboardPage />} />
 
         <Route
           path="customers"
@@ -157,6 +160,22 @@ export default function App() {
           element={
             <Protected ownerOk roles={[ROLES.SUPERADMIN]}>
               <ClientsPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="clients/:id"
+          element={
+            <Protected ownerOk roles={[ROLES.SUPERADMIN]}>
+              <ClientDetailPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="activity"
+          element={
+            <Protected ownerOk roles={[ROLES.SUPERADMIN]}>
+              <OwnerActivityPage />
             </Protected>
           }
         />

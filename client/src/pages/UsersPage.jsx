@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api, { errorMessage, fieldErrors } from '../api/client.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
@@ -16,7 +17,8 @@ export default function UsersPage() {
 
   const [items, setItems] = useState([]);
   const [clients, setClients] = useState([]);
-  const [clientFilter, setClientFilter] = useState('');
+  const [params] = useSearchParams();
+  const [clientFilter, setClientFilter] = useState(params.get('client') || '');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
