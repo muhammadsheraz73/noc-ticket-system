@@ -79,7 +79,6 @@ async function collectMetrics(tenantIds, { days, now }) {
           _id: '$tenant',
           total: { $sum: 1 },
           open: { $sum: { $cond: ['$isOpen', 1, 0] } },
-          resolvedTotal: { $sum: { $cond: ['$isOpen', 0, 1] } },
           overdue: { $sum: { $cond: [{ $and: ['$isOpen', { $lt: ['$ettrAt', now] }] }, 1, 0] } },
           urgent: { $sum: { $cond: [{ $and: ['$isOpen', { $eq: ['$priority', 'Urgent'] }] }, 1, 0] } },
           unassigned: { $sum: { $cond: [{ $and: ['$isOpen', { $not: ['$assignedTo'] }] }, 1, 0] } },
@@ -168,7 +167,6 @@ async function collectMetrics(tenantIds, { days, now }) {
       tickets: {
         total: tk.total || 0,
         open: tk.open || 0,
-        resolvedTotal: tk.resolvedTotal || 0,
         overdue: tk.overdue || 0,
         urgent: tk.urgent || 0,
         unassigned: tk.unassigned || 0,
