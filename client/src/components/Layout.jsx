@@ -12,7 +12,6 @@ const NAV = [
     items: [
       { to: '/', label: 'Dashboard', icon: '▤', end: true },
       { to: '/tickets', label: 'Tickets', icon: '🎫' },
-      { to: '/tickets/new', label: 'Create Ticket', icon: '＋', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
       { to: '/customers', label: 'Customers', icon: '👥', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR, ROLES.ACCOUNTS] },
     ],
   },
