@@ -104,6 +104,7 @@ export default function TicketsPage() {
               <Select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
                 <option value="">All statuses</option>
                 {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                <option value="Resolved,Closed">Resolved + Closed</option>
               </Select>
             </Field>
           </div>
