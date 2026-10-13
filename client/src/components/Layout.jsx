@@ -20,7 +20,6 @@ const NAV = [
     items: [
       { to: '/billing', label: 'Billing', icon: '💰', roles: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR] },
       { to: '/invoices', label: 'Invoices', icon: '🧾', roles: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER] },
-      { to: '/invoices/new', label: 'Create Invoice', icon: '＋', roles: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR] },
     ],
   },
   {
