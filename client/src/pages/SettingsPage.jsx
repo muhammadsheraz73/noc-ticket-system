@@ -239,9 +239,9 @@ function CompanyProfileCard() {
               <Field label="Website" error={errors.website}>
                 <TextInput value={form.website} onChange={set('website')} error={errors.website} placeholder="www.yourcompany.pk" />
               </Field>
-              <Field label="Default quotation terms" full error={errors.quotationTerms} hint="One per line. Filled into every new quotation; you can still change them per quotation.">
+              <Field label="Default quotation terms" full error={errors.quotationTerms} hint="One per line. Filled into every new quotation; you can still change them per quotation. Left empty, the two terms shown in grey are used.">
                 <Textarea rows={4} value={form.quotationTerms} onChange={set('quotationTerms')} error={errors.quotationTerms}
-                  placeholder={'50% advance payment with the purchase order\nInstallation within 3 working days of payment\nEquipment carries a 6-month replacement warranty'} />
+                  placeholder={'50% advance with the purchase order\nInstallation within 3 working days of payment'} />
               </Field>
             </div>
             <button className="btn" type="submit" disabled={busy}>

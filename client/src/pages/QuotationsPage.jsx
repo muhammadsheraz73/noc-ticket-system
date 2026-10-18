@@ -1,33 +1,34 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { CircleCheck, FileText, Hourglass, Trophy } from 'lucide-react';
+import { CalendarDays, Calculator, FileText, Wallet } from 'lucide-react';
 import api, { errorMessage } from '../api/client.js';
+import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import Kpi from '../components/Kpi.jsx';
-import { Alert, Badge, EmptyState, Field, Pagination, Select, TableSkeleton, TextInput } from '../components/ui.jsx';
-import { QUOTATION_TONE, formatDate, formatMoney, formatNumber } from '../utils/format.js';
+import { Alert, EmptyState, Field, Pagination, TableSkeleton, TextInput } from '../components/ui.jsx';
+import { formatDate, formatMoney, formatNumber } from '../utils/format.js';
+import { downloadQuotationPdf } from '../utils/quotationPdf.js';
 
-const STATUSES = ['Draft', 'Sent', 'Accepted', 'Rejected', 'Expired'];
-
-/** Every quotation this client has issued, with how many turned into business. */
+/** Every quotation this client has made — open one, or download its PDF straight from the list. */
 export default function QuotationsPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [params, setParams] = useSearchParams();
 
   const [state, setState] = useState({ items: [], pagination: null, summary: null, loading: true, error: '' });
   const [query, setQuery] = useState(params.get('q') || '');
-  const [status, setStatus] = useState(params.get('status') || '');
   const [page, setPage] = useState(1);
+  const [downloading, setDownloading] = useState('');
 
   const load = useCallback(async () => {
     setState((s) => ({ ...s, loading: true }));
     try {
-      const { data } = await api.get('/quotations', { params: { q: query || undefined, status: status || undefined, page, limit: 20 } });
+      const { data } = await api.get('/quotations', { params: { q: query || undefined, page, limit: 20 } });
       setState({ items: data.items, pagination: data.pagination, summary: data.summary, loading: false, error: '' });
     } catch (error) {
       setState((s) => ({ ...s, items: [], loading: false, error: errorMessage(error) }));
     }
-  }, [query, status, page]);
+  }, [query, page]);
 
   useEffect(() => {
     const timer = setTimeout(load, query ? 320 : 0);
@@ -35,53 +36,39 @@ export default function QuotationsPage() {
   }, [load, query]);
 
   useEffect(() => {
-    const next = new URLSearchParams();
-    if (query) next.set('q', query);
-    if (status) next.set('status', status);
-    setParams(next, { replace: true });
-  }, [query, status, setParams]);
+    setParams(query ? { q: query } : {}, { replace: true });
+  }, [query, setParams]);
+
+  const download = async (event, q) => {
+    event.stopPropagation();
+    setDownloading(q._id);
+    try {
+      await downloadQuotationPdf(q);
+    } catch (err) {
+      toast.error('Could not download the PDF', errorMessage(err));
+    } finally {
+      setDownloading('');
+    }
+  };
 
   const s = state.summary;
-  const short = (v) => formatNumber(Math.round(v || 0));
-  const toggle = (value) => { setStatus((cur) => (cur === value ? '' : value)); setPage(1); };
+  const whole = (v) => formatNumber(Math.round(v || 0));
 
   return (
     <>
       <PageHead
         title="Quotations"
-        subtitle="Price quotes for customers and new prospects — downloaded on your own letterhead."
+        subtitle="Make a quotation and download it as a PDF on your own letterhead."
         actions={<Link className="btn" to="/quotations/new">＋ New Quotation</Link>}
       />
 
       {state.error ? <Alert tone="error" title="Could not load quotations">{state.error}</Alert> : null}
 
       <div className="kpi-row">
-        <Kpi icon={FileText} tone="brand" label="Total quotations" value={formatNumber(s?.total)} hint="All time" />
-        <Kpi
-          icon={Hourglass}
-          tone="info"
-          label="Awaiting reply"
-          prefix="PKR"
-          value={short(s?.open.value)}
-          hint={`${formatNumber(s?.open.count)} draft or sent, still valid`}
-        />
-        <Kpi
-          icon={CircleCheck}
-          tone="ok"
-          label="Accepted"
-          prefix="PKR"
-          value={short(s?.accepted.value)}
-          hint={`${formatNumber(s?.accepted.count)} quotation(s) won · click to view`}
-          active={status === 'Accepted'}
-          onClick={() => toggle('Accepted')}
-        />
-        <Kpi
-          icon={Trophy}
-          tone={s?.winRate === null || s?.winRate === undefined ? 'muted' : s.winRate >= 50 ? 'ok' : 'danger'}
-          label="Win rate"
-          value={s?.winRate === null || s?.winRate === undefined ? '—' : `${s.winRate}%`}
-          hint={s?.expired.count ? `${s.expired.count} expired without a reply` : 'Accepted out of decided'}
-        />
+        <Kpi icon={FileText} tone="brand" label="Total quotations" value={formatNumber(s?.total.count)} hint="All time" />
+        <Kpi icon={CalendarDays} tone="info" label="This month" value={formatNumber(s?.thisMonth.count)} hint={`PKR ${whole(s?.thisMonth.value)} quoted`} />
+        <Kpi icon={Wallet} tone="ok" label="Total quoted" prefix="PKR" value={whole(s?.total.value)} hint="Value of all quotations" />
+        <Kpi icon={Calculator} tone="muted" label="Average quotation" prefix="PKR" value={whole(s?.average)} hint="Per quotation" />
       </div>
 
       <div className="card">
@@ -95,25 +82,17 @@ export default function QuotationsPage() {
               />
             </Field>
           </div>
-          <div className="filters__item">
-            <Field label="Status">
-              <Select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
-                <option value="">All statuses</option>
-                {STATUSES.map((st) => <option key={st} value={st}>{st}</option>)}
-              </Select>
-            </Field>
-          </div>
         </div>
 
         <div className="card__body card__body--flush">
           {state.loading && !state.items.length ? (
-            <TableSkeleton rows={6} cols={7} />
+            <TableSkeleton rows={6} cols={6} />
           ) : state.items.length === 0 ? (
             <EmptyState
               icon="📄"
-              title={query || status ? 'No quotations found' : 'No quotations yet'}
-              message={query || status ? 'Try a different search or status.' : 'Create your first quotation — it downloads as a PDF on your letterhead.'}
-              action={query || status ? null : <Link className="btn" to="/quotations/new">＋ New Quotation</Link>}
+              title={query ? 'No quotations found' : 'No quotations yet'}
+              message={query ? 'Try a different search.' : 'Create your first quotation — it downloads as a PDF on your letterhead.'}
+              action={query ? null : <Link className="btn" to="/quotations/new">＋ New Quotation</Link>}
             />
           ) : (
             <div className="table-wrap">
@@ -121,7 +100,7 @@ export default function QuotationsPage() {
                 <thead>
                   <tr>
                     <th>Quotation</th><th>Client</th><th>Subject</th><th>Date</th><th>Valid until</th>
-                    <th className="text-right">Total</th><th>Status</th>
+                    <th className="text-right">Total</th><th />
                   </tr>
                 </thead>
                 <tbody>
@@ -131,14 +110,20 @@ export default function QuotationsPage() {
                       <td>
                         <div className="strong">{q.clientName}</div>
                         <div className="small muted">
-                          {[q.clientCompany, q.customerReferenceNumber ? `ID ${q.customerReferenceNumber}` : ''].filter(Boolean).join(' · ') || 'Prospect'}
+                          {[q.clientCompany, q.customerReferenceNumber ? `ID ${q.customerReferenceNumber}` : ''].filter(Boolean).join(' · ') || '—'}
                         </div>
                       </td>
                       <td className="small">{q.subject || <span className="muted">—</span>}</td>
                       <td className="small nowrap">{formatDate(q.issueDate)}</td>
-                      <td className={`small nowrap${q.isExpired ? ' text-danger' : ''}`}>{formatDate(q.validUntil)}</td>
+                      <td className="small nowrap">{formatDate(q.validUntil)}</td>
                       <td className="text-right nowrap strong">{formatMoney(q.total, q.currency)}</td>
-                      <td><Badge tone={QUOTATION_TONE[q.displayStatus]} dot>{q.displayStatus}</Badge></td>
+                      <td>
+                        <div className="table__actions">
+                          <button className="btn btn--secondary btn--sm" onClick={(e) => download(e, q)} disabled={downloading === q._id}>
+                            {downloading === q._id ? <span className="spinner spinner--dark" /> : '⭳'} PDF
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -13,7 +13,7 @@ import { nextSequence } from '../utils/sequence.js';
 import { containsRegex, parsePagination } from '../utils/search.js';
 import { calculateTotals } from '../services/invoiceService.js';
 import { renderQuotationPdf } from '../services/quotationPdf.js';
-import { ROLES } from '../utils/constants.js';
+import { DEFAULT_QUOTATION_TERMS, ROLES } from '../utils/constants.js';
 import { quotationSchema, quotationStatusSchema, quotationUpdateSchema } from '../validators/schemas.js';
 
 const router = Router();
@@ -77,14 +77,14 @@ router.get(
       success: true,
       issueDate: now,
       validUntil: new Date(now.getTime() + DEFAULT_VALID_DAYS * DAY),
-      terms: req.tenant?.quotationTerms || '',
+      terms: req.tenant?.quotationTerms || DEFAULT_QUOTATION_TERMS,
       currency: env.invoice.currency,
       hasLetterhead: Boolean(req.tenant?.address || (await Tenant.exists({ _id: req.tenant._id, logo: { $nin: ['', null] } }))),
     });
   }),
 );
 
-/** GET /api/quotations — list, search and the summary tiles. */
+/** GET /api/quotations — list, search and the summary tiles (all time, this month, average). */
 router.get(
   '/',
   asyncHandler(async (req, res) => {
@@ -96,49 +96,40 @@ router.get(
       const rx = containsRegex(req.query.q);
       filter.$or = [{ quoteNumber: rx }, { clientName: rx }, { clientCompany: rx }, { subject: rx }, { customerReferenceNumber: rx }];
     }
-    if (req.query.status === 'Expired') {
-      filter.status = { $in: OPEN_STATUSES };
-      filter.validUntil = { $lt: now };
-    } else if (req.query.status) {
-      filter.status = req.query.status;
-      if (OPEN_STATUSES.includes(req.query.status)) filter.validUntil = { $gte: now };
-    }
+    const monthKey = new Intl.DateTimeFormat('en-CA', { timeZone: env.timezone, year: 'numeric', month: '2-digit' })
+      .format(now).slice(0, 7);
 
-    const [items, total, summaryRows] = await Promise.all([
+    const [items, total, [summary]] = await Promise.all([
       Quotation.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).select('-items -terms -notes').lean(),
       Quotation.countDocuments(filter),
       Quotation.aggregate([
         { $match: { isDeleted: false } },
         {
+          $addFields: {
+            inMonth: { $eq: [{ $dateToString: { format: '%Y-%m', date: '$issueDate', timezone: env.timezone } }, monthKey] },
+          },
+        },
+        {
           $group: {
-            _id: {
-              $cond: [
-                { $and: [{ $in: ['$status', OPEN_STATUSES] }, { $lt: ['$validUntil', now] }] },
-                'Expired',
-                '$status',
-              ],
-            },
+            _id: null,
             count: { $sum: 1 },
             value: { $sum: '$total' },
+            monthCount: { $sum: { $cond: ['$inMonth', 1, 0] } },
+            monthValue: { $sum: { $cond: ['$inMonth', '$total', 0] } },
           },
         },
       ]),
     ]);
 
-    const by = Object.fromEntries(summaryRows.map((r) => [r._id, r]));
-    const pick = (s) => by[s] || { count: 0, value: 0 };
-    const decided = pick('Accepted').count + pick('Rejected').count;
-
+    const s = summary || { count: 0, value: 0, monthCount: 0, monthValue: 0 };
     res.json({
       success: true,
       items: items.map((q) => decorate(q, now)),
       pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) },
       summary: {
-        total: summaryRows.reduce((s, r) => s + r.count, 0),
-        open: { count: pick('Draft').count + pick('Sent').count, value: pick('Draft').value + pick('Sent').value },
-        accepted: pick('Accepted'),
-        expired: pick('Expired'),
-        winRate: decided ? Math.round((pick('Accepted').count / decided) * 100) : null,
+        total: { count: s.count, value: s.value },
+        thisMonth: { count: s.monthCount, value: s.monthValue },
+        average: s.count ? s.value / s.count : 0,
       },
     });
   }),
@@ -182,13 +173,12 @@ router.get(
   }),
 );
 
-/** PUT /api/quotations/:id — full edit; an accepted quotation is locked. */
+/** PUT /api/quotations/:id — full edit. */
 router.put(
   '/:id',
   validate(quotationUpdateSchema),
   asyncHandler(async (req, res) => {
     const quotation = await findQuotation(req.params.id);
-    if (quotation.status === 'Accepted') throw ApiError.badRequest('An accepted quotation cannot be edited — duplicate it instead');
 
     const previousStatus = quotation.status;
     const merged = { ...quotation.toObject(), ...req.body };

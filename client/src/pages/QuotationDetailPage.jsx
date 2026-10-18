@@ -5,10 +5,11 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import PdfPreview from '../components/PdfPreview.jsx';
-import { Alert, Badge, ConfirmDialog, DefItem, Loading } from '../components/ui.jsx';
-import { QUOTATION_TONE, formatDate, formatDateTime, formatMoney } from '../utils/format.js';
+import { Alert, ConfirmDialog, DefItem, Loading } from '../components/ui.jsx';
+import { formatDate, formatMoney } from '../utils/format.js';
+import { saveQuotationPdf } from '../utils/quotationPdf.js';
 
-/** One quotation: the PDF exactly as the client will receive it, plus its life cycle. */
+/** One quotation: the PDF exactly as it downloads, with edit, duplicate and delete. */
 export default function QuotationDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ export default function QuotationDetailPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Re-render the PDF whenever the quotation changes (status, edits).
+  // Re-render the PDF whenever the quotation changes.
   useEffect(() => {
     if (!quotation) return;
     let cancelled = false;
@@ -46,30 +47,7 @@ export default function QuotationDetailPage() {
     return () => { cancelled = true; };
   }, [id, quotation?.updatedAt, toast]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const download = () => {
-    if (!pdf) return;
-    const url = URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${quotation.quoteNumber}${quotation.clientName ? ` - ${quotation.clientName.replace(/[\\/:*?"<>|]/g, '')}` : ''}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-
-  const setStatus = async (status) => {
-    setBusy(status);
-    try {
-      const { data } = await api.patch(`/quotations/${id}/status`, { status });
-      setQuotation(data.quotation);
-      toast.success(`Marked as ${status}`, data.quotation.quoteNumber);
-    } catch (err) {
-      toast.error('Could not change the status', errorMessage(err));
-    } finally {
-      setBusy('');
-    }
-  };
+  const download = () => { if (pdf) saveQuotationPdf(pdf, quotation); };
 
   const duplicate = async () => {
     setBusy('duplicate');
@@ -107,7 +85,6 @@ export default function QuotationDetailPage() {
   if (!quotation) return <Loading label="Loading quotation…" />;
 
   const q = quotation;
-  const locked = q.status === 'Accepted';
 
   return (
     <>
@@ -117,8 +94,10 @@ export default function QuotationDetailPage() {
         subtitle={[q.clientName, q.subject].filter(Boolean).join(' · ')}
         actions={
           <>
-            <button className="btn" onClick={download} disabled={!pdf}>⭳ Download PDF</button>
-            {!locked ? <Link className="btn btn--secondary" to={`/quotations/${id}/edit`}>Edit</Link> : null}
+            <button className="btn" onClick={download} disabled={!pdf}>
+              {pdf ? '⭳' : <span className="spinner" />} Download PDF
+            </button>
+            <Link className="btn btn--secondary" to={`/quotations/${id}/edit`}>Edit</Link>
             <button className="btn btn--secondary" onClick={duplicate} disabled={Boolean(busy)}>
               {busy === 'duplicate' ? <span className="spinner spinner--dark" /> : null} Duplicate
             </button>
@@ -130,7 +109,7 @@ export default function QuotationDetailPage() {
         <div className="card">
           <div className="card__head">
             <h2>Preview</h2>
-            <span className="small muted">Exactly what the client receives</span>
+            <span className="small muted">Exactly what downloads</span>
           </div>
           <div className="card__body" style={{ background: 'var(--bg)' }}>
             <PdfPreview bytes={pdf} loading={pdfLoading && !pdf} />
@@ -138,44 +117,6 @@ export default function QuotationDetailPage() {
         </div>
 
         <div className="stack">
-          <div className="card">
-            <div className="card__head">
-              <h3>Status</h3>
-              <div className="card__head-actions"><Badge tone={QUOTATION_TONE[q.displayStatus]} dot>{q.displayStatus}</Badge></div>
-            </div>
-            <div className="card__body">
-              {q.isExpired ? (
-                <Alert tone="warn">Valid-until date has passed. Edit the date or duplicate it to send a fresh quote.</Alert>
-              ) : null}
-              <div className="status-steps">
-                {['Draft', 'Sent', 'Accepted'].map((s, i) => {
-                  const order = { Draft: 0, Sent: 1, Accepted: 2, Rejected: 2 }[q.status];
-                  const done = i < order || (i === order && q.status !== 'Rejected');
-                  return (
-                    <div key={s} className={`status-steps__step${done ? ' is-done' : ''}${q.status === s ? ' is-current' : ''}`}>
-                      <span className="status-steps__dot">{done ? '✓' : i + 1}</span>{s}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="row" style={{ marginTop: 14 }}>
-                {q.status === 'Draft' ? (
-                  <button className="btn btn--sm" onClick={() => setStatus('Sent')} disabled={Boolean(busy)}>Mark as Sent</button>
-                ) : null}
-                {q.status !== 'Accepted' ? (
-                  <button className="btn btn--sm btn--ok" onClick={() => setStatus('Accepted')} disabled={Boolean(busy)}>✓ Accepted</button>
-                ) : null}
-                {q.status !== 'Rejected' && q.status !== 'Accepted' ? (
-                  <button className="btn btn--secondary btn--sm text-danger" onClick={() => setStatus('Rejected')} disabled={Boolean(busy)}>✕ Rejected</button>
-                ) : null}
-                {q.status === 'Accepted' || q.status === 'Rejected' ? (
-                  <button className="btn btn--ghost btn--sm" onClick={() => setStatus('Sent')} disabled={Boolean(busy)}>Reopen</button>
-                ) : null}
-              </div>
-              {q.statusChangedAt ? <div className="small muted" style={{ marginTop: 10 }}>Last change {formatDateTime(q.statusChangedAt)}</div> : null}
-            </div>
-          </div>
-
           <div className="card">
             <div className="card__head"><h3>Summary</h3></div>
             <div className="card__body">

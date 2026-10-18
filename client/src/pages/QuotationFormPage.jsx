@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import { Alert, Badge, Field, Loading, Select, TextInput, Textarea } from '../components/ui.jsx';
 import { formatMoney } from '../utils/format.js';
+import { downloadQuotationPdf } from '../utils/quotationPdf.js';
 
 const UNITS = ['pcs', 'meter', 'job', 'month', 'year', 'set', 'roll', 'box', 'hour', 'lot'];
 const BLANK_ITEM = { description: '', quantity: 1, unit: 'pcs', rate: 0 };
@@ -61,9 +62,6 @@ export default function QuotationFormPage() {
           const { data } = await api.get(`/quotations/${id}`);
           const q = data.quotation;
           if (cancelled) return;
-          if (q.status === 'Accepted') {
-            setLoadError('An accepted quotation cannot be edited. Duplicate it to make a new version.');
-          }
           setNumber(q.quoteNumber);
           setForm({
             ...BLANK,
@@ -110,23 +108,31 @@ export default function QuotationFormPage() {
 
   const unlink = () => setForm((f) => ({ ...f, customer: '', customerReferenceNumber: '' }));
 
-  const save = async (statusOverride) => {
-    setBusy(statusOverride || 'save');
+  /** Save, then optionally hand the PDF straight to the browser. */
+  const save = async (andDownload = false) => {
+    setBusy(andDownload ? 'download' : 'save');
     setError('');
     setErrors({});
     const body = {
       ...form,
-      status: statusOverride || form.status,
       issueDate: form.issueDate || undefined,
       validUntil: form.validUntil || undefined,
       items: items.filter((it) => String(it.description).trim() || Number(it.rate) > 0),
     };
     delete body.customerReferenceNumber;
+    delete body.status;
     try {
       const { data } = editing
         ? await api.put(`/quotations/${id}`, body)
         : await api.post('/quotations', body);
       toast.success(editing ? 'Quotation updated' : 'Quotation created', data.quotation.quoteNumber);
+      if (andDownload) {
+        try {
+          await downloadQuotationPdf(data.quotation);
+        } catch (err) {
+          toast.error('Saved, but the PDF could not be downloaded', errorMessage(err));
+        }
+      }
       navigate(`/quotations/${data.quotation._id}`);
     } catch (err) {
       setErrors(fieldErrors(err));
@@ -195,13 +201,6 @@ export default function QuotationFormPage() {
                 </Field>
                 <Field label="Valid until" error={errors.validUntil}>
                   <TextInput type="date" value={form.validUntil} onChange={set('validUntil')} min={form.issueDate} />
-                </Field>
-                <Field label="Status" error={errors.status}>
-                  <Select value={form.status} onChange={set('status')}>
-                    <option value="Draft">Draft</option>
-                    <option value="Sent">Sent to client</option>
-                    {editing ? <option value="Rejected">Rejected</option> : null}
-                  </Select>
                 </Field>
               </div>
             </div>
@@ -311,13 +310,11 @@ export default function QuotationFormPage() {
             <div className="card__foot">
               <div className="row row--end">
                 <button type="button" className="btn btn--secondary" onClick={() => navigate(editing ? `/quotations/${id}` : '/quotations')} disabled={Boolean(busy)}>Cancel</button>
-                {form.status === 'Draft' ? (
-                  <button type="button" className="btn btn--secondary" onClick={() => save('Sent')} disabled={Boolean(busy) || Boolean(loadError)}>
-                    {busy === 'Sent' ? <span className="spinner spinner--dark" /> : null} Save as Sent
-                  </button>
-                ) : null}
-                <button type="button" className="btn" onClick={() => save()} disabled={Boolean(busy) || Boolean(loadError)}>
-                  {busy === 'save' ? <span className="spinner" /> : null} {editing ? 'Save changes' : 'Create quotation'}
+                <button type="button" className="btn btn--secondary" onClick={() => save(false)} disabled={Boolean(busy) || Boolean(loadError)}>
+                  {busy === 'save' ? <span className="spinner spinner--dark" /> : null} {editing ? 'Save changes' : 'Save'}
+                </button>
+                <button type="button" className="btn" onClick={() => save(true)} disabled={Boolean(busy) || Boolean(loadError)}>
+                  {busy === 'download' ? <span className="spinner" /> : '⭳'} Save & Download PDF
                 </button>
               </div>
             </div>
