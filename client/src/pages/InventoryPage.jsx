@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Boxes, Package, TriangleAlert, Wallet } from 'lucide-react';
 import api, { errorMessage, fieldErrors } from '../api/client.js';
 import { useAuth, ROLES } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import {
-  Alert, Badge, ConfirmDialog, EmptyState, Field, Loading, Modal, Select, Stat, TextInput, Textarea,
+  Alert, Badge, ConfirmDialog, EmptyState, Field, Loading, Modal, Select, TextInput, Textarea,
 } from '../components/ui.jsx';
 import { formatDateTime, formatMoney, formatNumber } from '../utils/format.js';
 
@@ -118,17 +119,33 @@ export default function InventoryPage() {
 
       {error ? <Alert tone="error" title="Could not load inventory">{error}</Alert> : null}
 
-      <div className="grid grid--stats">
-        <Stat label="Total SKUs" value={formatNumber(summary?.skus)} hint="items in the catalogue" />
-        <Stat label="Units in stock" value={formatNumber(summary?.units)} hint="across all SKUs" tone="ok" />
-        <Stat
+      <div className="kpi-row">
+        <Kpi icon={Package} tone="brand" label="Total SKUs" value={formatNumber(summary?.skus)} hint="Items in the catalogue" />
+        <Kpi
+          icon={Boxes}
+          tone="ok"
+          label="Units in stock"
+          value={formatNumber(summary?.units)}
+          hint={`Across ${formatNumber(summary?.skus)} SKUs`}
+        />
+        <Kpi
+          icon={TriangleAlert}
+          tone={summary?.lowStock ? 'danger' : 'muted'}
           label="Low stock"
           value={formatNumber(summary?.lowStock)}
-          hint="at or below reorder level"
-          tone={summary?.lowStock ? 'danger' : ''}
-          onClick={() => setLowOnly(true)}
+          hint={lowOnly ? 'Showing low stock only · click to show all' : summary?.lowStock ? 'At or below reorder level · click to view' : 'Everything above reorder level'}
+          active={lowOnly}
+          onClick={summary?.lowStock || lowOnly ? () => setLowOnly((v) => !v) : undefined}
         />
-        <Stat label="Stock value" value={formatMoney(summary?.value)} hint="at cost price" />
+        <Kpi
+          icon={Wallet}
+          tone="info"
+          label="Stock value"
+          prefix="PKR"
+          value={formatNumber(Math.round(summary?.value || 0))}
+          hint="At cost price"
+          title={formatMoney(summary?.value)}
+        />
       </div>
 
       <div className="card">
@@ -239,6 +256,29 @@ export default function InventoryPage() {
         onCancel={() => setDeleting(null)}
       />
     </>
+  );
+}
+
+/** One summary tile: icon, label, a single-line value and a short hint. */
+function Kpi({ icon: Icon, tone, label, value, prefix, hint, title, active = false, onClick }) {
+  const body = (
+    <>
+      <div className="kpi__top">
+        <span className="kpi__label">{label}</span>
+        <span className={`kpi__icon kpi__icon--${tone}`} aria-hidden="true"><Icon size={18} strokeWidth={2.2} /></span>
+      </div>
+      <div className="kpi__value" title={title}>
+        {prefix ? <span className="kpi__prefix">{prefix}</span> : null}
+        {value}
+      </div>
+      <div className="kpi__hint">{hint}</div>
+    </>
+  );
+  const className = `kpi kpi--${tone}${active ? ' is-active' : ''}${onClick ? ' kpi--clickable' : ''}`;
+  return onClick ? (
+    <button type="button" className={className} onClick={onClick} aria-pressed={active}>{body}</button>
+  ) : (
+    <div className={className}>{body}</div>
   );
 }
 
