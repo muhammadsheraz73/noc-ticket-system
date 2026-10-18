@@ -1,7 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import api, { TOKEN_KEY, setUnauthorizedHandler } from '../api/client.js';
+import api, { setUnauthorizedHandler, signOutReason, tokenStore } from '../api/client.js';
 
 const AuthContext = createContext(null);
+
+/** Activity that counts as "still using the panel". */
+const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'wheel', 'scroll', 'touchstart'];
+const DEFAULT_IDLE_MINUTES = 5;
+/** While active, renew the server-side session at most this often (even with no saves). */
+const PING_EVERY_MS = 60 * 1000;
 
 export const ROLES = {
   SUPERADMIN: 'superadmin',
@@ -14,6 +20,7 @@ export const ROLES = {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
+  const [idleMinutes, setIdleMinutes] = useState(DEFAULT_IDLE_MINUTES);
 
   /**
    * Difference between the server clock and this browser's clock.
@@ -22,20 +29,58 @@ export function AuthProvider({ children }) {
    */
   const clockOffset = useRef(0);
 
-  const applySession = useCallback((nextUser, serverTime) => {
+  const applySession = useCallback((nextUser, serverTime, session) => {
     setUser(nextUser);
     if (serverTime) clockOffset.current = new Date(serverTime).getTime() - Date.now();
+    if (session?.idleMinutes) setIdleMinutes(session.idleMinutes);
   }, []);
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (reason) => {
     try {
-      if (localStorage.getItem(TOKEN_KEY)) await api.post('/auth/logout');
+      if (tokenStore.get()) await api.post('/auth/logout');
     } catch {
       // A failed logout call must never trap the user in the app.
     }
-    localStorage.removeItem(TOKEN_KEY);
+    tokenStore.clear();
+    if (reason) signOutReason.set(reason);
     setUser(null);
   }, []);
+
+  /**
+   * Sign out after `idleMinutes` without any mouse, keyboard, scroll or touch
+   * activity. Checked on a timer and whenever the tab becomes visible again,
+   * so a sleeping laptop or a background tab is caught as soon as it returns.
+   */
+  useEffect(() => {
+    if (!user) return undefined;
+    const limit = idleMinutes * 60 * 1000;
+    let lastActivity = Date.now();
+    let lastPing = Date.now();
+
+    const markActive = () => { lastActivity = Date.now(); };
+    const check = () => {
+      const now = Date.now();
+      if (now - lastActivity >= limit) {
+        logout(`idle:${idleMinutes}`);
+        return;
+      }
+      // Busy but not saving anything (typing a long form): keep the server session alive.
+      if (lastActivity > lastPing && now - lastPing >= PING_EVERY_MS) {
+        lastPing = now;
+        api.post('/auth/ping').catch(() => {});
+      }
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+
+    ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, markActive, { passive: true }));
+    document.addEventListener('visibilitychange', onVisible);
+    const timer = setInterval(check, 5000);
+    return () => {
+      ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, markActive));
+      document.removeEventListener('visibilitychange', onVisible);
+      clearInterval(timer);
+    };
+  }, [user, idleMinutes, logout]);
 
   useEffect(() => {
     setUnauthorizedHandler(() => setUser(null));
@@ -45,15 +90,15 @@ export function AuthProvider({ children }) {
     let cancelled = false;
 
     async function restore() {
-      if (!localStorage.getItem(TOKEN_KEY)) {
+      if (!tokenStore.get()) {
         setReady(true);
         return;
       }
       try {
         const { data } = await api.get('/auth/me');
-        if (!cancelled) applySession(data.user, data.serverTime);
+        if (!cancelled) applySession(data.user, data.serverTime, data.session);
       } catch {
-        localStorage.removeItem(TOKEN_KEY);
+        tokenStore.clear();
       } finally {
         if (!cancelled) setReady(true);
       }
@@ -69,8 +114,9 @@ export function AuthProvider({ children }) {
     /** @param identifier the account's username or email */
     async (identifier, password) => {
       const { data } = await api.post('/auth/login', { identifier, password });
-      localStorage.setItem(TOKEN_KEY, data.token);
-      applySession(data.user, new Date().toISOString());
+      tokenStore.set(data.token);
+      signOutReason.take();
+      applySession(data.user, new Date().toISOString(), data.session);
       return data.user;
     },
     [applySession],

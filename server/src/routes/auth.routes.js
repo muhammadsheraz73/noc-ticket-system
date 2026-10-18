@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import Tenant from '../models/Tenant.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
+import env from '../config/env.js';
 import { requireAnyAuth, signToken } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { authLimiter } from '../middleware/rateLimit.js';
@@ -58,6 +59,7 @@ router.post(
       success: true,
       token: signToken(user),
       user: await sessionUser(user),
+      session: { idleMinutes: env.sessionIdleMinutes },
     });
   }),
 );
@@ -71,7 +73,20 @@ router.get(
       success: true,
       user: await sessionUser(req.user),
       serverTime: new Date(),
+      session: { idleMinutes: env.sessionIdleMinutes },
     });
+  }),
+);
+
+/**
+ * POST /api/auth/ping — keeps the session alive while the user is working
+ * without saving anything (typing a long form, reading a page).
+ */
+router.post(
+  '/ping',
+  requireAnyAuth,
+  asyncHandler(async (_req, res) => {
+    res.json({ success: true });
   }),
 );
 

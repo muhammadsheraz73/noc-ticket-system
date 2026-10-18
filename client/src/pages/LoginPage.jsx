@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { errorMessage } from '../api/client.js';
+import { errorMessage, signOutReason } from '../api/client.js';
 import { Alert, Field, TextInput } from '../components/ui.jsx';
 
 /** Three linked nodes: the product mark. */
@@ -38,6 +38,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  /** Read once: why the last session ended (idle timeout or an expired token). */
+  const [notice] = useState(() => {
+    const reason = signOutReason.take();
+    if (reason?.startsWith('idle')) {
+      const minutes = Number(reason.split(':')[1]) || 5;
+      return `You were signed out after ${minutes} minute${minutes === 1 ? '' : 's'} of inactivity. Please sign in again.`;
+    }
+    if (reason === 'expired') return 'Your session has expired. Please sign in again.';
+    return '';
+  });
 
   const signIn = async (nextIdentifier, nextPassword) => {
     setError('');
@@ -79,6 +89,7 @@ export default function LoginPage() {
             <p className="small muted">Sign in to your account to continue.</p>
           </div>
 
+        {notice && !error ? <Alert tone="info">{notice}</Alert> : null}
         {error ? <Alert tone="error">{error}</Alert> : null}
 
         <div className="login-card__form">

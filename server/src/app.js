@@ -82,6 +82,7 @@ export function createApp() {
         return callback(new Error(`Origin ${origin} is not allowed by CORS`));
       },
       credentials: true,
+      exposedHeaders: ['X-Session-Token', 'Content-Disposition'],
     })(req, res, next);
   });
 

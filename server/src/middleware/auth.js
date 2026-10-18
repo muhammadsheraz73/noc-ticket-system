@@ -7,12 +7,28 @@ import asyncHandler from '../utils/asyncHandler.js';
 import { runWithTenant } from '../utils/tenantContext.js';
 import { ROLES } from '../utils/constants.js';
 
+/** Extra token lifetime beyond the idle limit, so a request made just before the browser's own sign-out still succeeds. */
+const GRACE_MINUTES = 2;
+/** A token older than this is swapped for a fresh one on the next request. */
+const RENEW_AFTER_SECONDS = 60;
+
 export function signToken(user) {
   return jwt.sign(
     { sub: String(user._id), role: user.role, name: user.name },
     env.jwtSecret,
-    { expiresIn: env.jwtExpiresIn },
+    { expiresIn: `${env.sessionIdleMinutes + GRACE_MINUTES}m` },
   );
+}
+
+/**
+ * Sliding session: every authenticated request older than a minute gets a
+ * renewed token in `X-Session-Token`, so an active user stays signed in while
+ * an idle one's token simply runs out on the server too.
+ */
+function renewToken(res, user, payload) {
+  if (Date.now() / 1000 - (payload.iat || 0) > RENEW_AFTER_SECONDS) {
+    res.setHeader('X-Session-Token', signToken(user));
+  }
 }
 
 function readToken(req) {
@@ -31,7 +47,7 @@ function readToken(req) {
  *  - 'any'    — either (sign-in housekeeping such as /auth/me)
  */
 function authenticate(allow) {
-  return asyncHandler(async (req, _res, next) => {
+  return asyncHandler(async (req, res, next) => {
     const token = readToken(req);
     if (!token) throw ApiError.unauthorized('Missing authentication token');
 
@@ -52,6 +68,7 @@ function authenticate(allow) {
     if (isOwner) {
       if (allow === 'tenant') throw ApiError.forbidden('The owner account has no client data');
       req.user = user;
+      renewToken(res, user, payload);
       return next();
     }
 
@@ -65,6 +82,7 @@ function authenticate(allow) {
 
     req.user = user;
     req.tenant = tenant;
+    renewToken(res, user, payload);
     return runWithTenant(tenant._id, next);
   });
 }

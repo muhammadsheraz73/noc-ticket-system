@@ -77,7 +77,12 @@ export const env = {
   embeddedMongoPath: path.join(SERVER_ROOT, '.data', 'mongo'),
 
   jwtSecret: process.env.JWT_SECRET || 'noc-dev-only-secret-change-me',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '12h',
+  /**
+   * Sign-ins end after this many minutes without activity. The browser signs
+   * out on its own at this mark; the token itself lives a little longer (see
+   * middleware/auth.js) and is renewed while the user keeps working.
+   */
+  sessionIdleMinutes: int(process.env.SESSION_IDLE_MINUTES, 5),
   bcryptRounds: int(process.env.BCRYPT_ROUNDS, 10),
 
   timezone: process.env.APP_TIMEZONE || 'Asia/Karachi',
