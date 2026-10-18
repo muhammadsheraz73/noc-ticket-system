@@ -165,15 +165,53 @@ router.get(
   }),
 );
 
-/** POST /api/customers */
+const FIRST_CUSTOMER_ID = 1001;
+
+/**
+ * The next Customer ID for this client: one past the highest numeric ID it
+ * has ever used (archived customers included, so an ID is never handed out
+ * twice), or 1001 for a client's very first customer. Runs inside the
+ * client's tenant scope, so each client counts on its own.
+ */
+async function nextCustomerId() {
+  const [row] = await Customer.aggregate([
+    { $match: { customerReferenceNumber: { $regex: /^\d{1,15}$/ } } },
+    { $group: { _id: null, max: { $max: { $toLong: '$customerReferenceNumber' } } } },
+  ]);
+  return String(row?.max ? Number(row.max) + 1 : FIRST_CUSTOMER_ID);
+}
+
+/** GET /api/customers/next-id — the ID a new customer would get right now. */
+router.get(
+  '/next-id',
+  canWrite,
+  asyncHandler(async (_req, res) => {
+    res.json({ success: true, customerReferenceNumber: await nextCustomerId() });
+  }),
+);
+
+/**
+ * POST /api/customers
+ *
+ * A blank Customer ID means "assign the next one" — it is worked out here at
+ * save time, so two operators adding customers at once never collide.
+ */
 router.post(
   '/',
   canWrite,
   validate(customerSchema),
   asyncHandler(async (req, res) => {
-    const exists = await Customer.findOne({
+    const autoId = !req.body.customerReferenceNumber;
+    if (autoId) req.body.customerReferenceNumber = await nextCustomerId();
+
+    let exists = await Customer.findOne({
       customerReferenceNumber: req.body.customerReferenceNumber,
     }).lean();
+    // Someone else took the auto ID in the meantime — move on to the next one.
+    for (let tries = 0; exists && autoId && tries < 5; tries += 1) {
+      req.body.customerReferenceNumber = String(Number(req.body.customerReferenceNumber) + 1);
+      exists = await Customer.findOne({ customerReferenceNumber: req.body.customerReferenceNumber }).lean();
+    }
     if (exists) {
       throw ApiError.conflict(
         `Customer Reference Number "${req.body.customerReferenceNumber}" is already in use`,

@@ -30,14 +30,28 @@ export default function CustomerFormModal({ open, customer, onClose, onSaved }) 
   const [errors, setErrors] = useState({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  /** A new customer's ID is filled in automatically until the operator types their own. */
+  const [idTouched, setIdTouched] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setErrors({});
     setError('');
+    setIdTouched(false);
     const values = customer ? { ...BLANK, ...pick(customer) } : BLANK;
     const type = CUSTOMER_TYPES.find((t) => t.toLowerCase() === String(values.type).toLowerCase()) || '';
     setForm({ ...values, type, status: values.status || 'Active' });
+
+    if (!customer) {
+      let cancelled = false;
+      api.get('/customers/next-id')
+        .then(({ data }) => {
+          if (!cancelled) setForm((f) => (f.customerReferenceNumber ? f : { ...f, customerReferenceNumber: data.customerReferenceNumber }));
+        })
+        .catch(() => {});
+      return () => { cancelled = true; };
+    }
+    return undefined;
   }, [open, customer]);
 
   const set = (key) => (event) => setForm((f) => ({ ...f, [key]: event.target.value }));
@@ -52,8 +66,10 @@ export default function CustomerFormModal({ open, customer, onClose, onSaved }) 
         await api.put(`/customers/${customer._id}`, form);
         toast.success('Customer updated', form.customerReferenceNumber);
       } else {
-        await api.post('/customers', form);
-        toast.success('Customer created', `${form.customerReferenceNumber} — ${form.name}`);
+        // Untouched = let the server assign the next free ID at save time.
+        const body = idTouched ? form : { ...form, customerReferenceNumber: '' };
+        const { data } = await api.post('/customers', body);
+        toast.success('Customer created', `${data.customer.customerReferenceNumber} — ${form.name}`);
       }
       onSaved();
     } catch (err) {
@@ -87,8 +103,19 @@ export default function CustomerFormModal({ open, customer, onClose, onSaved }) 
         <fieldset className="fieldset">
           <legend>Customer information</legend>
           <div className="form-grid">
-            <Field label="Customer Reference Number" required error={errors.customerReferenceNumber} hint="Unique identifier, e.g. 10255">
-              <TextInput value={form.customerReferenceNumber} onChange={set('customerReferenceNumber')} error={errors.customerReferenceNumber} required placeholder="10255" />
+            <Field
+              label="Customer Reference Number"
+              required={Boolean(customer)}
+              error={errors.customerReferenceNumber}
+              hint={customer ? 'Unique identifier, e.g. 10255' : 'Auto-assigned — the next number after your last customer. You can change it.'}
+            >
+              <TextInput
+                value={form.customerReferenceNumber}
+                onChange={(event) => { setIdTouched(true); set('customerReferenceNumber')(event); }}
+                error={errors.customerReferenceNumber}
+                required={Boolean(customer)}
+                placeholder={customer ? '10255' : 'Auto'}
+              />
             </Field>
             <Field label="Customer Name" required error={errors.name}>
               <TextInput value={form.name} onChange={set('name')} error={errors.name} required placeholder="Abdul Rouf" />

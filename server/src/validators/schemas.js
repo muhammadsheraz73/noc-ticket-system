@@ -104,7 +104,8 @@ export const resetPasswordSchema = z.object({ password });
 
 // ------------------------------------------------------------ customers
 export const customerSchema = z.object({
-  customerReferenceNumber: requiredText('Customer Reference Number', 60),
+  /** Blank on create = the server assigns the next Customer ID. */
+  customerReferenceNumber: optionalText(60),
   name: requiredText('Customer Name', 160),
   address: requiredText('Address', 400),
   connectedFrom: requiredText('Connected From', 160),
@@ -121,7 +122,9 @@ export const customerSchema = z.object({
   notes: optionalText(1000),
 });
 
-export const customerUpdateSchema = customerSchema.partial();
+export const customerUpdateSchema = customerSchema
+  .extend({ customerReferenceNumber: requiredText('Customer Reference Number', 60) })
+  .partial();
 
 export const importCommitSchema = z.object({
   rows: z.array(z.record(z.any())).min(1, 'No rows to import').max(20000),
