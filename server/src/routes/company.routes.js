@@ -15,7 +15,7 @@ import { companyProfileSchema } from '../validators/schemas.js';
 const router = Router();
 router.use(requireAuth);
 
-const PROFILE_FIELDS = 'name contactName phone email address website logo quotationTerms themeColor';
+const PROFILE_FIELDS = 'name contactName phone email address website logo quotationTerms bankAccounts themeColor';
 
 /** GET /api/company */
 router.get(

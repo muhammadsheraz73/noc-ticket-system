@@ -168,7 +168,9 @@ export default function SettingsPage() {
   );
 }
 
-const BLANK_COMPANY = { contactName: '', phone: '', email: '', address: '', website: '', logo: '', quotationTerms: '' };
+const BLANK_COMPANY = { contactName: '', phone: '', email: '', address: '', website: '', logo: '', quotationTerms: '', bankAccounts: [] };
+const BLANK_ACCOUNT = { title: '', bank: '', branch: '', accountNumber: '', iban: '' };
+const MAX_ACCOUNTS = 4;
 
 /** The client's letterhead — printed on every quotation it downloads. */
 function CompanyProfileCard() {
@@ -183,21 +185,30 @@ function CompanyProfileCard() {
     api.get('/company')
       .then(({ data }) => {
         setCompany(data.company);
-        setForm(Object.fromEntries(Object.keys(BLANK_COMPANY).map((k) => [k, data.company[k] || ''])));
+        setForm(Object.fromEntries(Object.keys(BLANK_COMPANY).map((k) => [k, data.company[k] ?? BLANK_COMPANY[k]])));
       })
       .catch((err) => setLoadError(errorMessage(err)));
   }, []);
 
   const set = (key) => (event) => setForm((f) => ({ ...f, [key]: event.target.value }));
+  const setAccount = (index, key) => (event) => setForm((f) => ({
+    ...f,
+    bankAccounts: f.bankAccounts.map((a, i) => (i === index ? { ...a, [key]: event.target.value } : a)),
+  }));
+  const addAccount = () => setForm((f) => ({ ...f, bankAccounts: [...f.bankAccounts, { ...BLANK_ACCOUNT }] }));
+  const removeAccount = (index) => setForm((f) => ({ ...f, bankAccounts: f.bankAccounts.filter((_, i) => i !== index) }));
 
   const save = async (event) => {
     event.preventDefault();
     setBusy(true);
     setErrors({});
     try {
-      const { data } = await api.put('/company', form);
+      // Rows left completely blank are dropped rather than rejected.
+      const bankAccounts = form.bankAccounts.filter((a) => Object.values(a).some((v) => String(v).trim()));
+      const { data } = await api.put('/company', { ...form, bankAccounts });
+      setForm((f) => ({ ...f, bankAccounts: data.company.bankAccounts || [] }));
       setCompany(data.company);
-      toast.success('Company profile saved', 'New quotations will use this letterhead.');
+      toast.success('Company profile saved', 'Quotations and invoices will use these details.');
     } catch (err) {
       setErrors(fieldErrors(err));
       toast.error('Could not save the company profile', errorMessage(err));
@@ -210,7 +221,7 @@ function CompanyProfileCard() {
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card__head">
         <h2>Company profile</h2>
-        <span className="small muted">Your letterhead on quotations</span>
+        <span className="small muted">Your letterhead and bank details on quotations and invoices</span>
       </div>
       <div className="card__body">
         {loadError ? <Alert tone="error">{loadError}</Alert> : null}
@@ -244,6 +255,45 @@ function CompanyProfileCard() {
                   placeholder={'50% advance with the purchase order\nInstallation within 3 working days of payment'} />
               </Field>
             </div>
+
+            <div className="bank-editor">
+              <div className="bank-editor__head">
+                <div>
+                  <div className="strong">Bank accounts</div>
+                  <div className="small muted">Printed under "Bank details" on every quotation and invoice.</div>
+                </div>
+                {form.bankAccounts.length < MAX_ACCOUNTS ? (
+                  <button type="button" className="btn btn--secondary btn--sm" onClick={addAccount}>＋ Add bank account</button>
+                ) : null}
+              </div>
+              {errors.bankAccounts ? <div className="field__error">{errors.bankAccounts}</div> : null}
+              {form.bankAccounts.length === 0 ? (
+                <div className="small muted">No bank accounts yet.</div>
+              ) : form.bankAccounts.map((account, i) => (
+                <div className="bank-editor__row" key={i}>
+                  <div className="bank-editor__num">{i + 1}</div>
+                  <div className="form-grid" style={{ flex: 1 }}>
+                    <Field label="Account title" required>
+                      <TextInput value={account.title} onChange={setAccount(i, 'title')} placeholder="TARIQ ALI" />
+                    </Field>
+                    <Field label="Bank">
+                      <TextInput value={account.bank} onChange={setAccount(i, 'bank')} placeholder="MCB Bank" />
+                    </Field>
+                    <Field label="Account number">
+                      <TextInput value={account.accountNumber} onChange={setAccount(i, 'accountNumber')} />
+                    </Field>
+                    <Field label="IBAN">
+                      <TextInput value={account.iban} onChange={setAccount(i, 'iban')} placeholder="PK00XXXX0000000000000000" />
+                    </Field>
+                    <Field label="Branch" full>
+                      <TextInput value={account.branch} onChange={setAccount(i, 'branch')} placeholder="Optional" />
+                    </Field>
+                  </div>
+                  <button type="button" className="btn btn--ghost btn--sm text-danger" onClick={() => removeAccount(i)} aria-label={`Remove account ${i + 1}`}>✕</button>
+                </div>
+              ))}
+            </div>
+
             <button className="btn" type="submit" disabled={busy}>
               {busy ? <span className="spinner" /> : null} Save company profile
             </button>

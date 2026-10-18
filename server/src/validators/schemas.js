@@ -103,6 +103,18 @@ const letterheadFields = {
   website: optionalText(160),
   logo: logoDataUrl.optional(),
   quotationTerms: optionalText(3000),
+  bankAccounts: z
+    .array(
+      z.object({
+        title: requiredText('Account title', 100),
+        bank: optionalText(100),
+        accountNumber: optionalText(40),
+        iban: optionalText(40).transform((v) => v.replace(/\s+/g, '').toUpperCase()),
+        branch: optionalText(120),
+      }),
+    )
+    .max(4, 'Up to 4 bank accounts')
+    .optional(),
 };
 
 export const tenantSchema = z.object({

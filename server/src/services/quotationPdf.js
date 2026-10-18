@@ -2,6 +2,7 @@ import { PassThrough } from 'node:stream';
 import PDFDocument from 'pdfkit';
 import env from '../config/env.js';
 import logger from '../utils/logger.js';
+import { bankBlockHeight, drawBankBlock } from './pdfBank.js';
 
 /**
  * A quotation on the client's own letterhead: their logo, colour, address
@@ -80,7 +81,7 @@ function logoBuffer(dataUrl) {
 
 /**
  * @param quotation  Quotation (lean or document)
- * @param company    { name, address, phone, email, website, logo, color }
+ * @param company    { name, address, phone, email, website, logo, color, bankAccounts }
  */
 export function renderQuotationPdf(quotation, company = {}) {
   return new Promise((resolve, reject) => {
@@ -237,7 +238,9 @@ export function renderQuotationPdf(quotation, company = {}) {
     const rightColH = totalRows.length * 22 + 12 + 34 + 16;
     const summaryH = Math.max(leftColH, rightColH);
     const SIGN_H = 66;
-    const tailH = 16 + summaryH + 22 + SIGN_H;
+    const accounts = company.bankAccounts || [];
+    const bankH = bankBlockHeight(accounts);
+    const tailH = 16 + summaryH + (bankH ? 16 + bankH : 0) + 22 + SIGN_H;
 
     // ============================================================== items
     const spec = [
@@ -350,8 +353,24 @@ export function renderQuotationPdf(quotation, company = {}) {
       }
     }
 
+    // ======================================================== bank details
+    let afterSummary = blockTop + summaryH;
+    if (bankH) {
+      if (afterSummary + 16 + bankH + 22 + SIGN_H > bottomLimit) {
+        doc.addPage();
+        afterSummary = doc.page.margins.top - 16;
+      }
+      afterSummary = drawBankBlock(doc, accounts, {
+        x: left, y: afterSummary + 16, width, accent: brand, tintColor: brandFaint, ink: INK, muted: MUTED,
+      });
+    }
+
     // ========================================================== signatures
-    y = Math.max(blockTop + summaryH + 22, bottomLimit - SIGN_H);
+    if (afterSummary + 22 + SIGN_H > bottomLimit) {
+      doc.addPage();
+      afterSummary = doc.page.margins.top;
+    }
+    y = Math.max(afterSummary + 22, bottomLimit - SIGN_H);
     const sigGap = 16;
     const sigW = (width - sigGap * 2) / 3;
     const sigs = [

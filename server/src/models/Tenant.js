@@ -12,6 +12,22 @@ const tenantSchema = new mongoose.Schema(
     website: { type: String, trim: true, default: '' },
     /** Logo as a PNG/JPEG data URL — kept in the document so it works on serverless hosts too. */
     logo: { type: String, default: '' },
+    /** Bank accounts printed on this client's quotations and invoices for payment. */
+    bankAccounts: {
+      type: [
+        new mongoose.Schema(
+          {
+            title: { type: String, trim: true, required: true },
+            bank: { type: String, trim: true, default: '' },
+            accountNumber: { type: String, trim: true, default: '' },
+            iban: { type: String, trim: true, uppercase: true, default: '' },
+            branch: { type: String, trim: true, default: '' },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
     /** Default terms & conditions printed on every new quotation. */
     quotationTerms: { type: String, trim: true, default: '' },
     notes: { type: String, trim: true, default: '' },

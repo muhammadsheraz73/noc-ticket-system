@@ -272,6 +272,7 @@ router.get(
       phone: tenant.phone,
       email: tenant.email,
       website: tenant.website,
+      bankAccounts: tenant.bankAccounts || [],
       logo: tenant.logo,
       color: tenant.themeColor,
     });

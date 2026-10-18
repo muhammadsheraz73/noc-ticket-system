@@ -238,6 +238,7 @@ router.get(
       branding: {
         name: req.tenant?.name,
         color: req.tenant?.themeColor,
+        bankAccounts: req.tenant?.bankAccounts || [],
       },
     });
 

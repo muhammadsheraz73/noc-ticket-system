@@ -1052,3 +1052,14 @@ a.stat:hover { border-color: var(--brand-accent); text-decoration: none; }
 .status-steps__step.is-done { color: var(--ok); }
 .status-steps__step.is-done .status-steps__dot { background: var(--ok); border-color: var(--ok); color: #fff; }
 .status-steps__step.is-current { color: var(--ink); }
+
+.bank-editor { border-top: 1px solid var(--line); margin: 6px 0 16px; padding-top: 14px; display: grid; gap: 12px; }
+.bank-editor__head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.bank-editor__row {
+  display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1px solid var(--line);
+  border-radius: var(--radius-sm); background: #fbfcfe;
+}
+.bank-editor__num {
+  width: 24px; height: 24px; flex: 0 0 24px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--brand-light); color: var(--brand); font-size: 12px; font-weight: 700; margin-top: 24px;
+}

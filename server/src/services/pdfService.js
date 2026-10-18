@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
 import PDFDocument from 'pdfkit';
 import env from '../config/env.js';
+import { bankBlockHeight, drawBankBlock } from './pdfBank.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -228,10 +229,25 @@ export function streamInvoicePdf(invoice, stream, extra = {}) {
     doc.font('Helvetica').fontSize(9).fillColor(COLORS.ink).text(invoice.notes, left, y + 12, {
       width: contentWidth * 0.6,
     });
+    y = doc.y + 16;
+  }
+
+  const footerY = doc.page.height - doc.page.margins.bottom - 34;
+
+  // ---------- Bank details (where to pay) ----------
+  const accounts = branding.bankAccounts || [];
+  if (accounts.length) {
+    const bankH = bankBlockHeight(accounts);
+    if (y + bankH > footerY - 12) {
+      doc.addPage();
+      y = doc.page.margins.top;
+    }
+    drawBankBlock(doc, accounts, {
+      x: left, y, width: contentWidth, accent: bandColor, tintColor: '#f4f5f7', ink: COLORS.ink, muted: COLORS.muted,
+    });
   }
 
   // ---------- Footer ----------
-  const footerY = doc.page.height - doc.page.margins.bottom - 34;
   doc
     .font('Helvetica')
     .fontSize(8.5)
