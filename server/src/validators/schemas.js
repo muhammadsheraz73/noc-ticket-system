@@ -110,7 +110,6 @@ const letterheadFields = {
         bank: optionalText(100),
         accountNumber: optionalText(40),
         iban: optionalText(40).transform((v) => v.replace(/\s+/g, '').toUpperCase()),
-        branch: optionalText(120),
       }),
     )
     .max(4, 'Up to 4 bank accounts')

@@ -21,7 +21,6 @@ const tenantSchema = new mongoose.Schema(
             bank: { type: String, trim: true, default: '' },
             accountNumber: { type: String, trim: true, default: '' },
             iban: { type: String, trim: true, uppercase: true, default: '' },
-            branch: { type: String, trim: true, default: '' },
           },
           { _id: false },
         ),

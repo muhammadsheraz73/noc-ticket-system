@@ -8,9 +8,9 @@ const ROW_GAP = 8;
 const COL_GAP = 12;
 const LABEL_H = 16;
 
-/** Bank, Account No. and IBAN always; Branch only when some account has one. */
-const linesFor = (accounts) => (accounts.some((a) => a.branch) ? 4 : 3);
-const cardHeight = (accounts) => 32 + linesFor(accounts) * LINE_H;
+/** Each card shows Bank, Account No. and IBAN under the account title. */
+const LINES = 3;
+const cardHeight = () => 32 + LINES * LINE_H;
 
 export function bankBlockHeight(accounts = []) {
   if (!accounts.length) return 0;
@@ -20,7 +20,7 @@ export function bankBlockHeight(accounts = []) {
 
 /**
  * @param doc       PDFKit document
- * @param accounts  [{ title, bank, branch, accountNumber, iban }]
+ * @param accounts  [{ title, bank, accountNumber, iban }]
  * @param opts      { x, y, width, accent, tintColor, ink, muted }
  * @returns the y just below the block
  */
@@ -30,7 +30,6 @@ export function drawBankBlock(doc, accounts = [], { x, y, width, accent, tintCol
   doc.font('Helvetica-Bold').fontSize(7.5).fillColor(accent).text('BANK DETAILS', x, y, { characterSpacing: 0.8 });
   let top = y + LABEL_H;
   const CARD_H = cardHeight(accounts);
-  const withBranch = linesFor(accounts) === 4;
   const perRow = Math.min(2, accounts.length);
   const cardW = (width - COL_GAP * (perRow - 1)) / perRow;
 
@@ -47,7 +46,6 @@ export function drawBankBlock(doc, accounts = [], { x, y, width, accent, tintCol
 
     const rows = [
       ['Bank', account.bank || '—'],
-      ...(withBranch ? [['Branch', account.branch || '—']] : []),
       ['Account No.', account.accountNumber || '—'],
       ['IBAN', account.iban || '—'],
     ];

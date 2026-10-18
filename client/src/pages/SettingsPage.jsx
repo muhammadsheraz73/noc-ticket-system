@@ -169,7 +169,7 @@ export default function SettingsPage() {
 }
 
 const BLANK_COMPANY = { contactName: '', phone: '', email: '', address: '', website: '', logo: '', quotationTerms: '', bankAccounts: [] };
-const BLANK_ACCOUNT = { title: '', bank: '', branch: '', accountNumber: '', iban: '' };
+const BLANK_ACCOUNT = { title: '', bank: '', accountNumber: '', iban: '' };
 const MAX_ACCOUNTS = 4;
 
 /** The client's letterhead — printed on every quotation it downloads. */
@@ -284,9 +284,6 @@ function CompanyProfileCard() {
                     </Field>
                     <Field label="IBAN">
                       <TextInput value={account.iban} onChange={setAccount(i, 'iban')} placeholder="PK00XXXX0000000000000000" />
-                    </Field>
-                    <Field label="Branch" full>
-                      <TextInput value={account.branch} onChange={setAccount(i, 'branch')} placeholder="Optional" />
                     </Field>
                   </div>
                   <button type="button" className="btn btn--ghost btn--sm text-danger" onClick={() => removeAccount(i)} aria-label={`Remove account ${i + 1}`}>✕</button>
