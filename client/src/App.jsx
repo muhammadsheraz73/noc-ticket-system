@@ -24,6 +24,9 @@ import OwnerOverviewPage from './pages/OwnerOverviewPage.jsx';
 import OwnerActivityPage from './pages/OwnerActivityPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import BillingPage from './pages/BillingPage.jsx';
+import QuotationsPage from './pages/QuotationsPage.jsx';
+import QuotationFormPage from './pages/QuotationFormPage.jsx';
+import QuotationDetailPage from './pages/QuotationDetailPage.jsx';
 
 /**
  * Blocks unauthenticated access and, optionally, disallowed roles.
@@ -129,6 +132,38 @@ export default function App() {
           }
         />
 
+        <Route
+          path="quotations"
+          element={
+            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
+              <QuotationsPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="quotations/new"
+          element={
+            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
+              <QuotationFormPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="quotations/:id"
+          element={
+            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
+              <QuotationDetailPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="quotations/:id/edit"
+          element={
+            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
+              <QuotationFormPage />
+            </Protected>
+          }
+        />
         <Route
           path="billing"
           element={

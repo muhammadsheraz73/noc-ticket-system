@@ -99,6 +99,9 @@ export const DEFAULT_ISSUE_TYPES = [
 
 export const INVOICE_STATUSES = ['Draft', 'Unpaid', 'Paid', 'Cancelled'];
 
+/** Expired is not stored — a Draft/Sent quotation past its valid-until date reads as expired. */
+export const QUOTATION_STATUSES = ['Draft', 'Sent', 'Accepted', 'Rejected'];
+
 export const FIELD_TEAM_KINDS = ['team', 'member'];
 
 export const DEVICE_TYPES = ['OLT', 'Switch', 'Router', 'ONU', 'Splitter', 'Media Converter', 'Other'];

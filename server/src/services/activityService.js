@@ -18,12 +18,13 @@ const VISIBLE_ENTITY_TYPES = {
     'FieldTeam',
     'IssueType',
     'Invoice',
+    'Quotation',
     'Pop',
     'NetworkDevice',
     'Connection',
     'Vlan',
   ],
-  [ROLES.ACCOUNTS]: ['Invoice', 'Customer'],
+  [ROLES.ACCOUNTS]: ['Invoice', 'Quotation', 'Customer'],
   [ROLES.FIELD_ENGINEER]: ['Ticket'],
 };
 

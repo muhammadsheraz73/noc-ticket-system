@@ -3,6 +3,7 @@ import {
   TICKET_PRIORITIES,
   TICKET_STATUSES,
   INVOICE_STATUSES,
+  QUOTATION_STATUSES,
   FIELD_TEAM_KINDS,
   DEVICE_TYPES,
   CONNECTION_TYPES,
@@ -88,14 +89,33 @@ export const updateUserSchema = createUserSchema
 
 const hexColor = z.string().refine((v) => v === '' || /^#[0-9a-fA-F]{6}$/.test(v), 'Colour must look like #1a56db');
 
+/** A PNG/JPEG data URL of at most ~500 KB, or '' to remove the logo. */
+const logoDataUrl = z
+  .string()
+  .max(700_000, 'Logo is too large — keep it under 500 KB')
+  .refine((v) => v === '' || /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(v), 'Logo must be a PNG or JPG image');
+
+/** The letterhead a client prints on its quotations. */
+const letterheadFields = {
+  phone: optionalText(40),
+  email: z.union([z.literal(''), z.string().trim().toLowerCase().email('Enter a valid email address').max(160)]).optional().default(''),
+  address: optionalText(300),
+  website: optionalText(160),
+  logo: logoDataUrl.optional(),
+  quotationTerms: optionalText(3000),
+};
+
 export const tenantSchema = z.object({
   name: requiredText('Company name', 120),
   contactName: optionalText(120),
-  phone: optionalText(40),
   notes: optionalText(1000),
   themeColor: hexColor.optional().default(''),
   isActive: z.boolean().optional().default(true),
+  ...letterheadFields,
 });
+
+/** What a client's own admin may change about their company (not name, colour or status). */
+export const companyProfileSchema = z.object({ contactName: optionalText(120), ...letterheadFields }).partial();
 
 export const tenantUpdateSchema = tenantSchema.partial();
 
@@ -193,6 +213,38 @@ export const createInvoiceSchema = z.object({
 });
 
 export const updateInvoiceSchema = createInvoiceSchema.partial().omit({ ticketNumber: true });
+
+// ----------------------------------------------------------- quotations
+const quotationItemSchema = z.object({
+  description: requiredText('Item description', 500),
+  quantity: z.coerce.number().min(0).max(1_000_000),
+  unit: optionalText(20),
+  rate: z.coerce.number().min(0).max(1_000_000_000),
+});
+
+export const quotationSchema = z.object({
+  /** Optional link to an existing customer; the "To" block is always stored as entered. */
+  customer: objectId,
+  clientName: requiredText('Client name', 160),
+  clientCompany: optionalText(160),
+  clientAddress: optionalText(400),
+  clientPhone: optionalText(60),
+  clientEmail: optionalText(160),
+  subject: optionalText(200),
+  issueDate: z.coerce.date().optional(),
+  validUntil: z.coerce.date().optional(),
+  items: z.array(quotationItemSchema).min(1, 'At least one line item is required').max(200),
+  discountType: z.enum(['none', 'percent', 'amount']).default('none'),
+  discountValue: z.coerce.number().min(0).default(0),
+  taxPercent: z.coerce.number().min(0).max(100).default(0),
+  status: z.enum(QUOTATION_STATUSES).default('Draft'),
+  notes: optionalText(2000),
+  terms: optionalText(3000),
+});
+
+export const quotationUpdateSchema = quotationSchema.partial();
+
+export const quotationStatusSchema = z.object({ status: z.enum(QUOTATION_STATUSES) });
 
 export const updateInvoiceStatusSchema = z.object({
   status: z.enum(INVOICE_STATUSES),

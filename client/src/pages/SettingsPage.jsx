@@ -3,7 +3,8 @@ import api, { errorMessage, fieldErrors } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
-import { Alert, Badge, DefItem, Field, TextInput } from '../components/ui.jsx';
+import { Alert, Badge, DefItem, Field, TextInput, Textarea } from '../components/ui.jsx';
+import LogoPicker from '../components/LogoPicker.jsx';
 import { ROLE_LABELS, formatDateTime } from '../utils/format.js';
 
 export default function SettingsPage() {
@@ -51,6 +52,8 @@ export default function SettingsPage() {
   return (
     <>
       <PageHead title="Settings" subtitle="Your account, and how this system is configured." />
+
+      {isAdmin ? <CompanyProfileCard /> : null}
 
       <div className="grid grid--2">
         <div className="card">
@@ -162,5 +165,91 @@ export default function SettingsPage() {
         ) : null}
       </div>
     </>
+  );
+}
+
+const BLANK_COMPANY = { contactName: '', phone: '', email: '', address: '', website: '', logo: '', quotationTerms: '' };
+
+/** The client's letterhead — printed on every quotation it downloads. */
+function CompanyProfileCard() {
+  const toast = useToast();
+  const [company, setCompany] = useState(null);
+  const [form, setForm] = useState(BLANK_COMPANY);
+  const [errors, setErrors] = useState({});
+  const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    api.get('/company')
+      .then(({ data }) => {
+        setCompany(data.company);
+        setForm(Object.fromEntries(Object.keys(BLANK_COMPANY).map((k) => [k, data.company[k] || ''])));
+      })
+      .catch((err) => setLoadError(errorMessage(err)));
+  }, []);
+
+  const set = (key) => (event) => setForm((f) => ({ ...f, [key]: event.target.value }));
+
+  const save = async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    setErrors({});
+    try {
+      const { data } = await api.put('/company', form);
+      setCompany(data.company);
+      toast.success('Company profile saved', 'New quotations will use this letterhead.');
+    } catch (err) {
+      setErrors(fieldErrors(err));
+      toast.error('Could not save the company profile', errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card__head">
+        <h2>Company profile</h2>
+        <span className="small muted">Your letterhead on quotations</span>
+      </div>
+      <div className="card__body">
+        {loadError ? <Alert tone="error">{loadError}</Alert> : null}
+        {!company && !loadError ? <div className="muted small">Loading…</div> : null}
+        {company ? (
+          <form onSubmit={save}>
+            <div className="form-grid">
+              <Field label="Company logo" full error={errors.logo}>
+                <LogoPicker value={form.logo} onChange={(logo) => setForm((f) => ({ ...f, logo }))} error={errors.logo} />
+              </Field>
+              <Field label="Company name" hint="Set by your panel provider.">
+                <TextInput value={company.name} disabled />
+              </Field>
+              <Field label="Contact person" error={errors.contactName}>
+                <TextInput value={form.contactName} onChange={set('contactName')} error={errors.contactName} />
+              </Field>
+              <Field label="Phone" error={errors.phone}>
+                <TextInput value={form.phone} onChange={set('phone')} error={errors.phone} placeholder="042-37888999" />
+              </Field>
+              <Field label="Email" error={errors.email}>
+                <TextInput type="email" value={form.email} onChange={set('email')} error={errors.email} placeholder="info@yourcompany.pk" />
+              </Field>
+              <Field label="Address" error={errors.address}>
+                <TextInput value={form.address} onChange={set('address')} error={errors.address} placeholder="Office 4, Ferozepur Road, Lahore" />
+              </Field>
+              <Field label="Website" error={errors.website}>
+                <TextInput value={form.website} onChange={set('website')} error={errors.website} placeholder="www.yourcompany.pk" />
+              </Field>
+              <Field label="Default quotation terms" full error={errors.quotationTerms} hint="One per line. Filled into every new quotation; you can still change them per quotation.">
+                <Textarea rows={4} value={form.quotationTerms} onChange={set('quotationTerms')} error={errors.quotationTerms}
+                  placeholder={'50% advance payment with the purchase order\nInstallation within 3 working days of payment\nEquipment carries a 6-month replacement warranty'} />
+              </Field>
+            </div>
+            <button className="btn" type="submit" disabled={busy}>
+              {busy ? <span className="spinner" /> : null} Save company profile
+            </button>
+          </form>
+        ) : null}
+      </div>
+    </div>
   );
 }

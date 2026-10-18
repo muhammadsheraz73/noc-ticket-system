@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import api, { errorMessage, fieldErrors } from '../api/client.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { Alert, Field, Modal, Textarea, TextInput } from './ui.jsx';
+import LogoPicker from './LogoPicker.jsx';
 import { THEME_PRESETS } from '../utils/theme.js';
 
 const BLANK = {
-  name: '', contactName: '', phone: '', notes: '', themeColor: '', isActive: true,
+  name: '', contactName: '', phone: '', email: '', address: '', website: '', logo: '', notes: '', themeColor: '', isActive: true,
 };
 
 /** Owner-only: create a client company or edit one (`client` null = new). */
@@ -15,21 +16,26 @@ export default function ClientFormModal({ open, client, onClose, onSaved }) {
   const [errors, setErrors] = useState({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  /** Until the full record arrives the logo is unknown — never send it then, or it would be wiped. */
+  const [logoLoaded, setLogoLoaded] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
     setErrors({});
     setError('');
-    setForm(client
-      ? {
-        name: client.name,
-        contactName: client.contactName || '',
-        phone: client.phone || '',
-        notes: client.notes || '',
-        themeColor: client.themeColor || '',
-        isActive: client.isActive,
-      }
-      : BLANK);
+    setLogoLoaded(!client);
+    const fill = (c) => setForm(Object.fromEntries(Object.keys(BLANK).map((k) => [k, c[k] ?? BLANK[k]])));
+    if (!client) {
+      setForm(BLANK);
+      return undefined;
+    }
+    fill(client);
+    // Lists leave the logo out to stay light — fetch the full record for editing.
+    let cancelled = false;
+    api.get(`/tenants/${client._id}`)
+      .then(({ data }) => { if (!cancelled) { fill(data.tenant); setLogoLoaded(true); } })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, [open, client]);
 
   const set = (key) => (event) => {
@@ -44,7 +50,9 @@ export default function ClientFormModal({ open, client, onClose, onSaved }) {
     try {
       let saved;
       if (client) {
-        ({ data: { tenant: saved } } = await api.put(`/tenants/${client._id}`, form));
+        const body = { ...form };
+        if (!logoLoaded) delete body.logo;
+        ({ data: { tenant: saved } } = await api.put(`/tenants/${client._id}`, body));
         toast.success('Client updated', form.name);
       } else {
         ({ data: { tenant: saved } } = await api.post('/tenants', form));
@@ -83,6 +91,18 @@ export default function ClientFormModal({ open, client, onClose, onSaved }) {
         </Field>
         <Field label="Phone" error={errors.phone}>
           <TextInput value={form.phone} onChange={set('phone')} error={errors.phone} />
+        </Field>
+        <Field label="Email" error={errors.email}>
+          <TextInput type="email" value={form.email} onChange={set('email')} error={errors.email} />
+        </Field>
+        <Field label="Website" error={errors.website}>
+          <TextInput value={form.website} onChange={set('website')} error={errors.website} />
+        </Field>
+        <Field label="Address" error={errors.address} full>
+          <TextInput value={form.address} onChange={set('address')} error={errors.address} />
+        </Field>
+        <Field label="Logo" error={errors.logo} full hint="Printed on this client's quotations. The client's admin can also change it from Settings.">
+          <LogoPicker value={form.logo} onChange={(logo) => setForm((f) => ({ ...f, logo }))} error={errors.logo} />
         </Field>
         <Field
           label="Colour theme"

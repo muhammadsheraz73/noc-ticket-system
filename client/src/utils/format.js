@@ -22,6 +22,14 @@ export const INVOICE_TONE = {
   Cancelled: 'danger',
 };
 
+export const QUOTATION_TONE = {
+  Draft: 'neutral',
+  Sent: 'info',
+  Accepted: 'ok',
+  Rejected: 'danger',
+  Expired: 'warn',
+};
+
 export const ROLE_LABELS = {
   superadmin: 'Owner',
   admin: 'Admin',

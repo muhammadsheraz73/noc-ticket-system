@@ -58,7 +58,7 @@ function authenticate(allow) {
     if (allow === 'owner') throw ApiError.forbidden('Only the panel owner can do this');
 
     // A login that is not attached to a live client must never see any data.
-    const tenant = user.tenant ? await Tenant.findById(user.tenant).lean() : null;
+    const tenant = user.tenant ? await Tenant.findById(user.tenant).select('-logo').lean() : null;
     if (!tenant || !tenant.isActive) {
       throw ApiError.unauthorized('Your company account is inactive. Please contact support.');
     }

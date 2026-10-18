@@ -265,7 +265,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const now = new Date();
     const days = rangeDays(req.query.days);
-    const tenants = await Tenant.find().sort({ name: 1 }).lean();
+    const tenants = await Tenant.find().select('-logo').sort({ name: 1 }).lean();
     const metrics = await collectMetrics(tenants.map((t) => t._id), { days, now });
     const names = new Map(tenants.map((t) => [String(t._id), t.name]));
 
@@ -318,7 +318,7 @@ router.get(
   '/clients/:id',
   asyncHandler(async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.id)) throw ApiError.notFound('Client not found');
-    const tenant = await Tenant.findById(req.params.id).lean();
+    const tenant = await Tenant.findById(req.params.id).select('-logo').lean();
     if (!tenant) throw ApiError.notFound('Client not found');
 
     const now = new Date();

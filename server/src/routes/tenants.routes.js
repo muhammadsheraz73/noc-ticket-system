@@ -25,7 +25,7 @@ router.get(
   '/',
   asyncHandler(async (_req, res) => {
     const [tenants, counts] = await Promise.all([
-      Tenant.find().sort({ name: 1 }).lean(),
+      Tenant.find().select('-logo').sort({ name: 1 }).lean(),
       User.aggregate([
         { $match: { role: { $ne: ROLES.SUPERADMIN }, tenant: { $ne: null } } },
         { $group: { _id: '$tenant', users: { $sum: 1 } } },
@@ -37,6 +37,16 @@ router.get(
       success: true,
       items: tenants.map((t) => ({ ...t, userCount: byTenant.get(String(t._id)) || 0 })),
     });
+  }),
+);
+
+/** GET /api/tenants/:id — one client in full, logo included (for the edit form). */
+router.get(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const tenant = await Tenant.findById(req.params.id).lean();
+    if (!tenant) throw ApiError.notFound('Client not found');
+    res.json({ success: true, tenant });
   }),
 );
 
