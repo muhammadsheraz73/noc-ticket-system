@@ -172,6 +172,7 @@ const ACTIONS = {
   restore: 'restored',
   change_password: 'changed the password for',
   delete: 'deleted',
+  export: 'exported',
 };
 
 const ENTITY_LABELS = { FieldTeam: 'employee', IssueType: 'issue type', InventoryItem: 'stock item', BillingRecord: 'billing record' };

@@ -340,6 +340,7 @@ function humanAction(action) {
     logout: 'signed out —',
     change_password: 'changed the password for',
     delete: 'deleted',
+    export: 'exported',
   };
   return map[action] || action.replace(/_/g, ' ');
 }

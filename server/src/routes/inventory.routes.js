@@ -7,6 +7,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { recordAudit } from '../utils/audit.js';
 import { containsRegex } from '../utils/search.js';
+import { buildReport, fileDate, renderInventoryExcel, renderInventoryPdf } from '../services/inventoryExport.js';
 import { ROLES, INVENTORY_UNITS } from '../utils/constants.js';
 import {
   inventoryItemSchema,
@@ -23,6 +24,40 @@ router.get(
   asyncHandler(async (_req, res) => {
     const categories = (await InventoryItem.distinct('category')).filter(Boolean).sort();
     res.json({ success: true, units: INVENTORY_UNITS, categories });
+  }),
+);
+
+/**
+ * GET /api/inventory/export?format=xlsx|pdf — the complete inventory.
+ * Excel adds a by-category sheet and the full stock-movement ledger.
+ */
+router.get(
+  '/export',
+  asyncHandler(async (req, res) => {
+    const format = req.query.format === 'pdf' ? 'pdf' : 'xlsx';
+    const items = await InventoryItem.find({}).sort({ category: 1, name: 1 }).lean();
+    const report = buildReport(items, {
+      company: req.tenant?.name,
+      color: req.tenant?.themeColor,
+      generatedBy: req.user.name,
+    });
+    const name = `inventory-${fileDate(report.generatedAt)}.${format}`;
+
+    let buffer;
+    if (format === 'pdf') {
+      buffer = await renderInventoryPdf(report);
+      res.setHeader('Content-Type', 'application/pdf');
+    } else {
+      const movements = await InventoryMovement.find({}).sort({ createdAt: -1 }).lean();
+      buffer = await renderInventoryExcel(report, movements);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    }
+
+    await recordAudit({ req, action: 'export', entityType: 'InventoryItem', entityLabel: `${items.length} items (${format.toUpperCase()})` });
+
+    res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
   }),
 );
 

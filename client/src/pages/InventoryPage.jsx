@@ -63,6 +63,27 @@ export default function InventoryPage() {
     return () => clearTimeout(timer);
   }, [load, query]);
 
+  const [exporting, setExporting] = useState('');
+
+  /** The complete inventory, regardless of the filters on screen. */
+  const download = async (format) => {
+    setExporting(format);
+    try {
+      const response = await api.get('/inventory/export', { params: { format }, responseType: 'blob' });
+      const name = /filename="([^"]+)"/.exec(response.headers['content-disposition'] || '')?.[1] || `inventory.${format}`;
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(response.data);
+      link.download = name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      toast.success('Inventory downloaded', name);
+    } catch (err) {
+      toast.error('Could not download the inventory', errorMessage(err));
+    } finally {
+      setExporting('');
+    }
+  };
+
   const confirmDelete = async () => {
     setBusy(true);
     try {
@@ -82,7 +103,17 @@ export default function InventoryPage() {
       <PageHead
         title="Inventory"
         subtitle="Your stock by SKU — add items, receive and issue stock, and track every movement."
-        actions={<button className="btn" onClick={() => setEditing(null)}>＋ Add SKU</button>}
+        actions={
+          <>
+            <button className="btn btn--excel" onClick={() => download('xlsx')} disabled={Boolean(exporting)} title="Download the complete inventory as Excel">
+              {exporting === 'xlsx' ? <span className="spinner" /> : '⭳'} Excel
+            </button>
+            <button className="btn btn--secondary" onClick={() => download('pdf')} disabled={Boolean(exporting)} title="Download the complete inventory as PDF">
+              {exporting === 'pdf' ? <span className="spinner spinner--dark" /> : '⭳'} PDF
+            </button>
+            <button className="btn" onClick={() => setEditing(null)}>＋ Add SKU</button>
+          </>
+        }
       />
 
       {error ? <Alert tone="error" title="Could not load inventory">{error}</Alert> : null}
