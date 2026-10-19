@@ -3,6 +3,7 @@ import PDFDocument from 'pdfkit';
 import env from '../config/env.js';
 import logger from '../utils/logger.js';
 import { bankBlockHeight, drawBankBlock } from './pdfBank.js';
+import { drawWordmark, measureWordmark } from './pdfBrand.js';
 
 /**
  * A quotation on the client's own letterhead: their logo, colour, address
@@ -134,10 +135,12 @@ export function renderQuotationPdf(quotation, company = {}) {
       }
     }
     if (!drewLogo) {
-      doc.font('Helvetica-Bold').fontSize(20).fillColor('#ffffff').text(companyName, left, 30, { width: width * 0.55, lineBreak: false, ellipsis: true });
-      if (company.website || company.email) {
-        doc.font('Helvetica').fontSize(9).fillColor(tint(brand, 0.75)).text(company.website || company.email, left, 56, { width: width * 0.55 });
-      }
+      // No logo: the company name typeset as a wordmark on a white card.
+      const maxCard = width * 0.56;
+      const { width: markW } = measureWordmark(doc, companyName, { height: 40, maxWidth: maxCard - 32 });
+      const cardW = Math.max(176, markW + 32);
+      doc.roundedRect(left, 18, cardW, 60, 6).fill('#ffffff');
+      drawWordmark(doc, companyName, { x: left + 16, y: 28, height: 40, maxWidth: maxCard - 32, brand, ink: INK });
     }
 
     doc.font('Helvetica-Bold').fontSize(28).fillColor('#ffffff').text('QUOTATION', left, 22, { width, align: 'right', characterSpacing: 1 });

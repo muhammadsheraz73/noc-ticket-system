@@ -4,6 +4,7 @@ import { PassThrough } from 'node:stream';
 import PDFDocument from 'pdfkit';
 import env from '../config/env.js';
 import { bankBlockHeight, drawBankBlock } from './pdfBank.js';
+import { drawWordmark } from './pdfBrand.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -65,8 +66,8 @@ export function streamInvoicePdf(invoice, stream, extra = {}) {
       .text(value, x + width * 0.45 + 8, y, { width: width * 0.55 - 8, align: 'right' });
   };
 
-  // ---------- Header: logo + INVOICE ----------
-  doc.font('Helvetica-Bold').fontSize(16).fillColor(COLORS.ink).text(companyName, left, 42, { width: 300 });
+  // ---------- Header: company wordmark + INVOICE ----------
+  drawWordmark(doc, companyName, { x: left, y: 36, height: 44, maxWidth: contentWidth * 0.58, brand: bandColor, ink: COLORS.ink });
   doc.font('Helvetica-Bold').fontSize(30).fillColor(COLORS.ink).text('INVOICE', left, 44, {
     width: contentWidth,
     align: 'right',
