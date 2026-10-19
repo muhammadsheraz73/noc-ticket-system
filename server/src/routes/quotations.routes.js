@@ -11,7 +11,7 @@ import { validate } from '../middleware/validate.js';
 import { recordAudit } from '../utils/audit.js';
 import { nextSequence } from '../utils/sequence.js';
 import { containsRegex, parsePagination } from '../utils/search.js';
-import { calculateTotals } from '../services/invoiceService.js';
+import { FIXED_PRICE, calculateTotals, fixedPricing } from '../services/invoiceService.js';
 import { renderQuotationPdf } from '../services/quotationPdf.js';
 import { DEFAULT_QUOTATION_TERMS, ROLES } from '../utils/constants.js';
 import { quotationSchema, quotationStatusSchema, quotationUpdateSchema } from '../validators/schemas.js';
@@ -139,6 +139,7 @@ router.get(
 router.post(
   '/',
   validate(quotationSchema),
+  fixedPricing,
   asyncHandler(async (req, res) => {
     const customer = await linkedCustomer(req.body.customer);
     const issueDate = req.body.issueDate || new Date();
@@ -177,6 +178,7 @@ router.get(
 router.put(
   '/:id',
   validate(quotationUpdateSchema),
+  fixedPricing,
   asyncHandler(async (req, res) => {
     const quotation = await findQuotation(req.params.id);
 
@@ -230,6 +232,8 @@ router.post(
     const now = new Date();
     const copy = await Quotation.create({
       ...source,
+      ...FIXED_PRICE,
+      ...priced({ ...source, ...FIXED_PRICE }),
       quoteNumber: await generateQuoteNumber(now),
       status: 'Draft',
       statusChangedAt: now,

@@ -147,24 +147,21 @@ export function streamInvoicePdf(invoice, stream, extra = {}) {
 
   // ---------- Items table ----------
   const cols = {
-    description: { x: left, width: contentWidth * 0.46 },
-    qty: { x: left + contentWidth * 0.46, width: contentWidth * 0.1 },
-    rate: { x: left + contentWidth * 0.56, width: contentWidth * 0.16 },
-    taxable: { x: left + contentWidth * 0.72, width: contentWidth * 0.12 },
-    amount: { x: left + contentWidth * 0.84, width: contentWidth * 0.16 },
+    description: { x: left, width: contentWidth * 0.52 },
+    qty: { x: left + contentWidth * 0.52, width: contentWidth * 0.12 },
+    rate: { x: left + contentWidth * 0.64, width: contentWidth * 0.18 },
+    amount: { x: left + contentWidth * 0.82, width: contentWidth * 0.18 },
   };
 
   doc.font('Helvetica-Bold').fontSize(8).fillColor(COLORS.ink);
   doc.text('PRODUCT / SERVICE DESCRIPTION', cols.description.x, y, { width: cols.description.width });
   doc.text('QTY', cols.qty.x, y, { width: cols.qty.width, align: 'center' });
   doc.text('UNIT PRICE', cols.rate.x, y, { width: cols.rate.width, align: 'right' });
-  doc.text('TAXABLE', cols.taxable.x, y, { width: cols.taxable.width, align: 'center' });
   doc.text('AMOUNT', cols.amount.x, y, { width: cols.amount.width, align: 'right' });
   y += 14;
   doc.moveTo(left, y).lineTo(right, y).strokeColor(COLORS.ink).lineWidth(1).stroke();
   y += 8;
 
-  const isTaxable = invoice.taxAmount > 0 || invoice.withholdingTaxAmount > 0;
 
   for (const item of invoice.items) {
     const textHeight = doc.heightOfString(item.description || '-', { width: cols.description.width });
@@ -179,7 +176,6 @@ export function streamInvoicePdf(invoice, stream, extra = {}) {
     doc.text(item.description || '-', cols.description.x, y, { width: cols.description.width });
     doc.text(String(item.quantity), cols.qty.x, y, { width: cols.qty.width, align: 'center' });
     doc.text(money(item.rate), cols.rate.x, y, { width: cols.rate.width, align: 'right' });
-    doc.text(isTaxable ? 'Yes' : 'No', cols.taxable.x, y, { width: cols.taxable.width, align: 'center' });
     doc.font('Helvetica-Bold').text(money(item.amount), cols.amount.x, y, { width: cols.amount.width, align: 'right' });
 
     y += rowHeight;
@@ -216,10 +212,11 @@ export function streamInvoicePdf(invoice, stream, extra = {}) {
     const label = invoice.discountType === 'percent' ? `Discount (${invoice.discountValue}%):` : 'Discount:';
     totalRow(label, invoice.discountAmount);
   }
-  totalRow(`Sales Tax (${invoice.taxPercent}%):`, invoice.taxAmount, { showDash: invoice.taxAmount <= 0 });
-  totalRow(`Withholding Tax (${invoice.withholdingTaxPercent}%):`, invoice.withholdingTaxAmount, {
-    showDash: invoice.withholdingTaxAmount <= 0,
-  });
+  // Invoices are fixed-price now; tax lines only appear on older invoices that carried tax.
+  if (invoice.taxAmount > 0) totalRow(`Sales Tax (${invoice.taxPercent}%):`, invoice.taxAmount);
+  if (invoice.withholdingTaxAmount > 0) {
+    totalRow(`Withholding Tax (${invoice.withholdingTaxPercent}%):`, invoice.withholdingTaxAmount);
+  }
 
   y += 3;
   doc.rect(totalsX, y, totalsWidth, 20).fill(COLORS.ink);

@@ -4,7 +4,7 @@ import api, { errorMessage, fieldErrors } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
-import { Alert, Badge, Field, Loading, Select, TextInput, Textarea } from '../components/ui.jsx';
+import { Alert, Badge, Field, Loading, TextInput, Textarea } from '../components/ui.jsx';
 import { formatMoney } from '../utils/format.js';
 import { downloadQuotationPdf } from '../utils/quotationPdf.js';
 
@@ -22,15 +22,11 @@ const BLANK = {
   issueDate: '',
   validUntil: '',
   status: 'Draft',
-  discountType: 'none',
-  discountValue: 0,
-  taxPercent: 0,
   notes: '',
   terms: '',
 };
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
-const clamp = (n, min, max) => Math.min(max, Math.max(min, Number(n) || 0));
 const toInput = (value) => (value ? new Date(value).toISOString().slice(0, 10) : '');
 
 /** Create a quotation, or edit one (`/quotations/:id/edit`). */
@@ -89,13 +85,9 @@ export default function QuotationFormPage() {
   const totals = useMemo(() => {
     const lines = items.map((it) => round2(Math.max(0, Number(it.quantity) || 0) * Math.max(0, Number(it.rate) || 0)));
     const subtotal = round2(lines.reduce((s, v) => s + v, 0));
-    let discount = 0;
-    if (form.discountType === 'percent') discount = round2((subtotal * clamp(form.discountValue, 0, 100)) / 100);
-    if (form.discountType === 'amount') discount = round2(clamp(form.discountValue, 0, subtotal));
-    const taxable = round2(subtotal - discount);
-    const tax = round2((taxable * clamp(form.taxPercent, 0, 100)) / 100);
-    return { lines, subtotal, discount, tax, total: round2(taxable + tax) };
-  }, [items, form.discountType, form.discountValue, form.taxPercent]);
+    // Fixed price: the total is simply the sum of the lines.
+    return { lines, total: subtotal };
+  }, [items]);
 
   const pickCustomer = (c) => setForm((f) => ({
     ...f,
@@ -276,36 +268,13 @@ export default function QuotationFormPage() {
           </div>
 
           <div className="card">
-            <div className="card__head"><h3>Pricing</h3></div>
+            <div className="card__head"><h3>Total</h3></div>
             <div className="card__body">
-              <div className="form-grid">
-                <Field label="Discount">
-                  <Select value={form.discountType} onChange={set('discountType')}>
-                    <option value="none">No discount</option>
-                    <option value="percent">Percentage (%)</option>
-                    <option value="amount">Fixed amount</option>
-                  </Select>
-                </Field>
-                <Field label="Discount value">
-                  <TextInput type="number" min="0" step="any" value={form.discountValue} disabled={form.discountType === 'none'} onChange={set('discountValue')} />
-                </Field>
-                <Field label="Sales tax %" error={errors.taxPercent}>
-                  <TextInput type="number" min="0" max="100" step="any" value={form.taxPercent} onChange={set('taxPercent')} />
-                </Field>
-              </div>
               <div className="totals">
-                <div className="totals__row"><span>Subtotal</span><span className="num">{formatMoney(totals.subtotal)}</span></div>
-                {totals.discount > 0 ? (
-                  <div className="totals__row">
-                    <span>Discount{form.discountType === 'percent' ? ` (${form.discountValue}%)` : ''}</span>
-                    <span className="num">− {formatMoney(totals.discount)}</span>
-                  </div>
-                ) : null}
-                {totals.tax > 0 ? (
-                  <div className="totals__row"><span>Sales tax ({form.taxPercent}%)</span><span className="num">{formatMoney(totals.tax)}</span></div>
-                ) : null}
+                <div className="totals__row"><span>Items</span><span className="num">{items.filter((it) => String(it.description).trim()).length}</span></div>
                 <div className="totals__row totals__row--total"><span>Total</span><span className="num">{formatMoney(totals.total)}</span></div>
               </div>
+              <div className="small muted" style={{ marginTop: 12 }}>Fixed price — no discount or tax.</div>
             </div>
             <div className="card__foot">
               <div className="row row--end">

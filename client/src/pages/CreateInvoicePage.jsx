@@ -23,10 +23,6 @@ export default function CreateInvoicePage() {
   const [looking, setLooking] = useState(false);
 
   const [items, setItems] = useState([{ ...BLANK_ITEM }]);
-  const [discountType, setDiscountType] = useState('none');
-  const [discountValue, setDiscountValue] = useState(0);
-  const [taxPercent, setTaxPercent] = useState(0);
-  const [withholdingTaxPercent, setWithholdingTaxPercent] = useState(0);
   const [status, setStatus] = useState('Unpaid');
   const [notes, setNotes] = useState('');
   const [issueDate, setIssueDate] = useState(today());
@@ -44,8 +40,6 @@ export default function CreateInvoicePage() {
     try {
       const { data } = await api.get(`/invoices/lookup/${number}`);
       setLookup(data);
-      setTaxPercent(data.defaults.taxPercent ?? 0);
-      setWithholdingTaxPercent(data.defaults.withholdingTaxPercent ?? 0);
       setIssueDate(toInput(data.defaults.issueDate));
       setDueDate(toInput(data.defaults.dueDate));
       if (data.existingInvoices?.length) {
@@ -73,25 +67,10 @@ export default function CreateInvoicePage() {
       ...item,
       amount: round2((Number(item.quantity) || 0) * (Number(item.rate) || 0)),
     }));
-    const subtotal = round2(normalized.reduce((sum, item) => sum + item.amount, 0));
-    let discountAmount = 0;
-    if (discountType === 'percent') {
-      discountAmount = round2((subtotal * clamp(discountValue, 0, 100)) / 100);
-    } else if (discountType === 'amount') {
-      discountAmount = round2(Math.min(subtotal, Math.max(0, Number(discountValue) || 0)));
-    }
-    const taxable = round2(subtotal - discountAmount);
-    const taxAmount = round2((taxable * Math.max(0, Number(taxPercent) || 0)) / 100);
-    const withholdingTaxAmount = round2((taxable * Math.max(0, Number(withholdingTaxPercent) || 0)) / 100);
-    return {
-      normalized,
-      subtotal,
-      discountAmount,
-      taxAmount,
-      withholdingTaxAmount,
-      total: round2(taxable + taxAmount - withholdingTaxAmount),
-    };
-  }, [items, discountType, discountValue, taxPercent, withholdingTaxPercent]);
+    // Fixed price: the total is simply the sum of the lines.
+    const total = round2(normalized.reduce((sum, item) => sum + item.amount, 0));
+    return { normalized, total };
+  }, [items]);
 
   const setItem = (index, key, value) =>
     setItems((current) => current.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
@@ -119,10 +98,6 @@ export default function CreateInvoicePage() {
           quantity: Number(item.quantity) || 0,
           rate: Number(item.rate) || 0,
         })),
-        discountType,
-        discountValue: Number(discountValue) || 0,
-        taxPercent: Number(taxPercent) || 0,
-        withholdingTaxPercent: Number(withholdingTaxPercent) || 0,
         status,
         notes,
         issueDate: issueDate || undefined,
@@ -273,25 +248,6 @@ export default function CreateInvoicePage() {
                       <Field label="Due date" error={errors.dueDate}>
                         <TextInput type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
                       </Field>
-                      <Field label="Discount type">
-                        <Select value={discountType} onChange={(event) => setDiscountType(event.target.value)}>
-                          <option value="none">No discount</option>
-                          <option value="percent">Percentage (%)</option>
-                          <option value="amount">Fixed amount</option>
-                        </Select>
-                      </Field>
-                      <Field label="Discount value">
-                        <TextInput type="number" min="0" step="any" value={discountValue} disabled={discountType === 'none'}
-                          onChange={(event) => setDiscountValue(event.target.value)} />
-                      </Field>
-                      <Field label="Sales Tax %" error={errors.taxPercent}>
-                        <TextInput type="number" min="0" max="100" step="any" value={taxPercent}
-                          onChange={(event) => setTaxPercent(event.target.value)} />
-                      </Field>
-                      <Field label="Withholding Tax %" error={errors.withholdingTaxPercent}>
-                        <TextInput type="number" min="0" max="100" step="any" value={withholdingTaxPercent}
-                          onChange={(event) => setWithholdingTaxPercent(event.target.value)} />
-                      </Field>
                       <Field label="Status">
                         <Select value={status} onChange={(event) => setStatus(event.target.value)}>
                           <option value="Draft">Draft</option>
@@ -311,23 +267,11 @@ export default function CreateInvoicePage() {
                   <div className="card__head"><h3>Summary</h3></div>
                   <div className="card__body">
                     <div className="totals">
-                      <div className="totals__row"><span>Subtotal</span><span className="num">{formatMoney(totals.subtotal, currency)}</span></div>
-                      {totals.discountAmount > 0 ? (
-                        <div className="totals__row">
-                          <span>Discount{discountType === 'percent' ? ` (${discountValue}%)` : ''}</span>
-                          <span className="num">− {formatMoney(totals.discountAmount, currency)}</span>
-                        </div>
-                      ) : null}
-                      {totals.taxAmount > 0 ? (
-                        <div className="totals__row"><span>Sales Tax ({taxPercent}%)</span><span className="num">{formatMoney(totals.taxAmount, currency)}</span></div>
-                      ) : null}
-                      {totals.withholdingTaxAmount > 0 ? (
-                        <div className="totals__row"><span>Withholding Tax ({withholdingTaxPercent}%)</span><span className="num">− {formatMoney(totals.withholdingTaxAmount, currency)}</span></div>
-                      ) : null}
+                      <div className="totals__row"><span>Items</span><span className="num">{totals.normalized.filter((i) => i.description.trim()).length}</span></div>
                       <div className="totals__row totals__row--total"><span>Total</span><span className="num">{formatMoney(totals.total, currency)}</span></div>
                     </div>
                     <div className="small muted" style={{ marginTop: 12 }}>
-                      Totals are recalculated on the server before saving.
+                      Fixed price — no discount or tax. The total is recalculated on the server before saving.
                     </div>
                   </div>
                   <div className="card__foot">
@@ -349,6 +293,5 @@ export default function CreateInvoicePage() {
 }
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
-const clamp = (n, min, max) => Math.min(max, Math.max(min, Number(n) || 0));
 const toInput = (value) => (value ? new Date(value).toISOString().slice(0, 10) : '');
 const today = () => new Date().toISOString().slice(0, 10);

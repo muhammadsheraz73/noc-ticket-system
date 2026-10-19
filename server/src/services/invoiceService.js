@@ -5,6 +5,23 @@ import { nextSequence } from '../utils/sequence.js';
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
 /**
+ * Invoices and quotations are fixed-price: no discount, sales tax or
+ * withholding tax. Applied server-side so no form or API call can add them.
+ */
+export const FIXED_PRICE = Object.freeze({
+  discountType: 'none',
+  discountValue: 0,
+  taxPercent: 0,
+  withholdingTaxPercent: 0,
+});
+
+/** Express middleware: force fixed pricing on the request body. */
+export function fixedPricing(req, _res, next) {
+  Object.assign(req.body, FIXED_PRICE);
+  next();
+}
+
+/**
  * Compute every money field from the line items.
  * Totals are always recalculated server-side — the client's numbers are hints only.
  */

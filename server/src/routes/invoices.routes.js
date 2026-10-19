@@ -16,7 +16,7 @@ import {
   updateInvoiceSchema,
   updateInvoiceStatusSchema,
 } from '../validators/schemas.js';
-import { calculateTotals, generateInvoiceNumber } from '../services/invoiceService.js';
+import { calculateTotals, fixedPricing, generateInvoiceNumber } from '../services/invoiceService.js';
 import { renderInvoicePdfBuffer } from '../services/pdfService.js';
 import { addDays } from '../utils/datetime.js';
 import { decorateTicket } from '../services/ticketService.js';
@@ -67,8 +67,6 @@ router.get(
       existingInvoices: existing,
       defaults: {
         currency: env.invoice.currency,
-        taxPercent: env.invoice.taxPercent,
-        withholdingTaxPercent: env.invoice.withholdingTaxPercent,
         dueDays: env.invoice.dueDays,
         issueDate: new Date(),
         dueDate: addDays(new Date(), env.invoice.dueDays),
@@ -81,6 +79,7 @@ router.get(
 router.post(
   '/preview',
   canWrite,
+  fixedPricing,
   asyncHandler(async (req, res) => {
     const totals = calculateTotals({
       items: req.body.items || [],
@@ -154,6 +153,7 @@ router.post(
   '/',
   canWrite,
   validate(createInvoiceSchema),
+  fixedPricing,
   asyncHandler(async (req, res) => {
     const ticket = await Ticket.findOne({ ticketNumber: req.body.ticketNumber, isDeleted: false });
     if (!ticket) throw ApiError.badRequest(`No ticket found with TID ${req.body.ticketNumber}`);
@@ -268,6 +268,7 @@ router.put(
   '/:id',
   canWrite,
   validate(updateInvoiceSchema),
+  fixedPricing,
   asyncHandler(async (req, res) => {
     const invoice = await findInvoice(req.params.id);
     if (invoice.status === 'Paid') throw ApiError.badRequest('A paid invoice cannot be edited');
