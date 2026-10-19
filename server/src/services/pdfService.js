@@ -32,7 +32,7 @@ const shortDate = (value) => {
 
 /**
  * Stream the invoice PDF into `res` (or any writable stream), styled after
- * the company's standard invoice template (logo header, black tagline band,
+ * the company's standard invoice template (wordmark header, tagline band,
  * "Invoice From / Invoice To" blocks, itemised table, tax breakdown).
  *
  * `extra` carries fields the Invoice document does not itself store — they
@@ -41,6 +41,8 @@ const shortDate = (value) => {
 export function streamInvoicePdf(invoice, stream, extra = {}) {
   const { ticketCategory = '', supervisorName = '', connectedFrom = '', branding = {} } = extra;
   const companyName = branding.name || env.company.name;
+  // Every company detail comes from the client's own profile (Settings → Company profile).
+  const contactInfo = [branding.phone, branding.email ? branding.email.toUpperCase() : ''].filter(Boolean).join(' | ');
   const bandColor = /^#[0-9a-fA-F]{6}$/.test(branding.color || '') ? branding.color : COLORS.ink;
 
   const doc = new PDFDocument({ size: 'A4', margin: 40 });
@@ -80,7 +82,7 @@ export function streamInvoicePdf(invoice, stream, extra = {}) {
     .font('Helvetica-Bold')
     .fontSize(8.5)
     .fillColor('#ffffff')
-    .text(`------:-${env.company.tagline}-:------`, left, y + 6, { width: contentWidth, align: 'center' });
+    .text(`------:-${(branding.tagline || companyName).toUpperCase()}-:------`, left, y + 6, { width: contentWidth, align: 'center' });
 
   // ---------- Invoice From ----------
   y += 36;
@@ -93,8 +95,10 @@ export function streamInvoicePdf(invoice, stream, extra = {}) {
   const fromValueWidth = contentWidth - fromLabelWidth;
   const fromRows = [
     ['NAME:', companyName],
-    ['ADDRESS:', env.company.address],
-    ['CONTACT INFO:', `${env.company.phone} | ${env.company.email.toUpperCase()}`],
+    ...(branding.contactName ? [['CONTACT PERSON:', branding.contactName]] : []),
+    ['ADDRESS:', branding.address],
+    ['CONTACT INFO:', contactInfo],
+    ...(branding.website ? [['WEBSITE:', branding.website]] : []),
     ['SUPERVISION BY:', supervisorName],
     ['TICKET CAT:', ticketCategory],
   ];
@@ -253,7 +257,7 @@ export function streamInvoicePdf(invoice, stream, extra = {}) {
     .font('Helvetica')
     .fontSize(8.5)
     .fillColor(COLORS.link)
-    .text('If you have any questions concerning this quotation, please contact:', left, footerY, {
+    .text(`If you have any questions concerning this invoice, please contact${contactInfo ? `: ${contactInfo}` : ' us.'}`, left, footerY, {
       width: contentWidth,
       underline: true,
     });

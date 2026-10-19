@@ -82,7 +82,7 @@ function logoBuffer(dataUrl) {
 
 /**
  * @param quotation  Quotation (lean or document)
- * @param company    { name, address, phone, email, website, logo, color, bankAccounts }
+ * @param company    { name, contactName, address, phone, email, website, logo, color, bankAccounts }
  */
 export function renderQuotationPdf(quotation, company = {}) {
   return new Promise((resolve, reject) => {
@@ -169,6 +169,7 @@ export function renderQuotationPdf(quotation, company = {}) {
     // ====================================================== from / for panels
     const panelW = (width - 12) / 2;
     const fromLines = [
+      company.contactName ? `Contact: ${company.contactName}` : '',
       company.address,
       company.phone ? `Phone: ${company.phone}` : '',
       company.email ? `Email: ${company.email}` : '',

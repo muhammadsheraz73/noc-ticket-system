@@ -238,6 +238,12 @@ router.get(
       branding: {
         name: req.tenant?.name,
         color: req.tenant?.themeColor,
+        contactName: req.tenant?.contactName,
+        address: req.tenant?.address,
+        phone: req.tenant?.phone,
+        email: req.tenant?.email,
+        website: req.tenant?.website,
+        tagline: req.tenant?.tagline,
         bankAccounts: req.tenant?.bankAccounts || [],
       },
     });

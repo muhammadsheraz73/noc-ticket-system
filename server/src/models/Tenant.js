@@ -10,6 +10,8 @@ const tenantSchema = new mongoose.Schema(
     email: { type: String, trim: true, lowercase: true, default: '' },
     address: { type: String, trim: true, default: '' },
     website: { type: String, trim: true, default: '' },
+    /** Short line printed in the invoice band and under the name on reports. */
+    tagline: { type: String, trim: true, default: '' },
     /** Logo as a PNG/JPEG data URL — kept in the document so it works on serverless hosts too. */
     logo: { type: String, default: '' },
     /** Bank accounts printed on this client's quotations and invoices for payment. */

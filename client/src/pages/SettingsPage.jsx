@@ -168,7 +168,7 @@ export default function SettingsPage() {
   );
 }
 
-const BLANK_COMPANY = { contactName: '', phone: '', email: '', address: '', website: '', logo: '', quotationTerms: '', bankAccounts: [] };
+const BLANK_COMPANY = { contactName: '', phone: '', email: '', address: '', website: '', tagline: '', logo: '', quotationTerms: '', bankAccounts: [] };
 const BLANK_ACCOUNT = { title: '', bank: '', accountNumber: '', iban: '' };
 const MAX_ACCOUNTS = 4;
 
@@ -221,7 +221,7 @@ function CompanyProfileCard() {
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card__head">
         <h2>Company profile</h2>
-        <span className="small muted">Your letterhead and bank details on quotations and invoices</span>
+        <span className="small muted">Name, contact, address and bank details printed on your quotations and invoices</span>
       </div>
       <div className="card__body">
         {loadError ? <Alert tone="error">{loadError}</Alert> : null}
@@ -249,6 +249,9 @@ function CompanyProfileCard() {
               </Field>
               <Field label="Website" error={errors.website}>
                 <TextInput value={form.website} onChange={set('website')} error={errors.website} placeholder="www.yourcompany.pk" />
+              </Field>
+              <Field label="Tagline" error={errors.tagline} hint="Printed in the coloured band on invoices. Left empty, your company name is used.">
+                <TextInput value={form.tagline} onChange={set('tagline')} error={errors.tagline} placeholder="Reliable source of internet connectivity" />
               </Field>
               <Field label="Default quotation terms" full error={errors.quotationTerms} hint="One per line. Filled into every new quotation; you can still change them per quotation. Left empty, the two terms shown in grey are used.">
                 <Textarea rows={4} value={form.quotationTerms} onChange={set('quotationTerms')} error={errors.quotationTerms}

@@ -38,6 +38,7 @@ router.get(
     const items = await InventoryItem.find({}).sort({ category: 1, name: 1 }).lean();
     const report = buildReport(items, {
       company: req.tenant?.name,
+      tagline: req.tenant?.tagline,
       color: req.tenant?.themeColor,
       generatedBy: req.user.name,
     });

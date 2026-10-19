@@ -77,6 +77,7 @@ export function buildReport(items, branding = {}) {
 
   return {
     company: branding.company || env.company.name,
+    tagline: branding.tagline || '',
     brand: brandHex(branding.color),
     generatedBy: branding.generatedBy || '',
     generatedAt: new Date(),
@@ -345,7 +346,7 @@ export function renderInventoryPdf(report) {
     // ---------- Header
     doc.rect(0, 0, doc.page.width, 6).fill(report.brand);
     doc.font('Helvetica-Bold').fontSize(17).fillColor(INK).text(report.company, left, 24, { width: width * 0.6 });
-    doc.font('Helvetica').fontSize(9).fillColor(MUTED).text(env.company.tagline, left, 45, { width: width * 0.6 });
+    if (report.tagline) doc.font('Helvetica').fontSize(9).fillColor(MUTED).text(report.tagline, left, 45, { width: width * 0.6 });
     doc.font('Helvetica-Bold').fontSize(20).fillColor(report.brand).text('INVENTORY REPORT', left, 22, { width, align: 'right' });
     doc.font('Helvetica').fontSize(8.5).fillColor(MUTED)
       .text(`Generated ${stamp(report.generatedAt)}${report.generatedBy ? ` · by ${report.generatedBy}` : ''}`, left, 47, { width, align: 'right' });

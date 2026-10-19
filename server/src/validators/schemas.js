@@ -101,6 +101,7 @@ const letterheadFields = {
   email: z.union([z.literal(''), z.string().trim().toLowerCase().email('Enter a valid email address').max(160)]).optional().default(''),
   address: optionalText(300),
   website: optionalText(160),
+  tagline: optionalText(120),
   logo: logoDataUrl.optional(),
   quotationTerms: optionalText(3000),
   bankAccounts: z
