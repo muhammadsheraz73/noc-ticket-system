@@ -9,7 +9,9 @@ export function ToastProvider({ children }) {
   const nextId = useRef(1);
 
   const dismiss = useCallback((id) => {
-    setToasts((current) => current.filter((t) => t.id !== id));
+    // Play the slide-out first, then drop it.
+    setToasts((current) => current.map((t) => (t.id === id ? { ...t, leaving: true } : t)));
+    setTimeout(() => setToasts((current) => current.filter((t) => t.id !== id)), 220);
   }, []);
 
   const push = useCallback(
@@ -38,7 +40,7 @@ export function ToastProvider({ children }) {
       {children}
       <div className="toasts" role="status" aria-live="polite">
         {toasts.map((toast) => (
-          <div key={toast.id} className={`toast toast--${toast.type}`}>
+          <div key={toast.id} className={`toast toast--${toast.type}${toast.leaving ? ' is-leaving' : ''}`}>
             <span className={`badge badge--${badgeTone(toast.type)}`}>{ICONS[toast.type]}</span>
             <div className="toast__body">
               <div className="toast__title">{toast.title}</div>

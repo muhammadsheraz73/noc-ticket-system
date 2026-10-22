@@ -1,3 +1,5 @@
+import CountUp from './CountUp.jsx';
+
 /** One summary tile: icon, label, a single-line value and a short hint. */
 export default function Kpi({ icon: Icon, tone, label, value, prefix, hint, title, active = false, onClick }) {
   const body = (
@@ -8,7 +10,7 @@ export default function Kpi({ icon: Icon, tone, label, value, prefix, hint, titl
       </div>
       <div className="kpi__value" title={title}>
         {prefix ? <span className="kpi__prefix">{prefix}</span> : null}
-        {value}
+        <CountUp value={value} />
       </div>
       <div className="kpi__hint">{hint}</div>
     </>

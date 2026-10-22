@@ -66,11 +66,15 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <aside className="login-hero">
+        <span className="login-hero__grid" aria-hidden="true" />
+        <span className="login-hero__orb login-hero__orb--1" aria-hidden="true" />
+        <span className="login-hero__orb login-hero__orb--2" aria-hidden="true" />
+        <span className="login-hero__orb login-hero__orb--3" aria-hidden="true" />
         <BrandIcon className="login-hero__icon" />
         <h1 className="login-hero__name">ISP MATRIX</h1>
         <p className="login-hero__tagline">ISP Billing &amp; Network Operations</p>
         <ul className="login-hero__features">
-          {FEATURES.map((feature) => <li key={feature}>{feature}</li>)}
+          {FEATURES.map((feature, index) => <li key={feature} style={{ '--i': index }}>{feature}</li>)}
         </ul>
         <div className="login-hero__footer">
           © {new Date().getFullYear()} ISP MATRIX. All rights reserved.

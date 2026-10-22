@@ -84,6 +84,7 @@ export default function Layout() {
     ...group,
     items: group.items.filter((item) => !item.roles || item.roles.includes(user?.role)),
   })).filter((group) => group.items.length > 0);
+  let linkIndex = 0;
 
   return (
     <div className="app-shell">
@@ -106,6 +107,7 @@ export default function Layout() {
                   to={item.to}
                   end={item.end}
                   className={({ isActive }) => `sidebar__link${isActive ? ' is-active' : ''}`}
+                  style={{ '--i': linkIndex++ }}
                 >
                   <span className="sidebar__icon">{item.icon}</span>
                   {item.label}
@@ -146,7 +148,7 @@ export default function Layout() {
             </button>
 
             {menuOpen ? (
-              <div className="usermenu__panel">
+              <div className="usermenu__panel pop-in">
                 <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--line)', marginBottom: 4 }}>
                   <div className="strong">{user?.name}</div>
                   <div className="small muted">{user?.email}</div>
@@ -175,7 +177,10 @@ export default function Layout() {
         </header>
 
         <main className="content">
-          <Outlet />
+          {/* Keyed by path so every page change plays the enter animation. */}
+          <div className="page-enter" key={location.pathname}>
+            <Outlet />
+          </div>
         </main>
       </div>
 

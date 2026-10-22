@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import CountUp from './CountUp.jsx';
 
 /* --------------------------------------------------------------- badges */
 export function Badge({ tone = 'neutral', dot = false, children }) {
@@ -201,7 +202,7 @@ export function Stat({ label, value, hint, tone = '', to, onClick }) {
   const content = (
     <>
       <div className="stat__label">{label}</div>
-      <div className="stat__value">{value}</div>
+      <div className="stat__value"><CountUp value={value} /></div>
       {hint ? <div className="stat__hint">{hint}</div> : null}
     </>
   );
