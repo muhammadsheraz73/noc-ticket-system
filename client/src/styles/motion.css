@@ -42,6 +42,8 @@
   66% { transform: translate(-25px, 20px) scale(0.95); }
 }
 @keyframes grid-pan { to { background-position: 40px 40px; } }
+@keyframes swing-in { from { opacity: 0; transform: perspective(600px) rotateY(-60deg) translateX(-10px); } to { opacity: 1; transform: none; } }
+@keyframes flip-in-x { from { opacity: 0; transform: perspective(500px) rotateX(-75deg); } to { opacity: 1; transform: none; } }
 @keyframes bounce-y { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-7px); } 70% { transform: translateY(-2px); } }
 
 /* ----------------------------------------------------------- stagger index */
@@ -84,7 +86,10 @@
 }
 
 /* ----------------------------------------------------------------- sidebar */
+/* 3D: the logo flips down into place, links swing in like doors hinged on the
+   left, and on hover a link tilts out toward the viewer. */
 .sidebar__brand { animation: fade-in 0.6s ease backwards; }
+.sidebar__logo { animation: flip-in-x 0.8s var(--ease-out) backwards; }
 .sidebar__logo-text {
   background-size: 220% 100%;
   animation: gradient-pan 6s ease-in-out infinite;
@@ -92,13 +97,21 @@
 .sidebar__logo::after { animation: grow-x 0.7s var(--ease-out) 0.3s backwards; transform-origin: center; }
 .sidebar__link {
   position: relative;
-  animation: slide-in-left 0.45s var(--ease-out) backwards;
+  transform-origin: left center;
+  animation: swing-in 0.55s var(--ease-out) backwards;
   animation-delay: calc(80ms + var(--i, 0) * 40ms);
-  transition: background 0.2s, color 0.2s, box-shadow 0.25s, padding-left 0.2s;
+  transition: background 0.2s, color 0.2s, box-shadow 0.25s, transform 0.3s var(--ease-out);
 }
-.sidebar__link:hover { padding-left: 13px; }
-.sidebar__icon { display: inline-block; transition: transform 0.25s var(--ease-spring); }
-.sidebar__link:hover .sidebar__icon { transform: scale(1.18); }
+.sidebar__link:hover {
+  transform: perspective(600px) translateX(4px) rotateY(-7deg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 16px -10px rgba(0, 0, 0, 0.8);
+}
+.sidebar__link.is-active {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 14px -8px rgba(0, 0, 0, 0.7);
+}
+.sidebar__link:active { transform: perspective(600px) translateX(2px) rotateY(-3deg) scale(0.98); transition-duration: 0.08s; }
+.sidebar__icon { display: inline-block; transition: transform 0.35s var(--ease-spring); }
+.sidebar__link:hover .sidebar__icon { transform: perspective(200px) rotateY(-20deg) scale(1.18); }
 .sidebar__link.is-active::before {
   content: ''; position: absolute; left: -10px; top: 8px; bottom: 8px; width: 3px;
   border-radius: 0 999px 999px 0; background: var(--brand-accent);
@@ -126,23 +139,39 @@
 .gsearch__input { transition: background 0.2s, border-color 0.2s, box-shadow 0.2s; }
 
 /* ----------------------------------------------------------------- buttons */
-.btn {
-  position: relative; overflow: hidden; isolation: isolate;
-  transition: background 0.18s, border-color 0.18s, color 0.18s, opacity 0.18s, box-shadow 0.2s, transform 0.12s;
+/* 3D buttons: a top highlight and a thin bottom edge at rest, lift on hover,
+   press into the page on click. Covers .btn and the shadcn buttons (group/button). */
+.btn, .group\/button {
+  --lift-glow: rgba(15, 23, 42, 0.26);
+  transition: background 0.18s, border-color 0.18s, color 0.18s, opacity 0.18s,
+    box-shadow 0.22s var(--ease-out), transform 0.22s var(--ease-out);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 0 rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.1);
 }
+.btn { position: relative; overflow: hidden; isolation: isolate; }
 .btn::after {
   content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 40%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.32), transparent);
   transform: translateX(-120%) skewX(-20deg); pointer-events: none; z-index: -1;
 }
 .btn:hover:not(:disabled)::after { animation: sheen 0.75s ease; }
-.btn:not(.btn--secondary):not(.btn--ghost):not(.btn--delete):hover:not(:disabled) {
-  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--brand) 70%, transparent);
+.btn:not(.btn--secondary):not(.btn--ghost):not(.btn--delete) { --lift-glow: color-mix(in srgb, var(--brand) 65%, transparent); }
+.btn--danger { --lift-glow: rgba(185, 28, 28, 0.55); }
+.btn--ok, .btn--excel { --lift-glow: rgba(21, 128, 61, 0.5); }
+.btn--secondary:hover:not(:disabled) { border-color: var(--muted-2); }
+
+.btn:hover:not(:disabled), .group\/button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 3px 0 -1px rgba(15, 23, 42, 0.08), 0 10px 20px -8px var(--lift-glow);
 }
-.btn--danger:hover:not(:disabled) { box-shadow: 0 6px 16px -6px rgba(185, 28, 28, 0.6) !important; }
-.btn--ok:hover:not(:disabled), .btn--excel:hover:not(:disabled) { box-shadow: 0 6px 16px -6px rgba(21, 128, 61, 0.55) !important; }
-.btn--secondary:hover:not(:disabled) { border-color: var(--muted-2); box-shadow: var(--shadow); }
-.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:active:not(:disabled), .group\/button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.16);
+  transition-duration: 0.06s;
+}
+/* ghost buttons stay flat: they only lift */
+.btn--ghost, .btn--ghost:hover:not(:disabled) { box-shadow: none; }
+.btn--ghost:active:not(:disabled) { box-shadow: none; }
+.btn:disabled, .group\/button:disabled { box-shadow: none; }
 
 /* ------------------------------------------------------------------- cards */
 .card { transition: box-shadow 0.25s, border-color 0.25s; }
