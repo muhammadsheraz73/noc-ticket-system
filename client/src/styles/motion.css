@@ -99,12 +99,9 @@
 .sidebar__link:hover { padding-left: 13px; }
 .sidebar__icon { display: inline-block; transition: transform 0.25s var(--ease-spring); }
 .sidebar__link:hover .sidebar__icon { transform: scale(1.18); }
-.sidebar__link.is-active {
-  box-shadow: 0 6px 18px -6px var(--brand-accent), inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
 .sidebar__link.is-active::before {
   content: ''; position: absolute; left: -10px; top: 8px; bottom: 8px; width: 3px;
-  border-radius: 0 3px 3px 0; background: #fff;
+  border-radius: 0 999px 999px 0; background: var(--brand-accent);
   animation: grow-y 0.3s var(--ease-out);
 }
 .sidebar-backdrop { animation: fade-in 0.2s ease; }
@@ -188,7 +185,7 @@
 .tab { position: relative; transition: color 0.2s; }
 .tab::after {
   content: ''; position: absolute; left: 10px; right: 10px; bottom: -2px; height: 2px;
-  border-radius: 2px; background: var(--brand);
+  border-radius: 999px; background: var(--brand);
   transform: scaleX(0); transition: transform 0.3s var(--ease-out);
 }
 .tab.is-active { border-bottom-color: transparent; }

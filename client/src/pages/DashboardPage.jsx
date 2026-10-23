@@ -26,10 +26,13 @@ export default function DashboardPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
+  /** mode: 'initial' shows the skeleton, 'manual' spins the Refresh icon, 'auto' is silent. */
   const load = useCallback(
-    async (quiet = false) => {
-      if (!quiet) setLoading(true);
+    async (mode = 'initial') => {
+      if (mode === 'initial') setLoading(true);
+      if (mode === 'manual') setRefreshing(true);
       try {
         const response = await api.get('/dashboard');
         setData(response.data);
@@ -37,9 +40,10 @@ export default function DashboardPage() {
         setError('');
       } catch (err) {
         setError(errorMessage(err));
-        if (!quiet) toast.error('Could not load the dashboard', errorMessage(err));
+        if (mode !== 'auto') toast.error('Could not load the dashboard', errorMessage(err));
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
     },
     [syncClock, toast],
@@ -48,7 +52,7 @@ export default function DashboardPage() {
   useEffect(() => {
     load();
     // Keep the operational picture fresh without a manual refresh.
-    const id = setInterval(() => load(true), 30000);
+    const id = setInterval(() => load('auto'), 30000);
     return () => clearInterval(id);
   }, [load]);
 
@@ -64,9 +68,12 @@ export default function DashboardPage() {
         title={`Good ${greeting(serverNow())}, ${user.name.split(' ')[0]}`}
         subtitle="Live operational picture of tickets, customers and billing."
         actions={
-          <Button variant="outline" onClick={() => load()}>
-            <RefreshCw className="size-4" /> Refresh
-          </Button>
+          <>
+            <span className="self-center text-xs text-muted-foreground">Auto-refreshes every 30s</span>
+            <Button variant="outline" onClick={() => load('manual')} disabled={refreshing}>
+              <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} /> Refresh
+            </Button>
+          </>
         }
       />
 
@@ -82,12 +89,11 @@ export default function DashboardPage() {
           <StatTile label="Pending Invoices" value={formatNumber(s.pendingInvoices)} tone="purple" hint="Draft or Unpaid" onClick={() => navigate('/invoices?status=Draft,Unpaid')} />
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {canManageTickets || canManageInvoices || canViewNetwork ? (
+          <section aria-labelledby="quick-actions-title">
+            <h2 id="quick-actions-title" className="mb-2 text-sm font-semibold text-muted-foreground">Quick actions</h2>
+            {/* Same columns and gap as the KPI grid above so the tiles line up. */}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {canManageTickets ? (
                 <QuickAction to="/tickets/new" icon={Ticket} label="Create Ticket" />
               ) : null}
@@ -101,8 +107,8 @@ export default function DashboardPage() {
                 <QuickAction to="/customers/import" icon={Upload} label="Import Excel" />
               ) : null}
             </div>
-          </CardContent>
-        </Card>
+          </section>
+        ) : null}
 
         <div className="grid grid--detail">
           <Card>
@@ -110,7 +116,7 @@ export default function DashboardPage() {
               <CardTitle className="text-lg">Recent tickets</CardTitle>
               <CardAction>
                 <Link
-                  className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'shrink-0 font-semibold')}
+                  className={cn(buttonVariants({ variant: 'outline' }), 'shrink-0')}
                   to="/tickets"
                 >
                   View all <ChevronRight className="size-3.5" />
@@ -124,12 +130,12 @@ export default function DashboardPage() {
                 <Table className="table-fixed min-w-[520px] [&_th]:text-[10.5px] [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-muted-foreground [&_th]:font-semibold">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[8%]">TID</TableHead>
-                      <TableHead className="w-[28%]">Customer</TableHead>
-                      <TableHead className="w-[16%]">Issue</TableHead>
-                      <TableHead className="w-[13%]">Priority</TableHead>
-                      <TableHead className="w-[18%]">Status</TableHead>
-                      <TableHead className="w-[17%] text-right">Time Left</TableHead>
+                      <TableHead className="w-[9%]">TID</TableHead>
+                      <TableHead className="w-[25%]">Customer</TableHead>
+                      <TableHead className="w-[22%]">Issue</TableHead>
+                      <TableHead className="w-[12%]">Priority</TableHead>
+                      <TableHead className="w-[17%]">Status</TableHead>
+                      <TableHead className="w-[15%] text-right">Time Left</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody className="[&_td]:py-3 [&_tr]:border-b-0 [&_tr:nth-child(even)]:bg-muted/40">
@@ -151,14 +157,12 @@ export default function DashboardPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="whitespace-normal">
-                          <Badge variant="outline" className="max-w-full">
-                            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap" title={ticket.issueType}>{ticket.issueType}</span>
-                          </Badge>
+                        <TableCell className="whitespace-normal text-xs leading-snug text-muted-foreground">
+                          {ticket.issueType}
                         </TableCell>
                         <TableCell><Badge variant={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge></TableCell>
                         <TableCell><Badge variant={STATUS_TONE[ticket.status]} dot>{ticket.status}</Badge></TableCell>
-                        <TableCell className="whitespace-nowrap text-right font-semibold">
+                        <TableCell className="whitespace-nowrap text-right text-xs tabular-nums">
                           <Countdown
                             ettrAt={ticket.ettrAt}
                             frozen={ticket.timeLeft.frozen}
@@ -183,9 +187,10 @@ export default function DashboardPage() {
                 {data.charts.byIssueType.length === 0 ? (
                   <div className="muted small">No open tickets.</div>
                 ) : (
-                  <div className="grid gap-3">
+                  /* One shared grid (rows are display: contents) so the label column fits the longest label. */
+                  <div className="grid grid-cols-[minmax(0,max-content)_minmax(64px,1fr)_auto] items-center gap-x-2.5 gap-y-3 text-xs">
                     {data.charts.byIssueType.map((row) => (
-                      <div className="grid grid-cols-[120px_1fr_34px] items-center gap-2.5 text-xs" key={row.label}>
+                      <div className="contents" key={row.label}>
                         <span className="truncate" title={row.label}>{row.label}</span>
                         <Progress value={(row.count / maxIssue) * 100} />
                         <span className="text-right font-semibold tabular-nums">{row.count}</span>
@@ -238,13 +243,13 @@ function StatTile({ label, value, hint, tone = '', onClick }) {
   const varName = TONE_VAR[tone] ?? TONE_VAR[''];
   return (
     <Card
-      role={onClick ? 'button' : undefined}
+      role={onClick ? 'link' : undefined}
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
       onKeyDown={
         onClick
           ? (event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
+              if (event.key === 'Enter') {
                 event.preventDefault();
                 onClick();
               }
@@ -253,12 +258,18 @@ function StatTile({ label, value, hint, tone = '', onClick }) {
       }
       className={cn(
         'relative overflow-hidden border-l-4 text-left',
-        onClick && 'cursor-pointer transition-colors hover:bg-muted/40',
+        onClick && 'group cursor-pointer transition-colors hover:bg-muted/40',
       )}
       style={{ borderLeftColor: `var(${varName})` }}
     >
       <CardContent>
-        <div className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">{label}</div>
+        {onClick ? (
+          <ChevronRight
+            className="absolute top-3 right-3 size-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
+            aria-hidden="true"
+          />
+        ) : null}
+        <div className="pr-5 text-[11px] font-bold tracking-wide text-muted-foreground uppercase">{label}</div>
         <div className="mt-1 text-2xl font-bold tabular-nums leading-none">{value}</div>
         {hint ? <div className="mt-1 text-xs text-muted-foreground">{hint}</div> : null}
       </CardContent>
@@ -269,7 +280,7 @@ function StatTile({ label, value, hint, tone = '', onClick }) {
 function QuickAction({ to, icon: Icon, label }) {
   const className = cn(
     buttonVariants({ variant: 'outline' }),
-    'h-auto flex-col gap-2 py-4 text-xs font-semibold',
+    'h-auto flex-col gap-2 rounded-xl py-4 text-xs font-semibold',
   );
 
   return (
