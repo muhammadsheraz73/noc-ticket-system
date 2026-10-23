@@ -132,7 +132,12 @@ export default function QuotationDetailPage() {
               </div>
               <div className="totals" style={{ marginTop: 14 }}>
                 <div className="totals__row"><span>Subtotal</span><span className="num">{formatMoney(q.subtotal, q.currency)}</span></div>
-                {q.discountAmount > 0 ? <div className="totals__row"><span>Discount</span><span className="num">− {formatMoney(q.discountAmount, q.currency)}</span></div> : null}
+                {q.discountAmount > 0 ? (
+                  <div className="totals__row totals__row--discount">
+                    <span>Discount{q.discountType === 'percent' ? ` (${q.discountValue}%)` : ''}</span>
+                    <span className="num">− {formatMoney(q.discountAmount, q.currency)}</span>
+                  </div>
+                ) : null}
                 {q.taxAmount > 0 ? <div className="totals__row"><span>Sales tax ({q.taxPercent}%)</span><span className="num">{formatMoney(q.taxAmount, q.currency)}</span></div> : null}
                 <div className="totals__row totals__row--total"><span>Total</span><span className="num">{formatMoney(q.total, q.currency)}</span></div>
               </div>

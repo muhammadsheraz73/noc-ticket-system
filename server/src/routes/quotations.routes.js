@@ -11,7 +11,7 @@ import { validate } from '../middleware/validate.js';
 import { recordAudit } from '../utils/audit.js';
 import { nextSequence } from '../utils/sequence.js';
 import { containsRegex, parsePagination } from '../utils/search.js';
-import { FIXED_PRICE, calculateTotals, fixedPricing } from '../services/invoiceService.js';
+import { calculateTotals } from '../services/invoiceService.js';
 import { renderQuotationPdf } from '../services/quotationPdf.js';
 import { DEFAULT_QUOTATION_TERMS, ROLES } from '../utils/constants.js';
 import { quotationSchema, quotationStatusSchema, quotationUpdateSchema } from '../validators/schemas.js';
@@ -29,6 +29,19 @@ async function generateQuoteNumber(date = new Date()) {
   const year = new Intl.DateTimeFormat('en-CA', { timeZone: env.timezone, year: 'numeric' }).format(date);
   const seq = await nextSequence(`quoteNumber:${year}`, 1);
   return `QT-${year}-${String(seq).padStart(4, '0')}`;
+}
+
+/**
+ * Quotations may carry a discount (percentage or fixed amount) but never tax.
+ * Applied server-side so no form or API call can add tax.
+ */
+function quotationPricing(req, _res, next) {
+  req.body.taxPercent = 0;
+  if (req.body.discountType === 'none') req.body.discountValue = 0;
+  if (req.body.discountType === 'percent' && Number(req.body.discountValue) > 100) {
+    return next(ApiError.badRequest('Discount cannot be more than 100%', [{ field: 'discountValue', message: 'Must be 100% or less' }]));
+  }
+  return next();
 }
 
 /** Recalculate every money field server-side; the browser's numbers are hints only. */
@@ -139,7 +152,7 @@ router.get(
 router.post(
   '/',
   validate(quotationSchema),
-  fixedPricing,
+  quotationPricing,
   asyncHandler(async (req, res) => {
     const customer = await linkedCustomer(req.body.customer);
     const issueDate = req.body.issueDate || new Date();
@@ -178,7 +191,7 @@ router.get(
 router.put(
   '/:id',
   validate(quotationUpdateSchema),
-  fixedPricing,
+  quotationPricing,
   asyncHandler(async (req, res) => {
     const quotation = await findQuotation(req.params.id);
 
@@ -232,8 +245,8 @@ router.post(
     const now = new Date();
     const copy = await Quotation.create({
       ...source,
-      ...FIXED_PRICE,
-      ...priced({ ...source, ...FIXED_PRICE }),
+      taxPercent: 0,
+      ...priced({ ...source, taxPercent: 0 }),
       quoteNumber: await generateQuoteNumber(now),
       status: 'Draft',
       statusChangedAt: now,

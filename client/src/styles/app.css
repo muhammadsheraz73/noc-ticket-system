@@ -717,6 +717,19 @@ a.stat:hover { border-color: var(--brand-accent); text-decoration: none; }
   border-top: 2px solid var(--line-strong); padding-top: 8px; margin-top: 3px;
   font-size: 17px; font-weight: 750; color: var(--brand);
 }
+.totals__row--discount { color: var(--ok); }
+
+/* Quotation discount: type switch, then the value with a % / PKR suffix. */
+.discount { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px dashed var(--line); }
+.discount__label { font-size: 12.5px; font-weight: 650; color: var(--ink-2); margin-bottom: 6px; }
+.discount .seg { margin-bottom: 12px; }
+.discount .field { max-width: 260px; margin-bottom: 0; }
+.input-affix { position: relative; }
+.input-affix .input { padding-right: 48px; }
+.input-affix__text {
+  position: absolute; top: 50%; right: 11px; transform: translateY(-50%);
+  font-size: 12px; font-weight: 650; color: var(--muted); pointer-events: none;
+}
 
 /* ---------------------------------------------------------- print styles */
 @media print {

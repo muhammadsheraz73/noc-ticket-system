@@ -22,11 +22,18 @@ const BLANK = {
   issueDate: '',
   validUntil: '',
   status: 'Draft',
+  discountType: 'none',
+  discountValue: '',
   notes: '',
   terms: '',
 };
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+const DISCOUNT_TYPES = [
+  { value: 'none', label: 'None' },
+  { value: 'percent', label: 'Percent (%)' },
+  { value: 'amount', label: 'Amount (PKR)' },
+];
 const toInput = (value) => (value ? new Date(value).toISOString().slice(0, 10) : '');
 
 /** Create a quotation, or edit one (`/quotations/:id/edit`). */
@@ -65,6 +72,7 @@ export default function QuotationFormPage() {
             customer: q.customer || '',
             issueDate: toInput(q.issueDate),
             validUntil: toInput(q.validUntil),
+            discountValue: q.discountType === 'none' ? '' : String(q.discountValue ?? ''),
           });
           setItems(q.items.map((it) => ({ description: it.description, quantity: it.quantity, unit: it.unit || '', rate: it.rate })));
         } else {
@@ -85,9 +93,21 @@ export default function QuotationFormPage() {
   const totals = useMemo(() => {
     const lines = items.map((it) => round2(Math.max(0, Number(it.quantity) || 0) * Math.max(0, Number(it.rate) || 0)));
     const subtotal = round2(lines.reduce((s, v) => s + v, 0));
-    // Fixed price: the total is simply the sum of the lines.
-    return { lines, total: subtotal };
-  }, [items]);
+    const value = Math.max(0, Number(form.discountValue) || 0);
+    let discount = 0;
+    let discountError = '';
+    if (form.discountType === 'percent') {
+      if (value > 100) discountError = 'A percentage discount cannot be more than 100%.';
+      discount = round2((subtotal * Math.min(100, value)) / 100);
+    } else if (form.discountType === 'amount') {
+      if (value > subtotal) discountError = `The discount cannot be more than the subtotal (${formatMoney(subtotal)}).`;
+      discount = round2(Math.min(subtotal, value));
+    }
+    // No tax on quotations: the total is the subtotal less any discount.
+    return { lines, subtotal, discount, discountError, total: round2(subtotal - discount) };
+  }, [items, form.discountType, form.discountValue]);
+
+  const setDiscountType = (type) => setForm((f) => ({ ...f, discountType: type, discountValue: type === f.discountType ? f.discountValue : '' }));
 
   const pickCustomer = (c) => setForm((f) => ({
     ...f,
@@ -105,8 +125,14 @@ export default function QuotationFormPage() {
     setBusy(andDownload ? 'download' : 'save');
     setError('');
     setErrors({});
+    if (totals.discountError) {
+      setBusy('');
+      setErrors({ discountValue: totals.discountError });
+      return;
+    }
     const body = {
       ...form,
+      discountValue: form.discountType === 'none' ? 0 : Number(form.discountValue) || 0,
       issueDate: form.issueDate || undefined,
       validUntil: form.validUntil || undefined,
       items: items.filter((it) => String(it.description).trim() || Number(it.rate) > 0),
@@ -268,13 +294,61 @@ export default function QuotationFormPage() {
           </div>
 
           <div className="card">
-            <div className="card__head"><h3>Total</h3></div>
+            <div className="card__head"><h3>Pricing</h3></div>
             <div className="card__body">
+              <div className="discount">
+                <div className="discount__label" id="discount-type-label">Discount</div>
+                <div className="seg" role="radiogroup" aria-labelledby="discount-type-label">
+                  {DISCOUNT_TYPES.map((t) => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={form.discountType === t.value}
+                      className={`seg__btn${form.discountType === t.value ? ' is-active' : ''}`}
+                      onClick={() => setDiscountType(t.value)}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                {form.discountType !== 'none' ? (
+                  <Field
+                    label={form.discountType === 'percent' ? 'Discount percentage' : 'Discount amount'}
+                    htmlFor="discountValue"
+                    error={errors.discountValue || totals.discountError}
+                    hint={totals.discount > 0 ? `Customer saves ${formatMoney(totals.discount)} on this quotation.` : undefined}
+                  >
+                    <div className="input-affix">
+                      <TextInput
+                        id="discountValue"
+                        type="number"
+                        min="0"
+                        max={form.discountType === 'percent' ? 100 : undefined}
+                        step="any"
+                        inputMode="decimal"
+                        value={form.discountValue}
+                        onChange={(e) => { set('discountValue')(e); setErrors((x) => ({ ...x, discountValue: undefined })); }}
+                        error={errors.discountValue || totals.discountError}
+                        placeholder={form.discountType === 'percent' ? '10' : '5000'}
+                      />
+                      <span className="input-affix__text" aria-hidden="true">{form.discountType === 'percent' ? '%' : 'PKR'}</span>
+                    </div>
+                  </Field>
+                ) : null}
+              </div>
+
               <div className="totals">
-                <div className="totals__row"><span>Items</span><span className="num">{items.filter((it) => String(it.description).trim()).length}</span></div>
+                <div className="totals__row"><span>Subtotal</span><span className="num">{formatMoney(totals.subtotal)}</span></div>
+                {totals.discount > 0 ? (
+                  <div className="totals__row totals__row--discount">
+                    <span>Discount{form.discountType === 'percent' ? ` (${Number(form.discountValue)}%)` : ''}</span>
+                    <span className="num">− {formatMoney(totals.discount)}</span>
+                  </div>
+                ) : null}
                 <div className="totals__row totals__row--total"><span>Total</span><span className="num">{formatMoney(totals.total)}</span></div>
               </div>
-              <div className="small muted" style={{ marginTop: 12 }}>Fixed price — no discount or tax.</div>
+              <div className="small muted" style={{ marginTop: 12, textAlign: 'right' }}>No tax is applied to quotations.</div>
             </div>
             <div className="card__foot">
               <div className="row row--end">
