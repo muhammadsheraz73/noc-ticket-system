@@ -628,13 +628,15 @@ a.stat:hover { border-color: var(--brand-accent); text-decoration: none; }
 .login-panel { display: flex; align-items: center; justify-content: center; padding: 32px 24px; background: var(--bg); }
 .login-card { width: 100%; max-width: 380px; }
 .login-card__mobile-brand { display: none; }
-.login-card__intro { margin-bottom: 24px; }
+.login-card__intro { margin-bottom: 18px; padding: 0 24px; } /* inset matches .login-card__form padding */
+.login-card__intro p { margin: 0; }
 .login-card__heading { font-size: 24px; font-weight: 800; margin: 0 0 6px; color: var(--ink); letter-spacing: -0.01em; }
 .login-card__form {
   background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
   box-shadow: var(--shadow); padding: 26px 24px 24px;
 }
-.login-card__footer { margin: 18px 0 0; padding-top: 16px; border-top: 1px solid var(--line); text-align: center; }
+.login-card__form .btn { margin-top: 6px; }
+.login-card__footer { margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--line); text-align: center; }
 
 @media (max-width: 860px) {
   .login-page { grid-template-columns: 1fr; }
