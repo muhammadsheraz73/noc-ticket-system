@@ -2,7 +2,7 @@
   "name": "noc-ticket-management-system",
   "private": true,
   "version": "1.0.0",
-  "description": "NOC Ticket Management & Customer Network System",
+  "description": "ISP Ticket Management & Customer Network System",
   "workspaces": [
     "server",
     "client"
