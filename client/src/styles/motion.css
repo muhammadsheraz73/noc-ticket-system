@@ -65,7 +65,7 @@
 }
 
 /* tiles and cards cascade in after their section */
-:is(.kpi-row, .grid--stats, .grid--stats-3, .quick-actions) > * {
+:is(.kpi-row, .stat-tiles, .grid--stats, .grid--stats-3, .quick-actions) > * {
   animation: rise-in 0.5s var(--ease-out) backwards;
   animation-delay: calc(120ms + var(--n) * 60ms);
 }
@@ -178,10 +178,10 @@
 .card:hover { box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 12px 28px -10px rgba(15, 23, 42, 0.16); }
 
 /* tiles lift on hover */
-.kpi, .stat, .quick-action {
+.kpi, .stat, .stat-tile, .quick-action {
   transition: transform 0.25s var(--ease-out), box-shadow 0.25s, border-color 0.2s, background 0.2s;
 }
-.kpi:hover, .stat:hover, .quick-action:hover {
+.kpi:hover, .stat:hover, .stat-tile:hover, .quick-action:hover {
   transform: translateY(-3px);
   box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05), 0 14px 30px -12px rgba(15, 23, 42, 0.22);
 }

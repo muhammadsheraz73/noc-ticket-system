@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import Countdown from '../components/Countdown.jsx';
+import CountUp from '../components/CountUp.jsx';
 import { Alert, EmptyState } from '../components/ui.jsx';
 import { Button, buttonVariants } from '../components/ui/button.jsx';
 import { Badge } from '../components/ui/badge.jsx';
@@ -78,7 +79,7 @@ export default function DashboardPage() {
       />
 
       <div className="stack">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="stat-tiles grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           <StatTile label="Total Customers" value={formatNumber(s.totalCustomers)} hint="Active master records" onClick={() => navigate('/customers')} />
           <StatTile label="Total Tickets" value={formatNumber(s.totalTickets)} hint="All tickets, every status" onClick={() => navigate('/tickets')} />
           <StatTile label="Resolved Tickets" value={formatNumber(s.resolvedTickets)} tone="ok" hint="Resolved · Closed, all time" onClick={() => navigate('/tickets?status=Resolved,Closed')} />
@@ -257,7 +258,7 @@ function StatTile({ label, value, hint, tone = '', onClick }) {
           : undefined
       }
       className={cn(
-        'relative overflow-hidden border-l-4 text-left',
+        'stat-tile relative overflow-hidden border-l-4 text-left',
         onClick && 'group cursor-pointer transition-colors hover:bg-muted/40',
       )}
       style={{ borderLeftColor: `var(${varName})` }}
@@ -270,7 +271,7 @@ function StatTile({ label, value, hint, tone = '', onClick }) {
           />
         ) : null}
         <div className="pr-5 text-[11px] font-bold tracking-wide text-muted-foreground uppercase">{label}</div>
-        <div className="mt-1 text-2xl font-bold tabular-nums leading-none">{value}</div>
+        <div className="mt-1 text-2xl font-bold tabular-nums leading-none"><CountUp value={value} /></div>
         {hint ? <div className="mt-1 text-xs text-muted-foreground">{hint}</div> : null}
       </CardContent>
     </Card>
