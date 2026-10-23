@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import xlsx from 'xlsx';
+import Customer from '../models/Customer.js';
 import Subscriber from '../models/Subscriber.js';
 import BillingRecord from '../models/BillingRecord.js';
 import ApiError from '../utils/ApiError.js';
@@ -169,6 +170,119 @@ router.post(
     }
     await recordAudit({ req, action: 'import', entityType: 'Billing', entityLabel: `${p} (${rows.length} rows)`, meta: result });
     res.json({ success: true, period: p, ...result });
+  }),
+);
+
+/* --------------------------- customers → billing --------------------------- */
+
+/**
+ * The billing user for a customer: the one already linked to it, else an unlinked
+ * billing user with the same name (e.g. imported from the Excel sheet). Never
+ * returns a billing user that belongs to a different customer.
+ */
+const subscriberForCustomer = async (customer) =>
+  (await Subscriber.findOne({ customer: customer._id })) ||
+  Subscriber.findOne({ usernameKey: customer.name.trim().toLowerCase(), customer: { $exists: false } });
+
+/**
+ * GET /api/billing/customers?period=&q=&page=&limit= — every customer, with the
+ * monthly fee on record (if any) and whether that month's bill exists.
+ */
+router.get(
+  '/customers',
+  asyncHandler(async (req, res) => {
+    const p = period(req.query.period);
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 200 });
+    const filter = { isDeleted: false };
+    if (req.query.q) {
+      const rx = containsRegex(req.query.q);
+      filter.$or = [{ name: rx }, { customerReferenceNumber: rx }, { address: rx }, { contactNumber: rx }, { bandwidth: rx }];
+    }
+    const [customers, total] = await Promise.all([
+      Customer.find(filter).sort({ name: 1 }).skip(skip).limit(limit).lean(),
+      Customer.countDocuments(filter),
+    ]);
+
+    const ids = customers.map((c) => c._id);
+    const nameKeys = customers.map((c) => c.name.trim().toLowerCase());
+    const subscribers = await Subscriber.find({
+      $or: [{ customer: { $in: ids } }, { usernameKey: { $in: nameKeys }, customer: { $exists: false } }],
+    }).lean();
+    const linked = new Map(subscribers.filter((s) => s.customer).map((s) => [String(s.customer), s]));
+    const byName = new Map(subscribers.filter((s) => !s.customer).map((s) => [s.usernameKey, s]));
+    const bills = await BillingRecord.find({ period: p, subscriber: { $in: subscribers.map((s) => s._id) } })
+      .select('subscriber fee paymentStatus')
+      .lean();
+    const billBy = new Map(bills.map((b) => [String(b.subscriber), b]));
+
+    const items = customers.map((c) => {
+      const sub = linked.get(String(c._id)) || byName.get(c.name.trim().toLowerCase());
+      const bill = sub ? billBy.get(String(sub._id)) : null;
+      return {
+        _id: c._id,
+        name: c.name,
+        customerReferenceNumber: c.customerReferenceNumber,
+        address: c.address,
+        contactNumber: c.contactNumber,
+        bandwidth: c.bandwidth,
+        status: c.status,
+        monthlyFee: sub ? sub.monthlyFee : null,
+        bill: bill ? { _id: bill._id, fee: bill.fee, paymentStatus: bill.paymentStatus } : null,
+      };
+    });
+    res.json({ success: true, period: p, items, pagination: { page, limit, total, pages: Math.ceil(total / limit) || 1 } });
+  }),
+);
+
+/**
+ * POST /api/billing/customers/:id/bill { period, fee } — create that month's bill
+ * for a customer, or overwrite its fee if it already exists. The customer's
+ * details are copied onto the bill and the fee is remembered for next month.
+ */
+router.post(
+  '/customers/:id/bill',
+  asyncHandler(async (req, res) => {
+    const p = period(req.body.period);
+    const fee = num(req.body.fee, 'Monthly fee');
+    if (fee <= 0) throw ApiError.badRequest('Monthly fee must be greater than zero');
+    const customer = mongoose.isValidObjectId(req.params.id)
+      ? await Customer.findOne({ _id: req.params.id, isDeleted: false })
+      : null;
+    if (!customer) throw ApiError.notFound('Customer not found');
+
+    let subscriber = await subscriberForCustomer(customer);
+    if (!subscriber) {
+      // Billing usernames are unique; two customers can share a name, so fall back to "Name (REF)".
+      const taken = await Subscriber.exists({ usernameKey: customer.name.trim().toLowerCase() });
+      subscriber = new Subscriber({
+        username: taken ? `${customer.name} (${customer.customerReferenceNumber})` : customer.name,
+      });
+    }
+    Object.assign(subscriber, {
+      customer: customer._id,
+      package: customer.bandwidth || subscriber.package,
+      address: customer.address || subscriber.address,
+      contact: customer.contactNumber || subscriber.contact,
+      status: customer.status === 'Non Active' ? 'Inactive' : 'Active',
+      monthlyFee: fee,
+    });
+    await subscriber.save();
+
+    let record = await BillingRecord.findOne({ subscriber: subscriber._id, period: p });
+    const created = !record;
+    if (!record) record = new BillingRecord({ subscriber: subscriber._id, period: p });
+    Object.assign(record, { username: subscriber.username, package: subscriber.package, address: subscriber.address, fee });
+    await record.save();
+
+    await recordAudit({
+      req,
+      action: created ? 'create' : 'update',
+      entityType: 'Billing',
+      entityId: record._id,
+      entityLabel: `${subscriber.username} ${p}`,
+      meta: { fee, customer: customer.customerReferenceNumber },
+    });
+    res.status(created ? 201 : 200).json({ success: true, created, record });
   }),
 );
 

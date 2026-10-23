@@ -13,6 +13,8 @@ const subscriberSchema = new mongoose.Schema(
     contact: { type: String, trim: true, default: '' },
     monthlyFee: { type: Number, required: true, min: 0, default: 0 },
     notes: { type: String, trim: true, default: '' },
+    /** The customer master record this billing user belongs to, once linked from Billing → Users. */
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', index: true },
   },
   { timestamps: true },
 );

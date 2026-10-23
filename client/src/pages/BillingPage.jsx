@@ -3,7 +3,7 @@ import api, { errorMessage } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import {
-  Alert, Badge, EmptyState, Field, Modal, Select, Stat, Tabs, TableSkeleton, TextInput,
+  Alert, Badge, DefItem, EmptyState, Field, Modal, Pagination, Select, Stat, Tabs, TableSkeleton, TextInput,
 } from '../components/ui.jsx';
 import { formatDateTime, formatMoney } from '../utils/format.js';
 
@@ -35,7 +35,7 @@ export default function BillingPage() {
       />
       <div className="stack" style={{ marginTop: 16 }}>
         {tab === 'bills' && <BillsTab />}
-        {tab === 'subscribers' && <SubscribersTab onNotice={setNotice} />}
+        {tab === 'subscribers' && <UsersTab onNotice={setNotice} />}
       </div>
     </>
   );
@@ -271,6 +271,195 @@ function PaymentModal({ record, defaultReceiver, onClose, onChanged }) {
           </table>
         </>
       ) : null}
+    </Modal>
+  );
+}
+
+/* ---------------------------------- Users ---------------------------------- */
+
+/** Customers (the default) or the billing users imported from the old Excel sheet. */
+function UsersTab({ onNotice }) {
+  const [view, setView] = useState('customers');
+  return (
+    <>
+      <div className="seg" role="group" aria-label="Show">
+        <button className={`seg__btn${view === 'customers' ? ' is-active' : ''}`} aria-pressed={view === 'customers'} onClick={() => setView('customers')}>
+          All customers
+        </button>
+        <button className={`seg__btn${view === 'imported' ? ' is-active' : ''}`} aria-pressed={view === 'imported'} onClick={() => setView('imported')}>
+          Billing list (Excel)
+        </button>
+      </div>
+      {view === 'customers' ? <CustomersBillingTab onNotice={onNotice} /> : <SubscribersTab onNotice={onNotice} />}
+    </>
+  );
+}
+
+function CustomersBillingTab({ onNotice }) {
+  const [period, setPeriod] = useState(monthStr());
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [state, setState] = useState({ items: [], pagination: null, loading: true, error: '' });
+  const [billing, setBilling] = useState(null);
+
+  const load = useCallback(async () => {
+    setState((s) => ({ ...s, loading: true }));
+    try {
+      const { data } = await api.get('/billing/customers', { params: { period, q: query || undefined, page, limit: 50 } });
+      setState({ items: data.items, pagination: data.pagination, loading: false, error: '' });
+    } catch (e) {
+      setState({ items: [], pagination: null, loading: false, error: errorMessage(e) });
+    }
+  }, [period, query, page]);
+
+  useEffect(() => {
+    const timer = setTimeout(load, query ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [load, query]);
+
+  return (
+    <>
+      {state.error ? <Alert tone="error" title="Error">{state.error}</Alert> : null}
+      <div className="card">
+        <div className="filters">
+          <div className="filters__item">
+            <Field label="Month">
+              <TextInput type="month" value={period} onChange={(e) => { if (e.target.value) { setPeriod(e.target.value); setPage(1); } }} />
+            </Field>
+          </div>
+          <div className="filters__item filters__item--grow">
+            <Field label="Search">
+              <TextInput placeholder="Name, reference, address, contact…" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
+            </Field>
+          </div>
+        </div>
+        <div className="card__body card__body--flush">
+          {state.loading && !state.items.length ? (
+            <TableSkeleton rows={8} cols={6} />
+          ) : state.items.length === 0 ? (
+            <EmptyState icon="👥" title="No customers found" message="Add customers in the Customers module, then bill them from here." />
+          ) : (
+            <div className="table-wrap">
+              <table className="table table--users table--even">
+                <thead>
+                  <tr>
+                    <th>Customer</th><th>Package</th><th>Address</th><th className="text-right">Monthly Fee</th>
+                    <th>{period} bill</th><th className="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {state.items.map((c) => (
+                    <tr key={c._id}>
+                      <td>
+                        <div className="strong">{c.name}</div>
+                        <div className="small muted">{c.customerReferenceNumber}</div>
+                      </td>
+                      <td className="small">{c.bandwidth || '–'}</td>
+                      <td className="small">{c.address || '–'}</td>
+                      <td className="text-right num">{c.monthlyFee ? formatMoney(c.monthlyFee) : <span className="muted small">Not set</span>}</td>
+                      <td>
+                        {c.bill ? (
+                          <Badge tone={STATUS_TONE[c.bill.paymentStatus]}>{c.bill.paymentStatus}</Badge>
+                        ) : (
+                          <span className="muted small">No bill</span>
+                        )}
+                      </td>
+                      <td className="text-right">
+                        <button className={`btn btn--sm${c.bill ? ' btn--secondary' : ''}`} onClick={() => setBilling(c)}>
+                          {c.bill ? 'Update bill' : 'Generate monthly bill'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <Pagination pagination={state.pagination} onChange={setPage} />
+        </div>
+      </div>
+
+      <CustomerBillModal
+        customer={billing}
+        period={period}
+        onClose={() => setBilling(null)}
+        onSaved={async (created, record) => {
+          setBilling(null);
+          onNotice(`${created ? 'Bill created' : 'Bill updated'}: ${record.username}, ${record.period}, ${formatMoney(record.fee)}.`);
+          await load();
+        }}
+      />
+    </>
+  );
+}
+
+function CustomerBillModal({ customer, period, onClose, onSaved }) {
+  const [fee, setFee] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!customer) return;
+    // This month's bill wins, then the fee on the billing list; otherwise it is typed in.
+    const known = customer.bill?.fee || customer.monthlyFee;
+    setFee(known ? String(known) : '');
+    setError('');
+  }, [customer]);
+
+  if (!customer) return null;
+
+  const source = customer.bill
+    ? `This month's bill already exists (${customer.bill.paymentStatus}). Saving overwrites its fee.`
+    : customer.monthlyFee
+      ? 'Fee fetched from the billing list. Change it if needed.'
+      : 'No fee on record for this customer. Enter the monthly fee.';
+
+  const save = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const { data } = await api.post(`/billing/customers/${customer._id}/bill`, { period, fee: Number(fee) });
+      await onSaved(data.created, data.record);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`${customer.bill ? 'Update' : 'Generate'} monthly bill — ${period}`}
+      footer={
+        <>
+          <button className="btn btn--secondary" onClick={onClose}>Cancel</button>
+          <button className="btn" onClick={save} disabled={busy || !(Number(fee) > 0)}>
+            {busy ? 'Saving…' : customer.bill ? 'Update bill' : 'Create bill'}
+          </button>
+        </>
+      }
+    >
+      {error ? <Alert tone="error" title="Could not save">{error}</Alert> : null}
+      <div className="deflist">
+        <DefItem label="Customer" value={customer.name} />
+        <DefItem label="Reference" value={customer.customerReferenceNumber} mono />
+        <DefItem label="Package" value={customer.bandwidth} />
+        <DefItem label="Contact" value={customer.contactNumber} />
+        <DefItem label="Address" value={customer.address} />
+        <DefItem label="Status" value={customer.status} />
+      </div>
+      <Field label="Monthly fee (PKR)" required hint={source}>
+        <TextInput
+          type="number"
+          min="1"
+          value={fee}
+          onChange={(e) => setFee(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && Number(fee) > 0 && !busy) save(); }}
+          autoFocus
+        />
+      </Field>
     </Modal>
   );
 }
