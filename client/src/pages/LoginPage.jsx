@@ -140,11 +140,11 @@ export default function LoginPage() {
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-        </div>
 
-          <div className="login-card__footer small muted">
+          <p className="login-card__footer small muted">
             Having trouble signing in? Contact your administrator.
-          </div>
+          </p>
+        </div>
         </div>
       </main>
     </div>

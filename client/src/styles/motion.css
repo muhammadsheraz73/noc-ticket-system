@@ -283,9 +283,7 @@
 .login-hero__features li {
   animation: rise-in 0.5s var(--ease-spring) backwards;
   animation-delay: calc(450ms + var(--i, 0) * 90ms);
-  transition: background 0.2s, transform 0.2s var(--ease-spring);
 }
-.login-hero__features li:hover { background: rgba(255, 255, 255, 0.26); transform: translateY(-2px); }
 .login-hero__footer { animation: fade-in 0.8s ease 0.8s backwards; }
 
 .login-card__mobile-brand { animation: rise-in 0.5s var(--ease-out) backwards; }
