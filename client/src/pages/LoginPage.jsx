@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { errorMessage, signOutReason } from '../api/client.js';
@@ -322,7 +322,6 @@ export default function LoginPage() {
   const { login } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [lightOn, setLightOn] = useState(false);
   const [tab, setTab] = useState('signin');
@@ -363,7 +362,8 @@ export default function LoginPage() {
       if (remember) remembered.set(identifier.trim());
       else remembered.clear();
       toast.success(`Welcome back, ${user.name.split(' ')[0]}`);
-      navigate(location.state?.from?.pathname || '/', { replace: true });
+      // Every sign-in lands on that panel's dashboard, wherever the user was before.
+      navigate('/', { replace: true });
     } catch (err) {
       setError(errorMessage(err, 'Sign in failed'));
       setBusy(false);

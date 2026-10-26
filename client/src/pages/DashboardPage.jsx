@@ -64,7 +64,6 @@ export default function DashboardPage() {
       <PageHead
         title={`Good ${greeting(serverNow())}, ${user.name.split(' ')[0]}`}
         subtitle="Live operational picture of tickets, customers and billing."
-        actions={<span className="self-center text-xs text-muted-foreground">Auto-refreshes every 30s</span>}
       />
 
       <div className="stack">
