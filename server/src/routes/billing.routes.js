@@ -4,6 +4,8 @@ import xlsx from 'xlsx';
 import Customer from '../models/Customer.js';
 import Subscriber from '../models/Subscriber.js';
 import BillingRecord from '../models/BillingRecord.js';
+import Invoice from '../models/Invoice.js';
+import Quotation from '../models/Quotation.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import env from '../config/env.js';
@@ -13,6 +15,7 @@ import { recordAudit } from '../utils/audit.js';
 import { containsRegex, parsePagination } from '../utils/search.js';
 import { ROLES } from '../utils/constants.js';
 import { parseBillingWorkbook } from '../services/billingImport.js';
+import { startOfLocalDay } from '../utils/datetime.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -421,6 +424,164 @@ router.delete(
     await record.save();
     await recordAudit({ req, action: 'delete', entityType: 'Billing', entityId: record._id, entityLabel: `payment ${record.username} ${record.period}` });
     res.json({ success: true, record });
+  }),
+);
+
+/* -------------------------------- dashboard -------------------------------- */
+
+/** "2026-10" → the `count` months ending there, oldest first. */
+function lastPeriods(end, count) {
+  const [year, month] = end.split('-').map(Number);
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(Date.UTC(year, month - 1 - (count - 1 - i), 1));
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  });
+}
+
+/** Sum of fee/received/arrears per period, plus how many bills sit in each status. */
+async function periodTotals(periods) {
+  const rows = await BillingRecord.aggregate([
+    { $match: { period: { $in: periods } } },
+    {
+      $group: {
+        _id: { period: '$period', status: '$paymentStatus' },
+        fee: { $sum: '$fee' },
+        received: { $sum: '$received' },
+        arrears: { $sum: '$arrears' },
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+  const totals = new Map(periods.map((p) => [p, {
+    period: p, fee: 0, received: 0, arrears: 0, count: 0, byStatus: { Received: 0, Partial: 0, Pending: 0 },
+  }]));
+  for (const r of rows) {
+    const t = totals.get(r._id.period);
+    t.fee += r.fee;
+    t.received += r.received;
+    t.arrears += r.arrears;
+    t.count += r.count;
+    t.byStatus[r._id.status] = r.count;
+  }
+  return periods.map((p) => totals.get(p));
+}
+
+/** GET /api/billing/dashboard — everything the billing team's home screen shows. */
+router.get(
+  '/dashboard',
+  asyncHandler(async (req, res) => {
+    const now = new Date();
+    const current = currentPeriod();
+    const periods = lastPeriods(current, 6);
+    const todayStart = startOfLocalDay(now);
+    const monthStart = startOfLocalDay(new Date(`${current}-01T12:00:00Z`));
+
+    const [
+      trend,
+      dues,
+      collectedToday,
+      collectedThisMonth,
+      defaulters,
+      recentPayments,
+      invoiceGroups,
+      overdueInvoices,
+      quotationGroups,
+      recentInvoices,
+      recentQuotations,
+    ] = await Promise.all([
+      periodTotals(periods),
+      BillingRecord.aggregate([
+        { $match: { arrears: { $gt: 0 } } },
+        { $group: { _id: null, amount: { $sum: '$arrears' }, bills: { $sum: 1 }, users: { $addToSet: '$subscriber' } } },
+      ]),
+      BillingRecord.aggregate([
+        { $unwind: '$payments' },
+        { $match: { 'payments.receivedAt': { $gte: todayStart } } },
+        { $group: { _id: null, amount: { $sum: '$payments.amount' }, count: { $sum: 1 } } },
+      ]),
+      BillingRecord.aggregate([
+        { $unwind: '$payments' },
+        { $match: { 'payments.receivedAt': { $gte: monthStart } } },
+        { $group: { _id: null, amount: { $sum: '$payments.amount' }, count: { $sum: 1 } } },
+      ]),
+      BillingRecord.aggregate([
+        { $match: { arrears: { $gt: 0 } } },
+        { $sort: { period: 1 } },
+        {
+          $group: {
+            _id: '$subscriber',
+            username: { $last: '$username' },
+            address: { $last: '$address' },
+            arrears: { $sum: '$arrears' },
+            months: { $sum: 1 },
+            oldest: { $first: '$period' },
+          },
+        },
+        { $sort: { arrears: -1 } },
+        { $limit: 6 },
+      ]),
+      BillingRecord.aggregate([
+        { $unwind: '$payments' },
+        { $sort: { 'payments.receivedAt': -1 } },
+        { $limit: 8 },
+        {
+          $project: {
+            _id: '$payments._id',
+            username: 1,
+            period: 1,
+            amount: '$payments.amount',
+            receivedBy: '$payments.receivedBy',
+            receivedAt: '$payments.receivedAt',
+          },
+        },
+      ]),
+      Invoice.aggregate([
+        { $match: { isDeleted: false } },
+        { $group: { _id: '$status', amount: { $sum: '$total' }, count: { $sum: 1 } } },
+      ]),
+      Invoice.aggregate([
+        { $match: { isDeleted: false, status: 'Unpaid', dueDate: { $lt: now } } },
+        { $group: { _id: null, amount: { $sum: '$total' }, count: { $sum: 1 } } },
+      ]),
+      Quotation.aggregate([
+        { $match: { isDeleted: false } },
+        { $group: { _id: '$status', amount: { $sum: '$total' }, count: { $sum: 1 } } },
+      ]),
+      Invoice.find({ isDeleted: false })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select('invoiceNumber customerName total currency status dueDate createdAt')
+        .lean(),
+      Quotation.find({ isDeleted: false })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select('quoteNumber clientName subject total status createdAt')
+        .lean(),
+    ]);
+
+    const byStatus = (groups) => Object.fromEntries(groups.map((g) => [g._id, { amount: g.amount, count: g.count }]));
+
+    res.json({
+      success: true,
+      serverTime: now,
+      period: current,
+      thisMonth: trend[trend.length - 1],
+      lastMonth: trend[trend.length - 2],
+      trend,
+      dues: {
+        amount: dues[0]?.amount || 0,
+        bills: dues[0]?.bills || 0,
+        users: dues[0]?.users.length || 0,
+      },
+      collectedToday: { amount: collectedToday[0]?.amount || 0, count: collectedToday[0]?.count || 0 },
+      collectedThisMonth: { amount: collectedThisMonth[0]?.amount || 0, count: collectedThisMonth[0]?.count || 0 },
+      defaulters: defaulters.map((d) => ({ ...d, subscriber: d._id, _id: undefined })),
+      recentPayments,
+      invoices: { ...byStatus(invoiceGroups), overdue: { amount: overdueInvoices[0]?.amount || 0, count: overdueInvoices[0]?.count || 0 } },
+      quotations: byStatus(quotationGroups),
+      recentInvoices,
+      recentQuotations,
+    });
   }),
 );
 

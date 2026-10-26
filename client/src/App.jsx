@@ -28,13 +28,14 @@ import QuotationsPage from './pages/QuotationsPage.jsx';
 import QuotationFormPage from './pages/QuotationFormPage.jsx';
 import QuotationDetailPage from './pages/QuotationDetailPage.jsx';
 import TeamPage from './pages/TeamPage.jsx';
+import BillingDashboardPage from './pages/BillingDashboardPage.jsx';
 
 /** Everybody inside a client except its billing department (Accounts), whose panel is billing-only. */
 const OPERATIONS = [ROLES.ADMIN, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER];
 
 function Home({ role }) {
   if (role === ROLES.SUPERADMIN) return <OwnerOverviewPage />;
-  if (role === ROLES.ACCOUNTS) return <Navigate to="/billing" replace />;
+  if (role === ROLES.ACCOUNTS) return <BillingDashboardPage />;
   return <DashboardPage />;
 }
 

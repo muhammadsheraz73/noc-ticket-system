@@ -21,6 +21,7 @@ const NAV = [
   {
     group: 'Billing',
     items: [
+      { to: '/', label: 'Dashboard', icon: '▤', end: true, roles: [ROLES.ACCOUNTS] },
       // Monthly bills are run by the client's billing team only, not from the Admin's panel.
       { to: '/billing', label: 'Billing', icon: '💰', roles: [ROLES.ACCOUNTS] },
       { to: '/invoices', label: 'Invoices', icon: '🧾', roles: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER] },
