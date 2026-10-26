@@ -157,7 +157,7 @@ export default function TeamPage() {
     <>
       <PageHead
         title="Billing Team"
-        subtitle={`Logins for the ${user?.tenantName || 'company'} billing department. They only see Billing, Invoices and Quotations, and everything they create shows up here in your panel too.`}
+        subtitle={`Logins for the ${user?.tenantName || 'company'} billing department. They see Billing (monthly bills), Invoices and Quotations. Monthly bills are run only from their panel; invoices and quotations they create also show up here in yours.`}
         actions={<button className="btn" onClick={() => openForm(null)}>＋ New billing login</button>}
       />
 

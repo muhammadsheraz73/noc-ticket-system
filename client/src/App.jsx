@@ -177,7 +177,7 @@ export default function App() {
         <Route
           path="billing"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
+            <Protected roles={[ROLES.ACCOUNTS]}>
               <BillingPage />
             </Protected>
           }

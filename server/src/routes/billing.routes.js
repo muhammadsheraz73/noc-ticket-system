@@ -16,7 +16,8 @@ import { parseBillingWorkbook } from '../services/billingImport.js';
 
 const router = Router();
 router.use(requireAuth);
-router.use(requireRole(ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR));
+// Monthly bills are run by the billing team (Accounts); requireRole also lets the Admin through.
+router.use(requireRole(ROLES.ACCOUNTS));
 
 const PERIOD = /^\d{4}-(0[1-9]|1[0-2])$/;
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: env.timezone }).format(new Date());
