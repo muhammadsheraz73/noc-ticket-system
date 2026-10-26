@@ -184,13 +184,7 @@
 /* form */
 .lamp-form { display: flex; flex-direction: column; gap: 1.125em; animation: ll-rise 0.45s var(--ll-ease); }
 .lamp-field { display: flex; flex-direction: column; gap: 0.5625em; }
-.lamp-field__row { display: flex; align-items: center; justify-content: space-between; }
 .lamp-field__label { font-size: 0.875em; font-weight: 500; color: #a9abb0; }
-.lamp-link {
-  border: 0; background: none; padding: 0; cursor: pointer;
-  font: inherit; font-size: 0.875em; font-weight: 700; color: var(--ll-gold);
-}
-.lamp-link:hover { color: #ffc265; text-decoration: underline; }
 
 .lamp-input {
   display: flex; align-items: center; gap: 0.625em; height: 3.25em; padding: 0 0.875em 0 1em;
@@ -267,23 +261,6 @@
 .lamp-signup p { margin: 0 0 0.4em; font-size: 0.875em; line-height: 1.55; color: var(--ll-muted); }
 .lamp-signup .lamp-submit { width: 100%; }
 
-/* divider + social buttons */
-.lamp-divider {
-  display: flex; align-items: center; gap: 1.2em; margin: 2.2em 0 1.5em;
-  font-size: 0.75em; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #6a6d73;
-}
-.lamp-divider::before, .lamp-divider::after { content: ""; flex: 1; height: 1px; background: rgba(255, 255, 255, 0.08); }
-
-.lamp-social { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75em; }
-.lamp-social button {
-  display: grid; place-items: center; height: 3.125em; border-radius: 0.875em; cursor: pointer;
-  background: var(--ll-field); border: 1px solid var(--ll-field-line); color: #f2f2f2;
-  transition: background 0.2s, border-color 0.2s, transform 0.15s;
-}
-.lamp-social button svg { width: 1.25em; height: 1.25em; }
-.lamp-social button:hover { background: #2a2d33; border-color: rgba(255, 255, 255, 0.12); }
-.lamp-social button:active { transform: scale(0.97); }
-
 /* Phones/tablets: iOS zooms into inputs under 16px, so keep them at 16px on touch screens. */
 @media (pointer: coarse) {
   .lamp-input input { font-size: max(16px, 0.9375em); }
@@ -296,7 +273,6 @@
   .lamp-card__subtitle { margin-bottom: 1.25em; }
   .lamp-tabs { margin-bottom: 1.1em; }
   .lamp-form { gap: 0.9em; }
-  .lamp-divider { margin: 1.4em 0 1em; }
 }
 
 /* ------------------------------------------- landscape phones (very short) */
