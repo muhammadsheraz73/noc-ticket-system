@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { RefreshCw, Ticket, UserPlus, Receipt, Upload, ChevronRight } from 'lucide-react';
+import { Ticket, UserPlus, Receipt, Upload, ChevronRight } from 'lucide-react';
 import api, { errorMessage } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -8,7 +8,7 @@ import { PageHead } from '../components/Layout.jsx';
 import Countdown from '../components/Countdown.jsx';
 import CountUp from '../components/CountUp.jsx';
 import { Alert, EmptyState } from '../components/ui.jsx';
-import { Button, buttonVariants } from '../components/ui/button.jsx';
+import { buttonVariants } from '../components/ui/button.jsx';
 import { Badge } from '../components/ui/badge.jsx';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.jsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table.jsx';
@@ -27,13 +27,10 @@ export default function DashboardPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  /** mode: 'initial' shows the skeleton, 'manual' spins the Refresh icon, 'auto' is silent. */
+  /** mode: 'initial' shows the skeleton, 'auto' is silent. */
   const load = useCallback(
     async (mode = 'initial') => {
       if (mode === 'initial') setLoading(true);
-      if (mode === 'manual') setRefreshing(true);
       try {
         const response = await api.get('/dashboard');
         setData(response.data);
@@ -44,7 +41,6 @@ export default function DashboardPage() {
         if (mode !== 'auto') toast.error('Could not load the dashboard', errorMessage(err));
       } finally {
         setLoading(false);
-        setRefreshing(false);
       }
     },
     [syncClock, toast],
@@ -68,14 +64,7 @@ export default function DashboardPage() {
       <PageHead
         title={`Good ${greeting(serverNow())}, ${user.name.split(' ')[0]}`}
         subtitle="Live operational picture of tickets, customers and billing."
-        actions={
-          <>
-            <span className="self-center text-xs text-muted-foreground">Auto-refreshes every 30s</span>
-            <Button variant="outline" onClick={() => load('manual')} disabled={refreshing}>
-              <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} /> Refresh
-            </Button>
-          </>
-        }
+        actions={<span className="self-center text-xs text-muted-foreground">Auto-refreshes every 30s</span>}
       />
 
       <div className="stack">
