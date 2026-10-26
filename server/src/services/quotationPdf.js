@@ -27,7 +27,7 @@ function longDate(value) {
 }
 
 /** Mix a hex colour with white — `amount` 0 = colour, 1 = white. */
-function tint(hex, amount) {
+export function tint(hex, amount) {
   const n = Number.parseInt(hex.slice(1), 16);
   const mix = (c) => Math.round(c + (255 - c) * amount).toString(16).padStart(2, '0');
   return `#${mix((n >> 16) & 255)}${mix((n >> 8) & 255)}${mix(n & 255)}`;
@@ -75,7 +75,7 @@ export function amountInWords(value, currency = 'PKR') {
   return `${major} ${integerWords(whole)}${cents ? ` and ${integerWords(cents)} ${minor}` : ''} Only`;
 }
 
-function logoBuffer(dataUrl) {
+export function logoBuffer(dataUrl) {
   const match = /^data:image\/(png|jpeg);base64,(.+)$/.exec(dataUrl || '');
   return match ? Buffer.from(match[2], 'base64') : null;
 }

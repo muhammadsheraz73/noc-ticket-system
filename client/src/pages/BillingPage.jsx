@@ -7,6 +7,7 @@ import {
   Alert, Badge, ConfirmDialog, DefItem, EmptyState, Field, Modal, Select, Stat, TableSkeleton, TextInput,
 } from '../components/ui.jsx';
 import { formatDateTime, formatMoney } from '../utils/format.js';
+import PdfPreview from '../components/PdfPreview.jsx';
 
 const todayStr = () => new Date().toLocaleDateString('en-CA');
 const monthStr = () => todayStr().slice(0, 7);
@@ -44,6 +45,11 @@ function MonthlyBills() {
   const [picking, setPicking] = useState(false);
   const [billing, setBilling] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  /** The bill whose slip is open in the preview. */
+  const [slip, setSlip] = useState(null);
+  const [slipsBusy, setSlipsBusy] = useState(false);
+  /** After "Generate ALL BILLS", offer the month's slips in the success message. */
+  const [offerSlips, setOfferSlips] = useState(false);
 
   const load = useCallback(async () => {
     setState((s) => ({ ...s, loading: true }));
@@ -67,6 +73,7 @@ function MonthlyBills() {
     try {
       const { data } = await api.post('/billing/records/generate', { period });
       setInfo(`${data.created} new bills created for ${period} (${data.alreadyExisting} already existed).`);
+      setOfferSlips(data.created + data.alreadyExisting > 0);
       await load();
     } catch (error) {
       setState((s) => ({ ...s, error: errorMessage(error) }));
@@ -98,11 +105,36 @@ function MonthlyBills() {
     URL.revokeObjectURL(link.href);
   };
 
+  /** Every slip of the month (respecting the status filter) in one PDF, one bill per page. */
+  const downloadSlips = async () => {
+    setSlipsBusy(true);
+    try {
+      const response = await api.get('/billing/slips', {
+        params: { period, status: status || undefined, download: true },
+        responseType: 'blob',
+      });
+      savePdf(new Uint8Array(await response.data.arrayBuffer()), `Bills ${period}${status ? ` (${status})` : ''}.pdf`);
+    } catch (error) {
+      toast.error('Could not download the slips', await blobErrorMessage(error));
+    } finally {
+      setSlipsBusy(false);
+    }
+  };
+
   const t = state.totals;
   return (
     <>
       {state.error ? <Alert tone="error" title="Billing error">{state.error}</Alert> : null}
-      {info ? <Alert tone="success" title="Done">{info}</Alert> : null}
+      {info ? (
+        <Alert tone="success" title="Done">
+          {info}
+          {offerSlips ? (
+            <button className="btn btn--sm" style={{ marginLeft: 12 }} onClick={downloadSlips} disabled={slipsBusy}>
+              {slipsBusy ? <span className="spinner" /> : '⭳'} Download all slips
+            </button>
+          ) : null}
+        </Alert>
+      ) : null}
 
       <div className="grid grid--stats grid--stats-3">
         <Stat label="Total Billed" value={formatMoney(t?.fee || 0)} hint={`${t?.count || 0} bills`} />
@@ -137,6 +169,14 @@ function MonthlyBills() {
           </button>
           <button className="btn btn--sm" onClick={generate} disabled={busy}>
             ＋ Generate ALL BILLS
+          </button>
+          <button
+            className="btn btn--secondary btn--sm"
+            onClick={downloadSlips}
+            disabled={slipsBusy || state.items.length === 0}
+            title="Every bill slip of this month in one PDF"
+          >
+            {slipsBusy ? <span className="spinner spinner--dark" /> : '⭳'} Slips
           </button>
           <button className="btn btn--excel btn--sm" onClick={download}>⭳ Excel</button>
         </div>
@@ -177,6 +217,9 @@ function MonthlyBills() {
                           <button className="btn btn--sm" onClick={() => setPaying(r)}>
                             {r.paymentStatus === 'Received' ? 'Details' : 'Receive'}
                           </button>
+                          <button className="btn btn--secondary btn--sm" onClick={() => setSlip(r)}>
+                            Slip
+                          </button>
                           <button className="btn btn--secondary btn--sm btn--delete" onClick={() => setDeleting(r)}>
                             Delete
                           </button>
@@ -211,10 +254,15 @@ function MonthlyBills() {
         onClose={() => setBilling(null)}
         onSaved={async (created, record) => {
           setBilling(null);
+          setOfferSlips(false);
           setInfo(`${created ? 'Bill created' : 'Bill updated'}: ${record.username}, ${record.period}, ${formatMoney(record.fee)}.`);
           await load();
+          // The slip is generated with the bill: show it straight away, ready to download.
+          setSlip(record);
         }}
       />
+
+      <BillSlipModal record={slip} onClose={() => setSlip(null)} />
 
       <ConfirmDialog
         open={Boolean(deleting)}
@@ -451,6 +499,74 @@ function CustomerBillModal({ customer, period, onClose, onSaved }) {
           autoFocus
         />
       </Field>
+    </Modal>
+  );
+}
+
+/* -------------------------------- bill slip -------------------------------- */
+
+/** Save PDF bytes under a readable file name. */
+function savePdf(bytes, filename) {
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename.replace(/[\/:*?"<>|]/g, '');
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** A failed blob request carries its JSON error as a Blob — read the message out of it. */
+async function blobErrorMessage(error) {
+  const data = error?.response?.data;
+  if (data instanceof Blob) {
+    try {
+      return JSON.parse(await data.text()).message || errorMessage(error);
+    } catch {
+      return errorMessage(error);
+    }
+  }
+  return errorMessage(error);
+}
+
+/** Preview of one bill's slip, exactly as it downloads. */
+function BillSlipModal({ record, onClose }) {
+  const [bytes, setBytes] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!record) return undefined;
+    let cancelled = false;
+    setBytes(null);
+    setError('');
+    api.get(`/billing/records/${record._id}/slip`, { responseType: 'blob' })
+      .then(async (res) => { if (!cancelled) setBytes(new Uint8Array(await res.data.arrayBuffer())); })
+      .catch(async (err) => { if (!cancelled) setError(await blobErrorMessage(err)); });
+    return () => { cancelled = true; };
+  }, [record?._id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!record) return null;
+
+  const filename = `Bill ${record.period} - ${record.username}.pdf`;
+
+  return (
+    <Modal
+      open
+      size="lg"
+      onClose={onClose}
+      title={`Bill slip — ${record.username}, ${record.period}`}
+      footer={
+        <>
+          <button className="btn btn--secondary" onClick={onClose}>Close</button>
+          <button className="btn" onClick={() => savePdf(bytes, filename)} disabled={!bytes}>⭳ Download slip</button>
+        </>
+      }
+    >
+      {error ? <Alert tone="error" title="Could not generate the slip">{error}</Alert> : null}
+      <div style={{ background: 'var(--bg)', borderRadius: 8, padding: 10 }}>
+        <PdfPreview bytes={bytes} loading={!bytes && !error} />
+      </div>
     </Modal>
   );
 }

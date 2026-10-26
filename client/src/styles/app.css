@@ -826,11 +826,12 @@ a.stat:hover { border-color: var(--brand-accent); text-decoration: none; }
 
 .table th.text-right, .table td.text-right { text-align: right; }
 
-.table--even { table-layout: fixed; width: 100%; min-width: 880px; }
+.table--even { table-layout: fixed; width: 100%; min-width: 1080px; }
 .table--even th, .table--even td { padding-left: 14px; padding-right: 14px; overflow-wrap: anywhere; vertical-align: middle; }
 .table--even th { white-space: nowrap; }
 .table--even td .btn { white-space: nowrap; }
-.table--even th.col-actions { width: 180px; }
+.table--even th.col-actions { width: 230px; }
+.table--even td.num { white-space: nowrap; overflow-wrap: normal; }
 
 .btn--excel { background: #217346; border-color: #217346; color: #fff; }
 .btn--excel:hover:not(:disabled) { background: #185c37; border-color: #185c37; color: #fff; }

@@ -6,6 +6,7 @@ import Subscriber from '../models/Subscriber.js';
 import BillingRecord from '../models/BillingRecord.js';
 import Invoice from '../models/Invoice.js';
 import Quotation from '../models/Quotation.js';
+import Tenant from '../models/Tenant.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import env from '../config/env.js';
@@ -16,6 +17,7 @@ import { containsRegex, parsePagination } from '../utils/search.js';
 import { ROLES } from '../utils/constants.js';
 import { parseBillingWorkbook } from '../services/billingImport.js';
 import { startOfLocalDay } from '../utils/datetime.js';
+import { billNumber, renderBillSlips } from '../services/billSlipPdf.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -582,6 +584,93 @@ router.get(
       recentInvoices,
       recentQuotations,
     });
+  }),
+);
+
+/* -------------------------------- bill slips -------------------------------- */
+
+/**
+ * What each slip needs besides the bill: the customer it belongs to and any
+ * dues left unpaid from earlier months.
+ */
+async function slipData(records) {
+  const subscriberIds = [...new Set(records.map((r) => String(r.subscriber)))];
+  const [subscribers, older] = await Promise.all([
+    Subscriber.find({ _id: { $in: subscriberIds } }).select('customer contact').lean(),
+    BillingRecord.find({ subscriber: { $in: subscriberIds }, arrears: { $gt: 0 } }).select('subscriber period arrears').lean(),
+  ]);
+  const customers = await Customer.find({ _id: { $in: subscribers.map((s) => s.customer).filter(Boolean) } })
+    .select('name customerReferenceNumber contactNumber')
+    .lean();
+  const subscriberById = new Map(subscribers.map((s) => [String(s._id), s]));
+  const customerById = new Map(customers.map((c) => [String(c._id), c]));
+
+  return records.map((record) => {
+    const sub = subscriberById.get(String(record.subscriber));
+    const customer = sub?.customer ? customerById.get(String(sub.customer)) : null;
+    const previousDues = older
+      .filter((o) => String(o.subscriber) === String(record.subscriber) && o.period < record.period)
+      .reduce((sum, o) => sum + o.arrears, 0);
+    return {
+      record,
+      previousDues,
+      customer: {
+        name: customer?.name || record.username,
+        customerReferenceNumber: customer?.customerReferenceNumber || '',
+        contactNumber: customer?.contactNumber || sub?.contact || '',
+      },
+    };
+  });
+}
+
+/** The client's letterhead, for every slip. */
+async function slipCompany(req) {
+  const tenant = await Tenant.findById(req.tenant._id).lean();
+  return {
+    name: tenant.name,
+    address: tenant.address,
+    phone: tenant.phone,
+    email: tenant.email,
+    website: tenant.website,
+    logo: tenant.logo,
+    color: tenant.themeColor,
+    bankAccounts: tenant.bankAccounts || [],
+  };
+}
+
+/** Only an explicit download is labelled as a PDF (see the quotation PDF route for why). */
+function sendPdf(req, res, buffer, filename) {
+  const isDownload = req.query.download === 'true';
+  res.setHeader('Content-Type', isDownload ? 'application/pdf' : 'application/octet-stream');
+  res.setHeader('Content-Length', buffer.length);
+  if (isDownload) res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.end(buffer);
+}
+
+/** GET /api/billing/records/:id/slip[?download=true] — one bill's slip. */
+router.get(
+  '/records/:id/slip',
+  asyncHandler(async (req, res) => {
+    const record = await findOr404(BillingRecord, req.params.id, 'Bill');
+    const [slips, company] = await Promise.all([slipData([record.toObject()]), slipCompany(req)]);
+    const buffer = await renderBillSlips(slips, company);
+    const safeName = record.username.replace(/[\\/:*?"<>|]/g, '').trim();
+    sendPdf(req, res, buffer, `Bill ${billNumber(record)} - ${safeName}.pdf`);
+  }),
+);
+
+/** GET /api/billing/slips?period=2026-10[&status=Pending][&download=true] — every slip of a month, one per page. */
+router.get(
+  '/slips',
+  asyncHandler(async (req, res) => {
+    const p = period(req.query.period);
+    const filter = { period: p };
+    if (req.query.status) filter.paymentStatus = String(req.query.status);
+    const records = await BillingRecord.find(filter).sort({ username: 1 }).lean();
+    if (!records.length) throw ApiError.notFound(`No bills for ${p}`);
+    const [slips, company] = await Promise.all([slipData(records), slipCompany(req)]);
+    const buffer = await renderBillSlips(slips, company);
+    sendPdf(req, res, buffer, `Bills ${p}.pdf`);
   }),
 );
 
