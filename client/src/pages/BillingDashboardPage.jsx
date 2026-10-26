@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Banknote, ChartColumn, ChevronRight, Coins, FileText, Plus, Receipt, RefreshCw, Table2, TriangleAlert, Wallet,
+  Banknote, ChartColumn, ChevronRight, Coins, FileText, Plus, Receipt, Table2, TriangleAlert, Wallet,
 } from 'lucide-react';
 import api, { errorMessage } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -42,18 +42,13 @@ export default function BillingDashboardPage() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async (manual = false) => {
-    if (manual) setRefreshing(true);
+  const load = useCallback(async () => {
     try {
       const response = await api.get('/billing/dashboard');
       setData(response.data);
       setError('');
     } catch (err) {
       setError(errorMessage(err));
-    } finally {
-      setRefreshing(false);
     }
   }, []);
 
@@ -79,14 +74,9 @@ export default function BillingDashboardPage() {
         title={`Good ${greeting}, ${user.name.split(' ')[0]}`}
         subtitle={`${user.tenantName ? `${user.tenantName} · ` : ''}Billing overview for ${monthLong(data.period)}`}
         actions={(
-          <>
-            <button className="btn btn--secondary" onClick={() => load(true)} disabled={refreshing}>
-              <RefreshCw size={15} className={refreshing ? 'bd-spin' : ''} /> Refresh
-            </button>
-            <button className="btn" onClick={() => navigate('/billing')}>
-              <Wallet size={15} /> Monthly bills
-            </button>
-          </>
+          <button className="btn" onClick={() => navigate('/billing')}>
+            <Wallet size={15} /> Monthly bills
+          </button>
         )}
       />
 
