@@ -6,7 +6,8 @@ import { PageHead } from '../components/Layout.jsx';
 import {
   Alert, Badge, ConfirmDialog, EmptyState, Field, Loading, Modal, Select, TextInput,
 } from '../components/ui.jsx';
-import { formatDateTime } from '../utils/format.js';
+import { ROLE_LABELS, formatDateTime } from '../utils/format.js';
+import { CredentialsModal, generatePassword, suggestUsername } from '../components/Credentials.jsx';
 
 const BLANK = {
   tenant: '', name: '', username: '', email: '', password: '', phone: '', isActive: true,
@@ -181,7 +182,7 @@ export default function UsersPage() {
     <>
       <PageHead
         title="Client logins"
-        subtitle="Every login belongs to one client, has full access to that client's data, and cannot add other users."
+        subtitle="Logins you create here are each client's Admin, with full access to that client's data. A client's Admin can add their own Accounts logins for their billing team."
         actions={(
           <>
             <Select value={clientFilter} onChange={(event) => setClientFilter(event.target.value)}>
@@ -204,7 +205,7 @@ export default function UsersPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Name</th><th>Client</th><th>Username</th><th>Email</th>
+                    <th>Name</th><th>Client</th><th>Role</th><th>Username</th><th>Email</th>
                     <th>Status</th><th>Last sign-in</th><th />
                   </tr>
                 </thead>
@@ -216,6 +217,7 @@ export default function UsersPage() {
                         <div className="small muted">{user.phone || '—'}</div>
                       </td>
                       <td><Badge tone="info">{user.tenantName || '—'}</Badge></td>
+                      <td><Badge tone={user.role === 'accounts' ? 'warn' : 'neutral'}>{ROLE_LABELS[user.role] || user.role}</Badge></td>
                       <td className="mono strong">{user.username || '—'}</td>
                       <td className="mono small">{user.email}</td>
                       <td>
@@ -398,100 +400,4 @@ export default function UsersPage() {
       />
     </>
   );
-}
-
-/** One-time hand-off sheet: the password exists nowhere else once this closes. */
-function CredentialsModal({ credentials, onClose, onCopied }) {
-  if (!credentials) return null;
-
-  const sheet = [
-    'NOC Manager — sign in',
-    `URL      : ${window.location.origin}`,
-    `Username : ${credentials.username}`,
-    `Email    : ${credentials.email}`,
-    `Password : ${credentials.password}`,
-  ].join('\n');
-
-  return (
-    <Modal
-      open
-      title={credentials.title}
-      onClose={onClose}
-      footer={
-        <>
-          <button className="btn btn--secondary" onClick={() => copyText(sheet, onCopied)}>
-            📋 Copy credentials
-          </button>
-          <button className="btn" onClick={onClose}>Done</button>
-        </>
-      }
-    >
-      <Alert tone="warn" title="Shown only once">
-        {`The server stores a hash, not the password. Copy it now and give it to ${credentials.name} — reopening this page cannot show it again.`}
-      </Alert>
-      <pre className="mono" style={{ whiteSpace: 'pre-wrap', margin: 0, userSelect: 'all' }}>{sheet}</pre>
-    </Modal>
-  );
-}
-
-async function copyText(text, onCopied) {
-  try {
-    await navigator.clipboard.writeText(text);
-    onCopied?.(true);
-  } catch {
-    // The Clipboard API needs a secure context; fall back to a temporary textarea.
-    const area = document.createElement('textarea');
-    area.value = text;
-    area.style.position = 'fixed';
-    area.style.opacity = '0';
-    document.body.appendChild(area);
-    area.select();
-    const ok = document.execCommand('copy');
-    document.body.removeChild(area);
-    onCopied?.(ok);
-  }
-}
-
-/** "Usman Tariq" → "usman.tariq", matching the server's username rules. */
-function suggestUsername(name) {
-  return String(name || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '.')
-    .replace(/^[.]+|[.]+$/g, '')
-    .slice(0, 32);
-}
-
-// Look-alike characters (0/O, 1/l/I) are left out — these get read off a screen
-// and typed by hand, often over the phone.
-const PASSWORD_CLASSES = [
-  'abcdefghijkmnopqrstuvwxyz',
-  'ABCDEFGHJKLMNPQRSTUVWXYZ',
-  '23456789',
-  '!@#$%&*?',
-];
-
-/** Random password holding at least one character from every class. */
-function generatePassword(length = 14) {
-  const all = PASSWORD_CLASSES.join('');
-  const picks = [
-    ...PASSWORD_CLASSES.map(pickChar),
-    ...Array.from({ length: length - PASSWORD_CLASSES.length }, () => pickChar(all)),
-  ];
-
-  // Shuffle, otherwise the guaranteed characters always sit in class order.
-  for (let i = picks.length - 1; i > 0; i -= 1) {
-    const j = randomInt(i + 1);
-    [picks[i], picks[j]] = [picks[j], picks[i]];
-  }
-  return picks.join('');
-}
-
-function pickChar(chars) {
-  return chars[randomInt(chars.length)];
-}
-
-function randomInt(max) {
-  const buffer = new Uint32Array(1);
-  window.crypto.getRandomValues(buffer);
-  return buffer[0] % max;
 }

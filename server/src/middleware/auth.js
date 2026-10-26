@@ -31,6 +31,30 @@ function renewToken(res, user, payload) {
   }
 }
 
+/**
+ * The only APIs a billing-department (Accounts) login may reach. Kept as one
+ * allowlist here rather than per router, so a newly added route stays closed
+ * to them until somebody decides otherwise.
+ */
+const ACCOUNTS_ALLOWED = [
+  { prefix: '/api/auth' },
+  { prefix: '/api/billing' },
+  { prefix: '/api/invoices' },
+  { prefix: '/api/quotations' },
+  // Read-only lookups the billing screens need: customer picker, letterhead, currency.
+  { prefix: '/api/customers', readOnly: true },
+  { prefix: '/api/company', readOnly: true },
+  { prefix: '/api/meta', readOnly: true },
+];
+
+function accountsMayUse(req) {
+  const path = req.originalUrl.split('?')[0];
+  const isRead = req.method === 'GET' || req.method === 'HEAD';
+  return ACCOUNTS_ALLOWED.some(
+    (rule) => (path === rule.prefix || path.startsWith(`${rule.prefix}/`)) && (!rule.readOnly || isRead),
+  );
+}
+
 function readToken(req) {
   const header = req.headers.authorization || '';
   if (header.startsWith('Bearer ')) return header.slice(7).trim();
@@ -78,6 +102,10 @@ function authenticate(allow) {
     const tenant = user.tenant ? await Tenant.findById(user.tenant).select('-logo').lean() : null;
     if (!tenant || !tenant.isActive) {
       throw ApiError.unauthorized('Your company account is inactive. Please contact support.');
+    }
+
+    if (user.role === ROLES.ACCOUNTS && !accountsMayUse(req)) {
+      throw ApiError.forbidden('The billing panel only has access to billing, invoices and quotations');
     }
 
     req.user = user;

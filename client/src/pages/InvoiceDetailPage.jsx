@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api, { errorMessage } from '../api/client.js';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth, ROLES } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import { Alert, Badge, ConfirmDialog, DefItem, Loading, Select } from '../components/ui.jsx';
@@ -27,7 +27,9 @@ export default function InvoiceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const { canManageInvoices, isAdmin } = useAuth();
+  const { canManageInvoices, isAdmin, user } = useAuth();
+  // The billing panel has no ticket or customer pages to link to.
+  const canOpenOps = user?.role !== ROLES.ACCOUNTS;
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -230,12 +232,16 @@ export default function InvoiceDetailPage() {
               <div className="deflist">
                 <DefItem label="Invoice number" value={invoice.invoiceNumber} mono />
                 <DefItem label="Ticket (TID)">
-                  <Link to={`/tickets/${invoice.ticketNumber}`} className="tid">{invoice.ticketNumber}</Link>
+                  {canOpenOps
+                    ? <Link to={`/tickets/${invoice.ticketNumber}`} className="tid">{invoice.ticketNumber}</Link>
+                    : <span className="tid">{invoice.ticketNumber}</span>}
                 </DefItem>
                 <DefItem label="Customer">
-                  <Link to={`/customers/${invoice.customerReferenceNumber}`}>
-                    {invoice.customerReferenceNumber} — {invoice.customerName}
-                  </Link>
+                  {canOpenOps ? (
+                    <Link to={`/customers/${invoice.customerReferenceNumber}`}>
+                      {invoice.customerReferenceNumber} — {invoice.customerName}
+                    </Link>
+                  ) : `${invoice.customerReferenceNumber} — ${invoice.customerName}`}
                 </DefItem>
                 <DefItem label="Issue date" value={formatDate(invoice.issueDate)} />
                 <DefItem label="Due date" value={formatDate(invoice.dueDate)} />
@@ -304,7 +310,7 @@ export default function InvoiceDetailPage() {
               <div className="card__head">
                 <h3>Linked ticket</h3>
                 <div className="card__head-actions">
-                  <Link className="btn btn--secondary btn--sm" to={`/tickets/${ticket.ticketNumber}`}>Open →</Link>
+                  {canOpenOps ? <Link className="btn btn--secondary btn--sm" to={`/tickets/${ticket.ticketNumber}`}>Open →</Link> : null}
                 </div>
               </div>
               <div className="card__body">

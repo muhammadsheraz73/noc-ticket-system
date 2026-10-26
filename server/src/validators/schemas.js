@@ -66,8 +66,8 @@ export const changePasswordSchema = z.object({
 });
 
 /**
- * Every login belongs to one client and has full access to that client's data,
- * so there is no role to pick. Only the panel owner creates logins.
+ * A login the panel owner creates is always the client's Admin, with full access
+ * to that client's data, so there is no role to pick.
  */
 export const createUserSchema = z.object({
   tenant: z
@@ -85,6 +85,14 @@ export const createUserSchema = z.object({
 export const updateUserSchema = createUserSchema
   .partial()
   .omit({ password: true, tenant: true })
+  .extend({ password: password.optional() });
+
+/** A client admin adding a billing-department login: always their own client, so no `tenant`. */
+export const teamMemberSchema = createUserSchema.omit({ tenant: true });
+
+export const teamMemberUpdateSchema = teamMemberSchema
+  .partial()
+  .omit({ password: true })
   .extend({ password: password.optional() });
 
 const hexColor = z.string().refine((v) => v === '' || /^#[0-9a-fA-F]{6}$/.test(v), 'Colour must look like #1a56db');

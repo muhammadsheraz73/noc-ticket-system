@@ -28,6 +28,7 @@ import companyRoutes from './routes/company.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import billingRoutes from './routes/billing.routes.js';
 import metaRoutes from './routes/meta.routes.js';
+import teamRoutes from './routes/team.routes.js';
 
 export function createApp() {
   const app = express();
@@ -120,6 +121,7 @@ export function createApp() {
   app.use('/api/ai', aiRoutes);
   app.use('/api/billing', billingRoutes);
   app.use('/api/meta', metaRoutes);
+  app.use('/api/team', teamRoutes);
 
   // Any /api path that reached this point does not exist.
   app.use('/api', notFoundHandler);

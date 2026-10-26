@@ -47,7 +47,7 @@ async function syncFieldTeamLink(user) {
  * index is the last line of defence, but it is not built on serverless
  * deployments (`autoIndex: false`), so the check has to be explicit.
  */
-async function assertCredentialsFree({ username, email }, excludeId) {
+export async function assertCredentialsFree({ username, email }, excludeId) {
   const clashes = [];
   if (username) clashes.push({ username });
   if (email) clashes.push({ email });
@@ -66,8 +66,8 @@ async function assertCredentialsFree({ username, email }, excludeId) {
 }
 
 const router = Router();
-// Logins are created and managed by the panel owner only — a client's own
-// users cannot add, edit or remove accounts.
+// Client Admin logins are created and managed by the panel owner only. A
+// client's Admin can add billing-department logins for itself (team.routes.js).
 router.use(requireOwner);
 
 /** GET /api/users */

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api, { errorMessage, fieldErrors } from '../api/client.js';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth, ROLES } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import { Alert, Badge, DefItem, Field, TextInput, Textarea } from '../components/ui.jsx';
@@ -23,9 +23,10 @@ export default function SettingsPage() {
 
   useEffect(() => {
     api.get('/meta').then(({ data }) => setMeta(data)).catch(() => {});
-    api.get('/ai/status').then(({ data }) => setAi(data)).catch(() => {});
+    // The AI assistant only helps with tickets, which the billing panel does not have.
+    if (user.role !== ROLES.ACCOUNTS) api.get('/ai/status').then(({ data }) => setAi(data)).catch(() => {});
     api.get('/health').then(({ data }) => setHealth(data)).catch(() => {});
-  }, []);
+  }, [user.role]);
 
   const changePassword = async (event) => {
     event.preventDefault();
@@ -110,36 +111,38 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="card">
-          <div className="card__head">
-            <h2>AI assistant</h2>
-            <div className="card__head-actions">
-              <Badge tone={ai?.available ? 'ok' : 'neutral'}>{ai?.status ?? '…'}</Badge>
+        {user.role !== ROLES.ACCOUNTS ? (
+          <div className="card">
+            <div className="card__head">
+              <h2>AI assistant</h2>
+              <div className="card__head-actions">
+                <Badge tone={ai?.available ? 'ok' : 'neutral'}>{ai?.status ?? '…'}</Badge>
+              </div>
+            </div>
+            <div className="card__body">
+              {ai?.available ? (
+                <>
+                  <Alert tone="ok" title="AI is configured">
+                    Model: <code>{ai.model}</code>{ai.provider ? ` (via ${ai.provider})` : ''}
+                  </Alert>
+                  <div className="small muted">
+                    AI suggests an issue category, priority, summary, troubleshooting steps and a customer response.
+                    It never blocks ticket creation and every suggestion can be overridden.
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Alert tone="info" title="AI is not active">{ai?.reason || 'Checking…'}</Alert>
+                  <div className="small muted">
+                    Set <code>OPENROUTER_API_KEY</code> in <code>server/.env</code> and restart the API to enable it.
+                    A free key from <code>openrouter.ai/keys</code> is enough — the default model costs nothing.
+                    The key stays on the server and is never sent to the browser.
+                  </div>
+                </>
+              )}
             </div>
           </div>
-          <div className="card__body">
-            {ai?.available ? (
-              <>
-                <Alert tone="ok" title="AI is configured">
-                  Model: <code>{ai.model}</code>{ai.provider ? ` (via ${ai.provider})` : ''}
-                </Alert>
-                <div className="small muted">
-                  AI suggests an issue category, priority, summary, troubleshooting steps and a customer response.
-                  It never blocks ticket creation and every suggestion can be overridden.
-                </div>
-              </>
-            ) : (
-              <>
-                <Alert tone="info" title="AI is not active">{ai?.reason || 'Checking…'}</Alert>
-                <div className="small muted">
-                  Set <code>OPENROUTER_API_KEY</code> in <code>server/.env</code> and restart the API to enable it.
-                  A free key from <code>openrouter.ai/keys</code> is enough — the default model costs nothing.
-                  The key stays on the server and is never sent to the browser.
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        ) : null}
 
         {isAdmin && meta ? (
           <div className="card" style={{ gridColumn: '1 / -1' }}>

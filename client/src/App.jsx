@@ -27,6 +27,16 @@ import BillingPage from './pages/BillingPage.jsx';
 import QuotationsPage from './pages/QuotationsPage.jsx';
 import QuotationFormPage from './pages/QuotationFormPage.jsx';
 import QuotationDetailPage from './pages/QuotationDetailPage.jsx';
+import TeamPage from './pages/TeamPage.jsx';
+
+/** Everybody inside a client except its billing department (Accounts), whose panel is billing-only. */
+const OPERATIONS = [ROLES.ADMIN, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER];
+
+function Home({ role }) {
+  if (role === ROLES.SUPERADMIN) return <OwnerOverviewPage />;
+  if (role === ROLES.ACCOUNTS) return <Navigate to="/billing" replace />;
+  return <DashboardPage />;
+}
 
 /**
  * Blocks unauthenticated access and, optionally, disallowed roles.
@@ -69,12 +79,12 @@ export default function App() {
           </Protected>
         }
       >
-        <Route index element={user?.role === ROLES.SUPERADMIN ? <OwnerOverviewPage /> : <DashboardPage />} />
+        <Route index element={<Home role={user?.role} />} />
 
         <Route
           path="customers"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR, ROLES.ACCOUNTS]}>
+            <Protected roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
               <CustomersPage />
             </Protected>
           }
@@ -90,13 +100,13 @@ export default function App() {
         <Route
           path="customers/:id"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR, ROLES.ACCOUNTS]}>
+            <Protected roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
               <CustomerDetailPage />
             </Protected>
           }
         />
 
-        <Route path="tickets" element={<TicketsPage />} />
+        <Route path="tickets" element={<Protected roles={OPERATIONS}><TicketsPage /></Protected>} />
         <Route
           path="tickets/new"
           element={
@@ -105,7 +115,7 @@ export default function App() {
             </Protected>
           }
         />
-        <Route path="tickets/:id" element={<TicketDetailPage />} />
+        <Route path="tickets/:id" element={<Protected roles={OPERATIONS}><TicketDetailPage /></Protected>} />
 
         <Route
           path="invoices"
@@ -172,7 +182,7 @@ export default function App() {
             </Protected>
           }
         />
-        <Route path="search" element={<SearchPage />} />
+        <Route path="search" element={<Protected roles={OPERATIONS}><SearchPage /></Protected>} />
         <Route path="network" element={<Navigate to="/inventory" replace />} />
         <Route
           path="employees"
@@ -219,6 +229,14 @@ export default function App() {
           element={
             <Protected ownerOk roles={[ROLES.SUPERADMIN]}>
               <UsersPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="team"
+          element={
+            <Protected roles={[ROLES.ADMIN]}>
+              <TeamPage />
             </Protected>
           }
         />

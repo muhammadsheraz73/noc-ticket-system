@@ -6,13 +6,16 @@ import { initials, ROLE_LABELS } from '../utils/format.js';
 import { ConfirmDialog } from './ui.jsx';
 import { applyTheme } from '../utils/theme.js';
 
+/** Everybody inside a client except its billing department, whose panel is billing-only. */
+const OPERATIONS = [ROLES.ADMIN, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER];
+
 const NAV = [
   {
     group: 'Operations',
     items: [
-      { to: '/', label: 'Dashboard', icon: '▤', end: true },
-      { to: '/tickets', label: 'Tickets', icon: '🎫' },
-      { to: '/customers', label: 'Customers', icon: '👥', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR, ROLES.ACCOUNTS] },
+      { to: '/', label: 'Dashboard', icon: '▤', end: true, roles: OPERATIONS },
+      { to: '/tickets', label: 'Tickets', icon: '🎫', roles: OPERATIONS },
+      { to: '/customers', label: 'Customers', icon: '👥', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
     ],
   },
   {
@@ -34,6 +37,7 @@ const NAV = [
   {
     group: 'Administration',
     items: [
+      { to: '/team', label: 'Billing Team', icon: '💼', roles: [ROLES.ADMIN] },
       { to: '/settings', label: 'Settings', icon: '⚙' },
     ],
   },
@@ -94,6 +98,7 @@ export default function Layout() {
             <strong className="sidebar__logo-text">
               {user?.role === ROLES.SUPERADMIN ? 'NOC Panel' : user?.tenantName || 'NOC Manager'}
             </strong>
+            {user?.role === ROLES.ACCOUNTS ? <span className="sidebar__logo-sub">Billing Panel</span> : null}
           </div>
         </div>
 
@@ -134,7 +139,7 @@ export default function Layout() {
             ☰
           </button>
 
-          <GlobalSearch />
+          {user?.role === ROLES.ACCOUNTS ? null : <GlobalSearch />}
           <div className="topbar__spacer" />
 
           <div className="usermenu" ref={menuRef}>
