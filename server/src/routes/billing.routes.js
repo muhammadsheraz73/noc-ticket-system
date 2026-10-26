@@ -368,6 +368,27 @@ router.patch(
   }),
 );
 
+/**
+ * DELETE /api/billing/records/:id — remove one month's bill (and its payments).
+ * The billing user stays, so next month's bills are unaffected.
+ */
+router.delete(
+  '/records/:id',
+  asyncHandler(async (req, res) => {
+    const record = await findOr404(BillingRecord, req.params.id, 'Bill');
+    await record.deleteOne();
+    await recordAudit({
+      req,
+      action: 'delete',
+      entityType: 'Billing',
+      entityId: record._id,
+      entityLabel: `${record.username} ${record.period}`,
+      before: record,
+    });
+    res.json({ success: true, message: `Bill for ${record.username} (${record.period}) deleted` });
+  }),
+);
+
 /** POST /api/billing/records/:id/payments — record money received. */
 router.post(
   '/records/:id/payments',
