@@ -29,12 +29,16 @@ import QuotationFormPage from './pages/QuotationFormPage.jsx';
 import QuotationDetailPage from './pages/QuotationDetailPage.jsx';
 import TeamPage from './pages/TeamPage.jsx';
 import BillingDashboardPage from './pages/BillingDashboardPage.jsx';
+import { MODULE_LABELS, firstOpenPath } from './utils/modules.js';
 
 /** Everybody inside a client except its billing department (Accounts), whose panel is billing-only. */
 const OPERATIONS = [ROLES.ADMIN, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER];
 
 function Home({ role }) {
+  const { user, isLocked } = useAuth();
   if (role === ROLES.SUPERADMIN) return <OwnerOverviewPage />;
+  // Dashboard locked by the owner: start on the first page this login can open.
+  if (isLocked('dashboard')) return <Navigate to={firstOpenPath(user)} replace />;
   if (role === ROLES.ACCOUNTS) return <BillingDashboardPage />;
   return <DashboardPage />;
 }
@@ -44,8 +48,8 @@ function Home({ role }) {
  * The panel owner has no client data, so everywhere except the pages marked
  * `ownerOk` they are sent to the Clients page.
  */
-function Protected({ roles, ownerOk, children }) {
-  const { user, ready } = useAuth();
+function Protected({ roles, ownerOk, module, children }) {
+  const { user, ready, isLocked } = useAuth();
   const location = useLocation();
 
   if (!ready) return <Loading label="Restoring your session…" />;
@@ -58,6 +62,15 @@ function Protected({ roles, ownerOk, children }) {
         icon="🔒"
         title="You do not have access to this page"
         message={`This section is restricted. Your role is "${user.role}".`}
+      />
+    );
+  }
+  if (isLocked(module)) {
+    return (
+      <EmptyState
+        icon="🔒"
+        title={`${MODULE_LABELS[module]} is locked`}
+        message="The panel owner has locked this feature for your account. Please contact them to unlock it."
       />
     );
   }
@@ -85,7 +98,7 @@ export default function App() {
         <Route
           path="customers"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
+            <Protected module="customers" roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
               <CustomersPage />
             </Protected>
           }
@@ -93,7 +106,7 @@ export default function App() {
         <Route
           path="customers/import"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
+            <Protected module="import" roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
               <ImportCustomersPage />
             </Protected>
           }
@@ -101,27 +114,27 @@ export default function App() {
         <Route
           path="customers/:id"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
+            <Protected module="customers" roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
               <CustomerDetailPage />
             </Protected>
           }
         />
 
-        <Route path="tickets" element={<Protected roles={OPERATIONS}><TicketsPage /></Protected>} />
+        <Route path="tickets" element={<Protected module="tickets" roles={OPERATIONS}><TicketsPage /></Protected>} />
         <Route
           path="tickets/new"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
+            <Protected module="tickets" roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
               <CreateTicketPage />
             </Protected>
           }
         />
-        <Route path="tickets/:id" element={<Protected roles={OPERATIONS}><TicketDetailPage /></Protected>} />
+        <Route path="tickets/:id" element={<Protected module="tickets" roles={OPERATIONS}><TicketDetailPage /></Protected>} />
 
         <Route
           path="invoices"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER]}>
+            <Protected module="invoices" roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER]}>
               <InvoicesPage />
             </Protected>
           }
@@ -129,7 +142,7 @@ export default function App() {
         <Route
           path="invoices/new"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
+            <Protected module="invoices" roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
               <CreateInvoicePage />
             </Protected>
           }
@@ -137,7 +150,7 @@ export default function App() {
         <Route
           path="invoices/:id"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER]}>
+            <Protected module="invoices" roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER]}>
               <InvoiceDetailPage />
             </Protected>
           }
@@ -146,7 +159,7 @@ export default function App() {
         <Route
           path="quotations"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
+            <Protected module="quotations" roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
               <QuotationsPage />
             </Protected>
           }
@@ -154,7 +167,7 @@ export default function App() {
         <Route
           path="quotations/new"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
+            <Protected module="quotations" roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
               <QuotationFormPage />
             </Protected>
           }
@@ -162,7 +175,7 @@ export default function App() {
         <Route
           path="quotations/:id"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
+            <Protected module="quotations" roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
               <QuotationDetailPage />
             </Protected>
           }
@@ -170,7 +183,7 @@ export default function App() {
         <Route
           path="quotations/:id/edit"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
+            <Protected module="quotations" roles={[ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR]}>
               <QuotationFormPage />
             </Protected>
           }
@@ -178,7 +191,7 @@ export default function App() {
         <Route
           path="billing"
           element={
-            <Protected roles={[ROLES.ACCOUNTS]}>
+            <Protected module="billing" roles={[ROLES.ACCOUNTS]}>
               <BillingPage />
             </Protected>
           }
@@ -188,7 +201,7 @@ export default function App() {
         <Route
           path="employees"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
+            <Protected module="employees" roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
               <EmployeesPage />
             </Protected>
           }
@@ -196,7 +209,7 @@ export default function App() {
         <Route
           path="inventory"
           element={
-            <Protected roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
+            <Protected module="inventory" roles={[ROLES.ADMIN, ROLES.NOC_OPERATOR]}>
               <InventoryPage />
             </Protected>
           }
@@ -236,7 +249,7 @@ export default function App() {
         <Route
           path="team"
           element={
-            <Protected roles={[ROLES.ADMIN]}>
+            <Protected module="team" roles={[ROLES.ADMIN]}>
               <TeamPage />
             </Protected>
           }

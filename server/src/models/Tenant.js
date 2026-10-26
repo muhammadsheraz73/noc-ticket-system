@@ -34,6 +34,8 @@ const tenantSchema = new mongoose.Schema(
     notes: { type: String, trim: true, default: '' },
     /** Accent colour the panel and this client's invoices are painted in. */
     themeColor: { type: String, default: '' },
+    /** Panel features the owner has locked for every login of this client (keys of MODULES). */
+    lockedModules: { type: [String], default: [] },
     isActive: { type: Boolean, default: true, index: true },
   },
   { timestamps: true },

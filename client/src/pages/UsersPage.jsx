@@ -8,6 +8,8 @@ import {
 } from '../components/ui.jsx';
 import { ROLE_LABELS, formatDateTime } from '../utils/format.js';
 import { CredentialsModal, generatePassword, suggestUsername } from '../components/Credentials.jsx';
+import AccessModal from '../components/AccessModal.jsx';
+import { MODULES, MODULE_LABELS } from '../utils/modules.js';
 
 const BLANK = {
   tenant: '', name: '', username: '', email: '', password: '', phone: '', isActive: true,
@@ -29,6 +31,22 @@ export default function UsersPage() {
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(null);
+  /** The login whose feature access is being edited. */
+  const [accessUser, setAccessUser] = useState(null);
+
+  const saveAccess = async (lockedModules) => {
+    try {
+      await api.put(`/users/${accessUser._id}/access`, { lockedModules });
+    } catch (err) {
+      throw new Error(errorMessage(err));
+    }
+    toast.success(
+      lockedModules.length ? `${lockedModules.length} feature${lockedModules.length === 1 ? '' : 's'} locked` : 'All features open',
+      accessUser.name,
+    );
+    setAccessUser(null);
+    load();
+  };
 
   /** Set once the admin edits the username, so it stops tracking the name. */
   const [usernameTouched, setUsernameTouched] = useState(false);
@@ -213,7 +231,14 @@ export default function UsersPage() {
                   {items.map((user) => (
                     <tr key={user._id}>
                       <td>
-                        <div className="strong">{user.name}</div>
+                        <div className="strong">
+                          {user.name}
+                          {user.lockedModules?.length ? (
+                            <span className="small text-danger" title={user.lockedModules.map((k) => MODULE_LABELS[k]).join(', ')}>
+                              {' '}🔒 {user.lockedModules.length}
+                            </span>
+                          ) : null}
+                        </div>
                         <div className="small muted">{user.phone || '—'}</div>
                       </td>
                       <td><Badge tone="info">{user.tenantName || '—'}</Badge></td>
@@ -232,6 +257,9 @@ export default function UsersPage() {
                         <div className="table__actions">
                           <button className="btn btn--secondary btn--sm" onClick={() => openForm(user)}>
                             Edit
+                          </button>
+                          <button className="btn btn--ghost btn--sm" onClick={() => setAccessUser(user)}>
+                            🔒 Access
                           </button>
                           <button className="btn btn--ghost btn--sm" onClick={() => openReset(user)}>
                             Reset password
@@ -380,6 +408,17 @@ export default function UsersPage() {
           </div>
         </Field>
       </Modal>
+
+      <AccessModal
+        open={Boolean(accessUser)}
+        title={`Feature access — ${accessUser?.name || ''}`}
+        intro={`Only for this login (${ROLE_LABELS[accessUser?.role] || ''}). Features locked for the whole client are set on the client's page and show here as locked.`}
+        modules={MODULES.filter((m) => m.roles.includes(accessUser?.role))}
+        locked={accessUser?.lockedModules || []}
+        inherited={clients.find((c) => c._id === accessUser?.tenant)?.lockedModules || []}
+        onClose={() => setAccessUser(null)}
+        onSave={saveAccess}
+      />
 
       <CredentialsModal
         credentials={credentials}

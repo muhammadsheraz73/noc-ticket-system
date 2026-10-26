@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, ROLES } from '../context/AuthContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
+import api from '../api/client.js';
 import GlobalSearch from './GlobalSearch.jsx';
 import { initials, ROLE_LABELS } from '../utils/format.js';
 import { ConfirmDialog } from './ui.jsx';
@@ -13,33 +15,33 @@ const NAV = [
   {
     group: 'Operations',
     items: [
-      { to: '/', label: 'Dashboard', icon: '▤', end: true, roles: OPERATIONS },
-      { to: '/tickets', label: 'Tickets', icon: '🎫', roles: OPERATIONS },
-      { to: '/customers', label: 'Customers', icon: '👥', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
+      { to: '/', module: 'dashboard', label: 'Dashboard', icon: '▤', end: true, roles: OPERATIONS },
+      { to: '/tickets', module: 'tickets', label: 'Tickets', icon: '🎫', roles: OPERATIONS },
+      { to: '/customers', module: 'customers', label: 'Customers', icon: '👥', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
     ],
   },
   {
     group: 'Billing',
     items: [
-      { to: '/', label: 'Dashboard', icon: '▤', end: true, roles: [ROLES.ACCOUNTS] },
+      { to: '/', module: 'dashboard', label: 'Dashboard', icon: '▤', end: true, roles: [ROLES.ACCOUNTS] },
       // Monthly bills are run by the client's billing team only, not from the Admin's panel.
-      { to: '/billing', label: 'Billing', icon: '💰', roles: [ROLES.ACCOUNTS] },
-      { to: '/invoices', label: 'Invoices', icon: '🧾', roles: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER] },
-      { to: '/quotations', label: 'Quotations', icon: '📄', roles: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR] },
+      { to: '/billing', module: 'billing', label: 'Billing', icon: '💰', roles: [ROLES.ACCOUNTS] },
+      { to: '/invoices', module: 'invoices', label: 'Invoices', icon: '🧾', roles: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER] },
+      { to: '/quotations', module: 'quotations', label: 'Quotations', icon: '📄', roles: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR] },
     ],
   },
   {
     group: 'Internal',
     items: [
-      { to: '/employees', label: 'Employees', icon: '🧑‍🔧', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
-      { to: '/inventory', label: 'Inventory', icon: '📦', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
-      { to: '/customers/import', label: 'Import Excel', icon: '⭳', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
+      { to: '/employees', module: 'employees', label: 'Employees', icon: '🧑‍🔧', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
+      { to: '/inventory', module: 'inventory', label: 'Inventory', icon: '📦', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
+      { to: '/customers/import', module: 'import', label: 'Import Excel', icon: '⭳', roles: [ROLES.ADMIN, ROLES.NOC_OPERATOR] },
     ],
   },
   {
     group: 'Administration',
     items: [
-      { to: '/team', label: 'Billing Team', icon: '💼', roles: [ROLES.ADMIN] },
+      { to: '/team', module: 'team', label: 'Billing Team', icon: '💼', roles: [ROLES.ADMIN] },
       { to: '/settings', label: 'Settings', icon: '⚙' },
     ],
   },
@@ -60,7 +62,8 @@ const OWNER_NAV = [
 ];
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, setUser, isLocked } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -70,6 +73,19 @@ export default function Layout() {
   const menuRef = useRef(null);
 
   useEffect(() => setSidebarOpen(false), [location.pathname]);
+
+  // The owner can lock or unlock features at any time: pick that up on every
+  // page change, so the menu is current without signing in again.
+  const lockKey = (user?.lockedModules || []).slice().sort().join(',');
+  useEffect(() => {
+    if (!user || user.role === ROLES.SUPERADMIN) return undefined;
+    let cancelled = false;
+    api.get('/auth/me').then(({ data }) => {
+      const fresh = (data.user.lockedModules || []).slice().sort().join(',');
+      if (!cancelled && fresh !== lockKey) setUser((u) => ({ ...u, lockedModules: data.user.lockedModules }));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Each client sees the panel in its own colour; leaving restores the default.
   useEffect(() => {
@@ -108,7 +124,20 @@ export default function Layout() {
           {visibleGroups.map((group) => (
             <div className="sidebar__group" key={group.group}>
               <div className="sidebar__group-label">{group.group}</div>
-              {group.items.map((item) => (
+              {group.items.map((item) => (isLocked(item.module) ? (
+                <button
+                  key={item.to}
+                  type="button"
+                  className="sidebar__link is-locked"
+                  style={{ '--i': linkIndex++ }}
+                  title="Locked by the panel owner"
+                  onClick={() => toast.info(`${item.label} is locked`, 'The panel owner has locked this feature for your account.')}
+                >
+                  <span className="sidebar__icon">{item.icon}</span>
+                  {item.label}
+                  <span className="sidebar__lock" aria-label="locked">🔒</span>
+                </button>
+              ) : (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -119,7 +148,7 @@ export default function Layout() {
                   <span className="sidebar__icon">{item.icon}</span>
                   {item.label}
                 </NavLink>
-              ))}
+              )))}
             </div>
           ))}
         </nav>

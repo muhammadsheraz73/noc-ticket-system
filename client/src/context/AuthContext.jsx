@@ -141,6 +141,8 @@ export function AuthProvider({ children }) {
       canManageInvoices: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR].includes(user?.role),
       canViewInvoices: [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER].includes(user?.role),
       canViewNetwork: [ROLES.ADMIN, ROLES.NOC_OPERATOR].includes(user?.role),
+      /** True when the panel owner has locked this feature for this login (or its whole client). */
+      isLocked: (module) => Boolean(module && user?.lockedModules?.includes(module)),
     }),
     [user, ready, login, logout],
   );

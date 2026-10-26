@@ -11,6 +11,7 @@ import {
   normalizeCustomerType,
   CUSTOMER_STATUSES,
   INVENTORY_UNITS,
+  MODULE_KEYS,
   STOCK_MOVEMENT_TYPES,
   USERNAME_MAX,
   USERNAME_MIN,
@@ -138,6 +139,11 @@ export const tenantSchema = z.object({
 export const companyProfileSchema = z.object({ contactName: optionalText(120), ...letterheadFields }).partial();
 
 export const tenantUpdateSchema = tenantSchema.partial();
+
+/** The owner locking panel features for a client or a login. */
+export const accessSchema = z.object({
+  lockedModules: z.array(z.enum(MODULE_KEYS)).max(MODULE_KEYS.length).transform((keys) => [...new Set(keys)]),
+});
 
 /** Admin-issued password reset — no current password, the admin is the authority. */
 export const resetPasswordSchema = z.object({ password });

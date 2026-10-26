@@ -20,7 +20,14 @@ import { cn } from '../lib/utils.js';
 const TONE_VAR = { danger: '--danger', warn: '--warn', ok: '--ok', purple: '--purple', '': '--brand-accent' };
 
 export default function DashboardPage() {
-  const { user, canManageTickets, canManageInvoices, canViewNetwork, syncClock, serverNow } = useAuth();
+  const { user, canManageTickets, canManageInvoices, canViewNetwork, syncClock, serverNow, isLocked } = useAuth();
+  // Quick actions only for features the panel owner has not locked.
+  const quick = {
+    ticket: canManageTickets && !isLocked('tickets'),
+    customer: canManageTickets && !isLocked('customers'),
+    invoice: canManageInvoices && !isLocked('invoices'),
+    import: canViewNetwork && !isLocked('import'),
+  };
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -78,21 +85,21 @@ export default function DashboardPage() {
           <StatTile label="Pending Invoices" value={formatNumber(s.pendingInvoices)} tone="purple" hint="Draft or Unpaid" onClick={() => navigate('/invoices?status=Draft,Unpaid')} />
         </div>
 
-        {canManageTickets || canManageInvoices || canViewNetwork ? (
+        {quick.ticket || quick.customer || quick.invoice || quick.import ? (
           <section aria-labelledby="quick-actions-title">
             <h2 id="quick-actions-title" className="mb-2 text-sm font-semibold text-muted-foreground">Quick actions</h2>
             {/* Same columns and gap as the KPI grid above so the tiles line up. */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {canManageTickets ? (
+              {quick.ticket ? (
                 <QuickAction to="/tickets/new" icon={Ticket} label="Create Ticket" />
               ) : null}
-              {canManageTickets ? (
+              {quick.customer ? (
                 <QuickAction to="/customers?new=1" icon={UserPlus} label="New Customer" />
               ) : null}
-              {canManageInvoices ? (
+              {quick.invoice ? (
                 <QuickAction to="/invoices/new" icon={Receipt} label="Create Invoice" />
               ) : null}
-              {canViewNetwork ? (
+              {quick.import ? (
                 <QuickAction to="/customers/import" icon={Upload} label="Import Excel" />
               ) : null}
             </div>

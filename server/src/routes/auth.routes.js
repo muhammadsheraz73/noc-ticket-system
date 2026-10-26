@@ -4,7 +4,7 @@ import Tenant from '../models/Tenant.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import env from '../config/env.js';
-import { requireAnyAuth, signToken } from '../middleware/auth.js';
+import { lockedModulesFor, requireAnyAuth, signToken } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { authLimiter } from '../middleware/rateLimit.js';
 import { loginSchema, changePasswordSchema } from '../validators/schemas.js';
@@ -15,12 +15,14 @@ const router = Router();
 
 /** The account as the UI sees it, including the client company it belongs to. */
 async function sessionUser(user) {
-  const tenant = user.tenant ? await Tenant.findById(user.tenant).select('name isActive themeColor').lean() : null;
+  const tenant = user.tenant ? await Tenant.findById(user.tenant).select('name isActive themeColor lockedModules').lean() : null;
   return {
     ...user.toJSON(),
     roleLabel: ROLE_LABELS[user.role],
     tenantName: tenant?.name || '',
     tenantTheme: tenant?.themeColor || '',
+    // What the panel should show as locked: the client's locks plus this login's own.
+    lockedModules: lockedModulesFor(user, tenant),
   };
 }
 

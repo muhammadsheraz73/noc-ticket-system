@@ -6,6 +6,8 @@ import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import { Alert, Badge, ConfirmDialog, EmptyState, Loading, Stat } from '../components/ui.jsx';
 import ClientFormModal from '../components/ClientFormModal.jsx';
+import AccessModal from '../components/AccessModal.jsx';
+import { MODULES } from '../utils/modules.js';
 import {
   ActivityFeed, ClientAvatar, HealthBadge, RangeSwitch, RankBars, TrendBars, durationLabel,
 } from '../components/OwnerKit.jsx';
@@ -25,6 +27,30 @@ export default function ClientDetailPage() {
   const [editing, setEditing] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** Features locked for the whole client, loaded when the access dialog opens. */
+  const [access, setAccess] = useState(null);
+
+  const openAccess = async () => {
+    try {
+      const { data: d } = await api.get(`/tenants/${id}`);
+      setAccess(d.tenant.lockedModules || []);
+    } catch (err) {
+      toast.error('Could not load feature access', errorMessage(err));
+    }
+  };
+
+  const saveAccess = async (lockedModules) => {
+    try {
+      await api.put(`/tenants/${id}/access`, { lockedModules });
+    } catch (err) {
+      throw new Error(errorMessage(err));
+    }
+    toast.success(
+      lockedModules.length ? `${lockedModules.length} feature${lockedModules.length === 1 ? '' : 's'} locked` : 'All features open',
+      data.client.name,
+    );
+    setAccess(null);
+  };
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -85,6 +111,7 @@ export default function ClientDetailPage() {
           <>
             <RangeSwitch value={days} onChange={setDays} />
             <Link className="btn btn--secondary" to={`/users?client=${client._id}`}>Logins</Link>
+            <button className="btn btn--secondary" onClick={openAccess}>🔒 Feature access</button>
             <button className="btn btn--secondary" onClick={() => setEditing(true)}>Edit</button>
             <button
               className={`btn ${client.isActive ? 'btn--secondary text-danger' : ''}`}
@@ -295,6 +322,15 @@ export default function ClientDetailPage() {
         client={client}
         onClose={() => setEditing(false)}
         onSaved={() => { setEditing(false); load(true); }}
+      />
+      <AccessModal
+        open={access !== null}
+        title={`Feature access — ${client.name}`}
+        intro="Locked features stay in the menu with a padlock but cannot be opened, for every login of this client (admin and billing team). To lock something for one login only, use Logins → Access."
+        modules={MODULES}
+        locked={access || []}
+        onClose={() => setAccess(null)}
+        onSave={saveAccess}
       />
       <ConfirmDialog
         open={toggling}

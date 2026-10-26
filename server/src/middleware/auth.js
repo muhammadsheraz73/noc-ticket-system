@@ -5,7 +5,7 @@ import Tenant from '../models/Tenant.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { runWithTenant } from '../utils/tenantContext.js';
-import { ROLES } from '../utils/constants.js';
+import { MODULES, ROLES } from '../utils/constants.js';
 
 /** Extra token lifetime beyond the idle limit, so a request made just before the browser's own sign-out still succeeds. */
 const GRACE_MINUTES = 2;
@@ -53,6 +53,40 @@ function accountsMayUse(req) {
   return ACCOUNTS_ALLOWED.some(
     (rule) => (path === rule.prefix || path.startsWith(`${rule.prefix}/`)) && (!rule.readOnly || isRead),
   );
+}
+
+/**
+ * Which lockable feature an API request belongs to. First match wins, so the
+ * more specific prefixes come first. `writesOnly` features stay readable when
+ * locked, because other screens look them up (customer picker, assignees).
+ */
+const MODULE_ROUTES = [
+  { prefix: '/api/billing/dashboard', module: 'dashboard' },
+  { prefix: '/api/dashboard', module: 'dashboard' },
+  { prefix: '/api/tickets', module: 'tickets' },
+  { prefix: '/api/ai', module: 'tickets' },
+  { prefix: '/api/customers/import', module: 'import' },
+  { prefix: '/api/customers', module: 'customers', writesOnly: true },
+  { prefix: '/api/invoices', module: 'invoices' },
+  { prefix: '/api/quotations', module: 'quotations' },
+  { prefix: '/api/billing', module: 'billing' },
+  { prefix: '/api/inventory', module: 'inventory' },
+  { prefix: '/api/network', module: 'inventory' },
+  { prefix: '/api/field-teams', module: 'employees', writesOnly: true },
+  { prefix: '/api/team', module: 'team' },
+];
+
+function moduleFor(req) {
+  const path = req.originalUrl.split('?')[0];
+  const isRead = req.method === 'GET' || req.method === 'HEAD';
+  const rule = MODULE_ROUTES.find((r) => path === r.prefix || path.startsWith(`${r.prefix}/`));
+  if (!rule || (rule.writesOnly && isRead)) return null;
+  return rule.module;
+}
+
+/** Features locked for this login: the client's locks plus the login's own. */
+export function lockedModulesFor(user, tenant) {
+  return [...new Set([...(tenant?.lockedModules || []), ...(user?.lockedModules || [])])];
 }
 
 function readToken(req) {
@@ -106,6 +140,11 @@ function authenticate(allow) {
 
     if (user.role === ROLES.ACCOUNTS && !accountsMayUse(req)) {
       throw ApiError.forbidden('The billing panel only has access to billing, invoices and quotations');
+    }
+
+    const feature = moduleFor(req);
+    if (feature && lockedModulesFor(user, tenant).includes(feature)) {
+      throw ApiError.forbidden(`${MODULES[feature]} is locked for your account. Please contact the panel owner.`);
     }
 
     req.user = user;

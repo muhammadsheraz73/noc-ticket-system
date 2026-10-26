@@ -36,6 +36,8 @@ const userSchema = new mongoose.Schema(
     /** The client this login belongs to. Absent only for the panel owner. */
     tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
     phone: { type: String, trim: true, default: '' },
+    /** Features the owner has locked for this login only, on top of the client's own locks. */
+    lockedModules: { type: [String], default: [] },
     isActive: { type: Boolean, default: true },
     lastLoginAt: { type: Date },
   },

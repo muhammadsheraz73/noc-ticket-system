@@ -11,6 +11,25 @@ export const ROLES = {
 export const ROLE_VALUES = Object.values(ROLES);
 
 /**
+ * Panel features the owner can lock, for a whole client or for one login.
+ * Settings (own account, password) can never be locked.
+ */
+export const MODULES = {
+  dashboard: 'Dashboard',
+  tickets: 'Tickets',
+  customers: 'Customers',
+  invoices: 'Invoices',
+  quotations: 'Quotations',
+  billing: 'Billing',
+  employees: 'Employees',
+  inventory: 'Inventory',
+  import: 'Import Excel',
+  team: 'Billing Team',
+};
+
+export const MODULE_KEYS = Object.keys(MODULES);
+
+/**
  * Login usernames: lowercase letters, digits, dot, underscore and hyphen, and
  * they must start and end with a letter or a digit. Deliberately narrow so a
  * username can never be confused with an email address at the login prompt.

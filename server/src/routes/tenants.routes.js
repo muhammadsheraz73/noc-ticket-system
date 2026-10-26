@@ -8,7 +8,7 @@ import { validate } from '../middleware/validate.js';
 import { seedTenantDefaults } from '../services/tenantService.js';
 import { recordAudit } from '../utils/audit.js';
 import { ROLES } from '../utils/constants.js';
-import { tenantSchema, tenantUpdateSchema } from '../validators/schemas.js';
+import { accessSchema, tenantSchema, tenantUpdateSchema } from '../validators/schemas.js';
 
 const router = Router();
 router.use(requireOwner);
@@ -91,6 +91,29 @@ router.put(
       entityLabel: tenant.name,
     });
     res.json({ success: true, tenant });
+  }),
+);
+
+/** PUT /api/tenants/:id/access — lock panel features for every login of this client. */
+router.put(
+  '/:id/access',
+  validate(accessSchema),
+  asyncHandler(async (req, res) => {
+    const tenant = await Tenant.findById(req.params.id);
+    if (!tenant) throw ApiError.notFound('Client not found');
+    const before = [...tenant.lockedModules];
+    tenant.lockedModules = req.body.lockedModules;
+    await tenant.save();
+
+    await recordAudit({
+      req,
+      action: 'update',
+      entityType: 'Tenant',
+      entityId: tenant._id,
+      entityLabel: `${tenant.name} (feature access)`,
+      meta: { lockedBefore: before, lockedAfter: tenant.lockedModules },
+    });
+    res.json({ success: true, lockedModules: tenant.lockedModules });
   }),
 );
 

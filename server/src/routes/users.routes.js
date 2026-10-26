@@ -8,7 +8,7 @@ import { requireOwner } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { recordAudit } from '../utils/audit.js';
 import { ROLES, ROLE_LABELS } from '../utils/constants.js';
-import { createUserSchema, updateUserSchema, resetPasswordSchema } from '../validators/schemas.js';
+import { accessSchema, createUserSchema, updateUserSchema, resetPasswordSchema } from '../validators/schemas.js';
 
 /**
  * A login account needs a FieldTeam record to be assignable to tickets.
@@ -184,6 +184,29 @@ router.post(
     });
 
     res.json({ success: true, message: `Password reset for ${user.name}`, user });
+  }),
+);
+
+/** PUT /api/users/:id/access — lock panel features for this one login. */
+router.put(
+  '/:id/access',
+  validate(accessSchema),
+  asyncHandler(async (req, res) => {
+    const user = await User.findById(req.params.id);
+    if (!user || user.role === ROLES.SUPERADMIN) throw ApiError.notFound('User not found');
+    const before = [...user.lockedModules];
+    user.lockedModules = req.body.lockedModules;
+    await user.save();
+
+    await recordAudit({
+      req,
+      action: 'update',
+      entityType: 'User',
+      entityId: user._id,
+      entityLabel: `${user.username} (feature access)`,
+      meta: { lockedBefore: before, lockedAfter: user.lockedModules },
+    });
+    res.json({ success: true, user });
   }),
 );
 
