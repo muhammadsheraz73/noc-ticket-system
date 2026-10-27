@@ -333,16 +333,8 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const identifierRef = useRef(null);
   const passwordRef = useRef(null);
-  /** Read once: why the last session ended (idle timeout or an expired token). */
-  const [notice] = useState(() => {
-    const reason = signOutReason.take();
-    if (reason?.startsWith('idle')) {
-      const minutes = Number(reason.split(':')[1]) || 5;
-      return `You were signed out after ${minutes} minute${minutes === 1 ? '' : 's'} of inactivity. Please sign in again.`;
-    }
-    if (reason === 'expired') return 'Your session has expired. Please sign in again.';
-    return '';
-  });
+  // Why the last session ended is not shown here — just clear it so it never lingers.
+  useState(() => signOutReason.take());
 
   // Once the light is on, put the cursor where the user needs to type.
   useEffect(() => {
@@ -415,7 +407,6 @@ export default function LoginPage() {
                 signIn();
               }}
             >
-              {notice && !error ? <div className="lamp-alert lamp-alert--info">{notice}</div> : null}
               {error ? <div className="lamp-alert lamp-alert--error" role="alert">{error}</div> : null}
 
               <label className="lamp-field">
