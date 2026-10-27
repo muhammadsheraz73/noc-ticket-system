@@ -5,11 +5,12 @@ import logger from '../utils/logger.js';
 import { cell, collectClientData, fieldsOf, heading } from './dataExport.js';
 import { drawWordmark, measureWordmark } from './pdfBrand.js';
 import { logoBuffer, tint } from './quotationPdf.js';
+import { dashboardCardCounts, dashboardCards } from './dashboardCards.js';
 
 /**
  * A client's complete data as a PDF — the same records and the same fields as
  * the Excel download (both come from collectClientData), laid out for reading:
- * letterhead, a summary of how many records each area has, then every record
+ * letterhead, a summary with the same cards as the client dashboard, then every record
  * as a card listing all of its fields.
  *
  * Runs inside the client's tenant scope, so it only ever sees that client.
@@ -50,9 +51,16 @@ function titleOf(area, r) {
   }
 }
 
+/** Card stripe colours, matching the dashboard's tones. */
+const TONES = { ok: '#15803d', danger: '#b91c1c', warn: '#b45309', purple: '#6d28d9' };
+
 /** @param company { name, logo, themeColor } — the client's letterhead */
 export async function buildClientReportPdf(company) {
-  const areas = await collectClientData();
+  const [areas, counts] = await Promise.all([collectClientData(), dashboardCardCounts()]);
+  const cards = dashboardCards(counts);
+  const stampNow = new Intl.DateTimeFormat('en-GB', {
+    timeZone: env.timezone, day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit',
+  }).format(new Date());
 
   return new Promise((resolve, reject) => {
     const brand = /^#[0-9a-fA-F]{6}$/.test(company.themeColor || '') ? company.themeColor : DEFAULT_BRAND;
@@ -108,22 +116,27 @@ export async function buildClientReportPdf(company) {
     y = BAND + 18;
 
     // ============================================================= summary
-    doc.font('Helvetica-Bold').fontSize(12).fillColor(INK).text('Summary', left, y);
+    // Exactly the cards on the client dashboard: same labels, hints, colours and numbers.
+    doc.font('Helvetica-Bold').fontSize(12).fillColor(INK).text('Summary', left, y, { continued: true })
+      .font('Helvetica').fontSize(8.5).fillColor(MUTED).text(`   as on the dashboard, ${stampNow}`);
     y += 20;
-    const perRow = 7;
-    const gap = 8;
+    const perRow = 4;
+    const gap = 10;
     const tileW = (width - gap * (perRow - 1)) / perRow;
-    areas.forEach(({ name, docs }, i) => {
+    const TILE_H = 58;
+    cards.forEach((card, i) => {
       const x = left + (i % perRow) * (tileW + gap);
-      const ty = y + Math.floor(i / perRow) * 48;
-      doc.roundedRect(x, ty, tileW, 40, 4).lineWidth(0.8).fillAndStroke('#ffffff', LINE);
-      doc.rect(x, ty, 3, 40).fill(brand);
-      doc.font('Helvetica-Bold').fontSize(15).fillColor(INK).text(String(docs.length), x + 11, ty + 6, { width: tileW - 16 });
-      doc.font('Helvetica').fontSize(7.8).fillColor(MUTED).text(name, x + 11, ty + 25, { width: tileW - 16, lineBreak: false, ellipsis: true });
+      const ty = y + Math.floor(i / perRow) * (TILE_H + gap);
+      doc.roundedRect(x, ty, tileW, TILE_H, 5).lineWidth(0.8).fillAndStroke('#ffffff', LINE);
+      doc.rect(x, ty, 4, TILE_H).fill(card.tone === 'brand' ? brand : TONES[card.tone]);
+      doc.font('Helvetica-Bold').fontSize(7.4).fillColor(MUTED)
+        .text(card.label.toUpperCase(), x + 14, ty + 9, { width: tileW - 24, lineBreak: false, ellipsis: true, characterSpacing: 0.4 });
+      doc.font('Helvetica-Bold').fontSize(19).fillColor(INK).text(Number(card.value).toLocaleString('en-US'), x + 14, ty + 21, { width: tileW - 24 });
+      doc.font('Helvetica').fontSize(7.8).fillColor(MUTED).text(card.hint, x + 14, ty + 43, { width: tileW - 24, lineBreak: false, ellipsis: true });
     });
-    y += Math.ceil(areas.length / perRow) * 48 + 6;
+    y += Math.ceil(cards.length / perRow) * (TILE_H + gap) + 4;
     doc.font('Helvetica').fontSize(8).fillColor(MUTED).text(
-      'Every record this company has on the panel, with all of its fields — the same data as the Excel download. Empty fields and internal record ids are left out (the Excel file keeps the ids).',
+      'Below: every record this company has on the panel, with all of its fields — the same data as the Excel download. Empty fields and internal record ids are left out (the Excel file keeps the ids).',
       left, y, { width },
     );
     y += 24;

@@ -1,15 +1,14 @@
 import { Router } from 'express';
-import Customer from '../models/Customer.js';
 import Ticket from '../models/Ticket.js';
 import Invoice from '../models/Invoice.js';
 import FieldTeam from '../models/FieldTeam.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { requireAuth } from '../middleware/auth.js';
-import { startOfLocalDay } from '../utils/datetime.js';
 import { CLOSED_STATUSES, ROLES } from '../utils/constants.js';
 import { decorateTicket } from '../services/ticketService.js';
 import { fieldEngineerScope, assigneeFilter } from '../services/searchService.js';
 import { recentActivityFor, ACTIVITY_SCOPE_LABELS } from '../services/activityService.js';
+import { dashboardCardCounts } from '../services/dashboardCards.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -19,7 +18,6 @@ router.get(
   '/',
   asyncHandler(async (req, res) => {
     const now = new Date();
-    const todayStart = startOfLocalDay(now);
 
     const ticketScope = { isDeleted: false };
     if (req.user.role === ROLES.FIELD_ENGINEER) {
@@ -30,17 +28,9 @@ router.get(
     const canSeeInvoices = [ROLES.ADMIN, ROLES.ACCOUNTS, ROLES.NOC_OPERATOR].includes(req.user.role);
 
     const [
-      totalCustomers,
-      totalTickets,
+      cards,
       openTickets,
-      resolvedTickets,
-      urgentTickets,
-      overdueTickets,
-      inProgressTickets,
       onHoldTickets,
-      resolvedToday,
-      createdToday,
-      pendingInvoices,
       totalFieldMembers,
       byIssueType,
       byPriority,
@@ -48,19 +38,10 @@ router.get(
       recentActivity,
       invoiceTotals,
     ] = await Promise.all([
-      Customer.countDocuments({ isDeleted: false }),
-      Ticket.countDocuments(ticketScope),
+      // The eight dashboard cards — shared with the "Your data" PDF summary.
+      dashboardCardCounts({ ticketScope, canSeeInvoices, now }),
       Ticket.countDocuments(openFilter),
-      Ticket.countDocuments({ ...ticketScope, status: { $in: CLOSED_STATUSES } }),
-      Ticket.countDocuments({ ...openFilter, priority: 'Urgent' }),
-      Ticket.countDocuments({ ...openFilter, ettrAt: { $lt: now } }),
-      Ticket.countDocuments({ ...ticketScope, status: 'In Progress' }),
       Ticket.countDocuments({ ...ticketScope, status: 'On Hold' }),
-      Ticket.countDocuments({ ...ticketScope, resolvedAt: { $gte: todayStart } }),
-      Ticket.countDocuments({ ...ticketScope, createdAt: { $gte: todayStart } }),
-      canSeeInvoices
-        ? Invoice.countDocuments({ isDeleted: false, status: { $in: ['Draft', 'Unpaid'] } })
-        : Promise.resolve(0),
       FieldTeam.countDocuments({ isActive: true, kind: 'member' }),
       Ticket.aggregate([
         { $match: openFilter },
@@ -85,17 +66,9 @@ router.get(
       success: true,
       serverTime: now,
       stats: {
-        totalCustomers,
-        totalTickets,
+        ...cards,
         openTickets,
-        resolvedTickets,
-        urgentTickets,
-        overdueTickets,
-        inProgressTickets,
         onHoldTickets,
-        resolvedToday,
-        createdToday,
-        pendingInvoices,
         totalFieldMembers,
       },
       charts: {
