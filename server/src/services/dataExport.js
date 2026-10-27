@@ -38,6 +38,11 @@ function cell(value) {
   if (Array.isArray(value)) {
     const text = value.map((v) => {
       if (v && typeof v === 'object' && 'description' in v) return `${v.description} × ${v.quantity ?? 1} @ ${v.rate ?? v.amount ?? ''}`;
+      // A payment inside a bill: "PKR 1,750 — Ali Raza — 2026-06-10 15:00".
+      if (v && typeof v === 'object' && 'amount' in v && 'receivedAt' in v) {
+        return [`PKR ${Number(v.amount || 0).toLocaleString('en-US')}`, v.receivedBy, v.receivedAt ? stamp(new Date(v.receivedAt)) : '', v.note]
+          .filter(Boolean).join(' — ');
+      }
       if (v && typeof v === 'object' && 'name' in v) return v.name;
       return typeof v === 'object' ? JSON.stringify(v) : String(v);
     }).join('; ');
@@ -50,8 +55,7 @@ function cell(value) {
 
 /** Documents → sheet rows with readable column names (every field that appears in any row). */
 function toSheet(docs) {
-  const keys = [];
-  for (const doc of docs) for (const key of Object.keys(doc)) if (!SKIP.has(key) && !keys.includes(key)) keys.push(key);
+  const keys = fieldsOf(docs);
   const rows = docs.map((doc) => Object.fromEntries(keys.map((k) => [heading(k), cell(doc[k])])));
   return rows.length ? xlsx.utils.json_to_sheet(rows) : xlsx.utils.aoa_to_sheet([['No records']]);
 }
@@ -61,27 +65,52 @@ function toSheet(docs) {
  * Must run inside the client's tenant scope (every request does), so the
  * tenant plugin confines each query to that client's own records.
  */
-export async function buildClientWorkbook() {
-  const sheets = [
+/**
+ * Every record one client has, area by area — the single source for both the
+ * Excel and the PDF download, so the two always contain the same data. Must
+ * run inside the client's tenant scope (every request does), so the tenant
+ * plugin confines each query to that client's own records.
+ *
+ * @returns [{ name, docs }] in reading order
+ */
+export async function collectClientData() {
+  const areas = [
     ['Customers', Customer], ['Tickets', Ticket], ['Invoices', Invoice], ['Quotations', Quotation],
     ['Monthly bills', BillingRecord], ['Billing users', Subscriber], ['Employees', FieldTeam],
     ['Inventory', InventoryItem], ['Stock movements', InventoryMovement], ['Network devices', NetworkDevice],
     ['POPs', Pop], ['VLANs', Vlan], ['Connections', Connection],
   ];
-  const book = xlsx.utils.book_new();
-  const counts = {};
-  for (const [name, Model] of sheets) {
+  const out = [];
+  for (const [name, Model] of areas) {
     const docs = await Model.find().sort({ createdAt: 1 }).lean();
-    counts[name] = docs.length;
-    xlsx.utils.book_append_sheet(book, toSheet(docs), name);
-    // Payments live inside each bill; give them their own sheet so they can be totalled.
+    out.push({ name, docs });
+    // Payments live inside each bill; give them their own area so they can be totalled.
     if (Model === BillingRecord) {
       const payments = docs.flatMap((bill) => (bill.payments || []).map((p) => ({
         user: bill.username, billMonth: bill.period, amount: p.amount, receivedBy: p.receivedBy, receivedAt: p.receivedAt, note: p.note,
       })));
-      counts.Payments = payments.length;
-      xlsx.utils.book_append_sheet(book, toSheet(payments), 'Payments');
+      out.push({ name: 'Payments', docs: payments });
     }
+  }
+  return out;
+}
+
+/** The fields shown for an area: every field that appears in any record, internal ones left out. */
+export function fieldsOf(docs) {
+  const keys = [];
+  for (const doc of docs) for (const key of Object.keys(doc)) if (!SKIP.has(key) && !keys.includes(key)) keys.push(key);
+  return keys;
+}
+
+export { cell, heading };
+
+/** Everything one client has, as an Excel workbook — one sheet per area. */
+export async function buildClientWorkbook() {
+  const book = xlsx.utils.book_new();
+  const counts = {};
+  for (const { name, docs } of await collectClientData()) {
+    counts[name] = docs.length;
+    xlsx.utils.book_append_sheet(book, toSheet(docs), name);
   }
   return { buffer: xlsx.write(book, { type: 'buffer', bookType: 'xlsx' }), counts };
 }

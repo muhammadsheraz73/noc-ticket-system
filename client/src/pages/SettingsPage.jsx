@@ -181,17 +181,19 @@ const MAX_ACCOUNTS = 4;
 /** Client admins can take a full copy of their own data at any time. */
 function DataExportCard() {
   const toast = useToast();
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState('');
 
-  const download = async () => {
-    setBusy(true);
+  /** kind: 'excel' or 'pdf' — the same complete data either way. */
+  const download = async (kind) => {
+    setBusy(kind);
     try {
-      await downloadFromApi('/company/export', 'all-data.xlsx');
-      toast.success('Download ready', 'Your data has been saved as an Excel file.');
+      if (kind === 'pdf') await downloadFromApi('/company/export/pdf', 'all-data.pdf');
+      else await downloadFromApi('/company/export', 'all-data.xlsx');
+      toast.success('Download ready', `Your data has been saved as ${kind === 'pdf' ? 'a PDF' : 'an Excel'} file.`);
     } catch (err) {
       toast.error('Could not download your data', await blobError(err));
     } finally {
-      setBusy(false);
+      setBusy('');
     }
   };
 
@@ -200,12 +202,18 @@ function DataExportCard() {
       <div className="card__head"><h2>Your data</h2></div>
       <div className="card__body row" style={{ justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div className="small muted" style={{ maxWidth: 640 }}>
-          Your data belongs to you. Download everything in one Excel file — customers, tickets, invoices,
-          quotations, monthly bills, payments, employees and stock — one sheet each. Nothing is changed.
+          Your data belongs to you. Download everything — customers, tickets, invoices, quotations, monthly
+          bills, payments, employees, stock and network — with every detail. Excel has one sheet per area;
+          the PDF lists every record with all its fields, ready to print. Nothing is changed.
         </div>
-        <button className="btn btn--excel" onClick={download} disabled={busy}>
-          {busy ? <span className="spinner" /> : '⭳'} Download all my data
-        </button>
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn btn--excel" onClick={() => download('excel')} disabled={Boolean(busy)}>
+            {busy === 'excel' ? <span className="spinner" /> : '⭳'} Download Excel
+          </button>
+          <button className="btn" onClick={() => download('pdf')} disabled={Boolean(busy)}>
+            {busy === 'pdf' ? <span className="spinner" /> : '⭳'} Download PDF
+          </button>
+        </div>
       </div>
     </div>
   );
