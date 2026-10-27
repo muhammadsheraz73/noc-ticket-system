@@ -8,12 +8,13 @@
     "client"
   ],
   "scripts": {
-    "setup": "npm install && npm run seed",
+    "setup": "npm install && npm run seed:demo",
     "dev": "concurrently -n SERVER,CLIENT -c cyan,magenta \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "npm --workspace server run dev",
     "dev:client": "npm --workspace client run dev",
     "start": "npm --workspace server run start",
     "seed": "npm --workspace server run seed",
+    "seed:demo": "npm --workspace server run seed:demo",
     "seed:reset": "npm --workspace server run seed:reset",
     "migrate": "npm --workspace server run migrate --",
     "test": "npm --workspace server run test",

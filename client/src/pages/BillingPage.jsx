@@ -50,6 +50,7 @@ function MonthlyBills() {
   const [slipsBusy, setSlipsBusy] = useState(false);
   /** After "Generate ALL BILLS", offer the month's slips in the success message. */
   const [offerSlips, setOfferSlips] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     setState((s) => ({ ...s, loading: true }));
@@ -167,6 +168,9 @@ function MonthlyBills() {
           <button className="btn btn--secondary btn--sm" onClick={() => setPicking(true)}>
             ＋ New bill
           </button>
+          <button className="btn btn--secondary btn--sm" onClick={() => setImporting(true)} title="Load an existing Excel billing sheet">
+            ⭱ Import Excel
+          </button>
           <button className="btn btn--sm" onClick={generate} disabled={busy}>
             ＋ Generate ALL BILLS
           </button>
@@ -263,6 +267,19 @@ function MonthlyBills() {
       />
 
       <BillSlipModal record={slip} onClose={() => setSlip(null)} />
+
+      <ImportBillsModal
+        open={importing}
+        defaultPeriod={period}
+        onClose={() => setImporting(false)}
+        onImported={async (result) => {
+          setImporting(false);
+          setPeriod(result.period);
+          setOfferSlips(result.billsCreated > 0);
+          setInfo(`Imported ${result.rows} rows for ${result.period}: ${result.created} new users, ${result.updated} updated, ${result.billsCreated} bills, ${result.paymentsAdded} payments.`);
+          await load();
+        }}
+      />
 
       <ConfirmDialog
         open={Boolean(deleting)}
@@ -567,6 +584,122 @@ function BillSlipModal({ record, onClose }) {
       <div style={{ background: 'var(--bg)', borderRadius: 8, padding: 10 }}>
         <PdfPreview bytes={bytes} loading={!bytes && !error} />
       </div>
+    </Modal>
+  );
+}
+
+/* ------------------------------- Excel import ------------------------------- */
+
+const ACTION_LABEL = { new: 'New user', update: 'Update', unchanged: 'No change' };
+const ACTION_TONE = { new: 'ok', update: 'info', unchanged: 'neutral' };
+
+/**
+ * Load an ISP's existing Excel billing sheet in two steps: Preview (nothing is
+ * saved) and then Import. Empty cells never erase saved details, existing
+ * bills are left as they are.
+ */
+function ImportBillsModal({ open, defaultPeriod, onClose, onImported }) {
+  const [period, setPeriod] = useState(defaultPeriod);
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setPeriod(defaultPeriod);
+    setFile(null);
+    setPreview(null);
+    setError('');
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!open) return null;
+
+  const send = async (dryRun) => {
+    setBusy(true);
+    setError('');
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const { data } = await api.post('/billing/subscribers/import', body, { params: { period, dryRun: dryRun ? 'true' : undefined } });
+      if (dryRun) setPreview(data);
+      else await onImported(data);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      size="lg"
+      onClose={onClose}
+      title="Import billing sheet from Excel"
+      footer={
+        <>
+          <button className="btn btn--secondary" onClick={onClose} disabled={busy}>Cancel</button>
+          {preview ? (
+            <button className="btn" onClick={() => send(false)} disabled={busy}>
+              {busy ? <span className="spinner" /> : null} Import {preview.rows} rows
+            </button>
+          ) : (
+            <button className="btn" onClick={() => send(true)} disabled={busy || !file}>
+              {busy ? <span className="spinner" /> : null} Preview
+            </button>
+          )}
+        </>
+      }
+    >
+      {error ? <Alert tone="error" title="Could not read the sheet">{error}</Alert> : null}
+      {!preview ? (
+        <>
+          <p className="small muted" style={{ marginTop: 0 }}>
+            The first sheet needs a <b>USER</b> column. Other columns it understands: <b>DATED</b>, <b>Unit</b> (package),
+            <b> Status</b>, <b>ADRESS</b>, <b>Fee</b>, <b>Received</b>, <b>Rec. By</b>. You will see a preview first — nothing is saved until you press Import.
+          </p>
+          <div className="form-grid">
+            <Field label="Bill month" hint="Bills and payments in the sheet are created for this month.">
+              <TextInput type="month" value={period} onChange={(e) => e.target.value && setPeriod(e.target.value)} />
+            </Field>
+            <Field label="Excel file" hint=".xlsx, .xls or .csv">
+              <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            </Field>
+          </div>
+        </>
+      ) : (
+        <>
+          <Alert tone="info" title="Preview — nothing has been saved yet">
+            {preview.rows} rows for {preview.period}: <b>{preview.created}</b> new users, <b>{preview.updated}</b> updated,
+            {' '}<b>{preview.unchanged}</b> unchanged · <b>{preview.billsCreated}</b> new bills
+            {preview.billsExisting ? ` (${preview.billsExisting} already billed, left as they are)` : ''} · <b>{preview.paymentsAdded}</b> payments.
+            {' '}Empty cells never erase details that are already saved.
+          </Alert>
+          <div className="table-wrap" style={{ maxHeight: 340, overflowY: 'auto' }}>
+            <table className="table">
+              <thead>
+                <tr><th>User</th><th>Package</th><th className="text-right">Fee</th><th>Status</th><th>User record</th><th>Bill</th><th className="text-right">Payment</th></tr>
+              </thead>
+              <tbody>
+                {preview.preview.map((r) => (
+                  <tr key={r.username}>
+                    <td className="strong">{r.username}</td>
+                    <td className="small">{r.package || '—'}</td>
+                    <td className="text-right num">{formatMoney(r.fee)}</td>
+                    <td className="small">{r.status}</td>
+                    <td><Badge tone={ACTION_TONE[r.action]}>{ACTION_LABEL[r.action]}</Badge></td>
+                    <td className="small">{r.bill === 'new' ? 'New bill' : r.bill === 'exists' ? 'Already billed' : '—'}</td>
+                    <td className="text-right num">{r.payment ? formatMoney(r.payment) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {preview.rows > preview.preview.length ? <p className="small muted">Showing the first {preview.preview.length} of {preview.rows} rows.</p> : null}
+          <button type="button" className="link-btn small" onClick={() => setPreview(null)}>← Choose a different file</button>
+        </>
+      )}
     </Modal>
   );
 }

@@ -6,6 +6,7 @@ import { PageHead } from '../components/Layout.jsx';
 import { Alert, Badge, DefItem, Field, TextInput, Textarea } from '../components/ui.jsx';
 import LogoPicker from '../components/LogoPicker.jsx';
 import { ROLE_LABELS, formatDateTime } from '../utils/format.js';
+import { blobError, downloadFromApi } from '../utils/download.js';
 
 export default function SettingsPage() {
   const { user, isAdmin } = useAuth();
@@ -55,6 +56,7 @@ export default function SettingsPage() {
       <PageHead title="Settings" subtitle="Your account, and how this system is configured." />
 
       {isAdmin ? <CompanyProfileCard /> : null}
+      {isAdmin ? <DataExportCard /> : null}
 
       <div className="grid grid--2">
         <div className="card">
@@ -176,6 +178,39 @@ const BLANK_ACCOUNT = { title: '', bank: '', accountNumber: '', iban: '' };
 const MAX_ACCOUNTS = 4;
 
 /** The client's letterhead — printed on every quotation it downloads. */
+/** Client admins can take a full copy of their own data at any time. */
+function DataExportCard() {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+
+  const download = async () => {
+    setBusy(true);
+    try {
+      await downloadFromApi('/company/export', 'all-data.xlsx');
+      toast.success('Download ready', 'Your data has been saved as an Excel file.');
+    } catch (err) {
+      toast.error('Could not download your data', await blobError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card__head"><h2>Your data</h2></div>
+      <div className="card__body row" style={{ justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div className="small muted" style={{ maxWidth: 640 }}>
+          Your data belongs to you. Download everything in one Excel file — customers, tickets, invoices,
+          quotations, monthly bills, payments, employees and stock — one sheet each. Nothing is changed.
+        </div>
+        <button className="btn btn--excel" onClick={download} disabled={busy}>
+          {busy ? <span className="spinner" /> : '⭳'} Download all my data
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CompanyProfileCard() {
   const toast = useToast();
   const [company, setCompany] = useState(null);

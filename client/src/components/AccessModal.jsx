@@ -107,25 +107,41 @@ export default function AccessModal({ open, title, intro, modules, locked = [], 
   );
 }
 
-/** The editor in place on a page — used for a whole client on its Feature access tab. */
-export function AccessPanel({ modules, locked = [], onSave }) {
+/**
+ * The editor in place on a page — used for a whole client on its Feature
+ * access tab. With `plans`, a row of package cards sits above the switches:
+ * picking one sets its switches; changing a switch by hand makes it "Custom".
+ */
+export function AccessPanel({ modules, locked = [], plan = 'custom', plans, onSave }) {
   const [draft, setDraft] = useState(locked);
-  const [saved, setSaved] = useState(locked);
+  const [chosen, setChosen] = useState(plan || 'custom');
+  const [saved, setSaved] = useState({ locked, plan: plan || 'custom' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const dirty = !sameSet(draft, saved);
+  const dirty = !sameSet(draft, saved.locked) || chosen !== saved.plan;
 
   useEffect(() => {
     setDraft(locked);
-    setSaved(locked);
-  }, [locked.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+    setChosen(plan || 'custom');
+    setSaved({ locked, plan: plan || 'custom' });
+  }, [locked.join(','), plan]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pickPlan = (p) => {
+    setChosen(p.key);
+    setDraft([...p.locked]);
+  };
+  // Any hand-made change to the switches leaves the named plan.
+  const editByHand = (update) => {
+    setChosen('custom');
+    setDraft(update);
+  };
 
   const save = async () => {
     setBusy(true);
     setError('');
     try {
-      await onSave(draft);
-      setSaved(draft);
+      await onSave(draft, chosen);
+      setSaved({ locked: draft, plan: chosen });
     } catch (err) {
       setError(err.message || 'Could not save');
     } finally {
@@ -137,12 +153,36 @@ export function AccessPanel({ modules, locked = [], onSave }) {
     <div className="card">
       <div className="card__body">
         {error ? <Alert tone="error" title="Could not save">{error}</Alert> : null}
-        <AccessEditor modules={modules} inherited={[]} draft={draft} setDraft={setDraft} />
+        {plans ? (
+          <div className="plan-picker" role="radiogroup" aria-label="Plan">
+            {plans.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                role="radio"
+                aria-checked={chosen === p.key}
+                className={`plan-card${chosen === p.key ? ' is-active' : ''}`}
+                onClick={() => pickPlan(p)}
+              >
+                <span className="plan-card__name">{p.label}</span>
+                <span className="plan-card__blurb">{p.blurb}</span>
+                <span className="plan-card__count">
+                  {p.locked.length ? `${modules.length - p.locked.length} of ${modules.length} features` : 'All features'}
+                </span>
+              </button>
+            ))}
+            <div className={`plan-card plan-card--custom${chosen === 'custom' ? ' is-active' : ''}`} aria-checked={chosen === 'custom'} role="radio">
+              <span className="plan-card__name">Custom</span>
+              <span className="plan-card__blurb">Your own mix — change any switch below</span>
+            </div>
+          </div>
+        ) : null}
+        <AccessEditor modules={modules} inherited={[]} draft={draft} setDraft={editByHand} />
       </div>
       <div className="card__foot access-foot">
         <span className="small muted">{dirty ? 'You have unsaved changes.' : 'Saved. Changes reach the client on their next page change.'}</span>
         <div className="row" style={{ gap: 8 }}>
-          <button className="btn btn--secondary" onClick={() => setDraft(saved)} disabled={!dirty || busy}>Undo</button>
+          <button className="btn btn--secondary" onClick={() => { setDraft(saved.locked); setChosen(saved.plan); }} disabled={!dirty || busy}>Undo</button>
           <button className="btn" onClick={save} disabled={!dirty || busy}>
             {busy ? <span className="spinner" /> : null} Save access
           </button>

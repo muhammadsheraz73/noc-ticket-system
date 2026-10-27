@@ -7,6 +7,8 @@ import { validate } from '../middleware/validate.js';
 import { recordAudit } from '../utils/audit.js';
 import { ROLES } from '../utils/constants.js';
 import { companyProfileSchema } from '../validators/schemas.js';
+import { buildClientWorkbook } from '../services/dataExport.js';
+import env from '../config/env.js';
 
 /**
  * The signed-in client's own company profile — the letterhead printed on its
@@ -49,6 +51,26 @@ router.put(
 
     const company = await Tenant.findById(tenant._id).select(PROFILE_FIELDS).lean();
     res.json({ success: true, company });
+  }),
+);
+
+/**
+ * GET /api/company/export — everything this client has, as one Excel file
+ * (customers, tickets, invoices, quotations, bills, payments, stock…).
+ * Client admins only. Read-only.
+ */
+router.get(
+  '/export',
+  requireRole(ROLES.ADMIN),
+  asyncHandler(async (req, res) => {
+    const { buffer, counts } = await buildClientWorkbook();
+    await recordAudit({ req, action: 'export', entityType: 'Company', entityId: req.tenant._id, entityLabel: `${req.tenant.name} (all data)`, meta: counts });
+    const date = new Intl.DateTimeFormat('en-CA', { timeZone: env.timezone }).format(new Date());
+    const safeName = String(req.tenant.name).replace(/[\\/:*?"<>|]/g, '').trim();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName} - all data ${date}.xlsx"`);
+    res.end(buffer);
   }),
 );
 

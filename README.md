@@ -14,7 +14,7 @@ bcrypt · PDFKit (server-side PDF) · xlsx (Excel import) · plain responsive CS
 
 ```bash
 npm install     # installs server + client (npm workspaces)
-npm run seed    # creates demo users, customers, tickets, invoice, network inventory
+npm run seed:demo  # owner login + a "Demo ISP" client with sample users, customers, tickets
 npm run dev     # starts API (:5000) and web app (:5173) together
 ```
 
@@ -46,8 +46,12 @@ Seed data includes customer **10255 (Abdul Rouf)** with full network fields and 
 | `npm install` | Install both workspaces |
 | `npm run dev` | API + web app together (development) |
 | `npm run dev:server` / `npm run dev:client` | Run just one side |
-| `npm run seed` | Seed demo data (safe to re-run — it never duplicates) |
-| `npm run seed:reset` | **Wipes every collection** and re-seeds |
+| `npm run seed` | Create only the panel owner's login — use this for a real install (safe to re-run) |
+| `npm run seed:demo` | Owner + a "Demo ISP" client full of sample data (local development / demos) |
+| `npm run seed:reset` | **Wipes every collection** and re-seeds the demo (local only) |
+
+`seed:demo` and `seed:reset` refuse to run against a remote/Atlas database or in production, so
+a live client's data cannot be wiped by mistake. Add `--i-understand` only if you really mean it.
 | `npm test` | Ticket-format, ETTR and invoice-maths test suite |
 | `npm run build` | Production build of the web app into `client/dist` |
 | `npm start` | Run the API alone (production) |
@@ -82,6 +86,7 @@ app also boots with no `.env` at all.
 | `AI_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b:free` | Model used for ticket analysis (free tier on OpenRouter) |
 | `AI_ENABLED` | `true` | `false` disables AI entirely |
 | `AI_TIMEOUT_MS` | `30000` | AI request timeout |
+| `SEED_ADMIN_NAME` | `Panel Owner` | Display name of the seeded owner account |
 | `SEED_ADMIN_USERNAME` | `admin` | Username of the seeded admin account |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@noc.local` / `Admin@123` | Seeded admin account |
 
@@ -300,7 +305,7 @@ NODE_ENV=production npm start # Express serves the API and the web app together
    ```
    mongodb+srv://user:password@cluster0.xxxxx.mongodb.net/noc_system?retryWrites=true&w=majority
    ```
-5. Seed it once: `MONGODB_URI="<uri>" npm run seed`
+5. Seed it once: `MONGODB_URI="<uri>" npm run seed` (creates only the owner login — no demo data)
 
 > **Free M0 clusters pause after ~60 days of inactivity.** Press *Resume* in Atlas to wake one.
 
@@ -327,10 +332,11 @@ Health check endpoint for all of them: `GET /api/health`.
 
 ### After the first deploy
 
-1. Sign in as the seeded admin and **change the password immediately**.
-2. Create real users under *Users & roles* — pick a username, assign the role, use **Generate** for
-   the password and copy the hand-off sheet — then deactivate the demo accounts.
-3. Set `TICKET_NUMBER_START` before the first real ticket if you need TIDs to continue from an
+1. Sign in as the seeded owner and **change the password immediately**.
+2. Add each ISP under *Clients*, pick its plan (Basic / Standard / Premium) on the client's
+   *Feature access* tab, and create its admin login on the *Logins* tab.
+3. Take a backup from the owner *Overview* (**Backup all data**) regularly and keep the file safe.
+4. Set `TICKET_NUMBER_START` before the first real ticket if you need TIDs to continue from an
    existing series.
 
 ---

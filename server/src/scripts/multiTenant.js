@@ -5,7 +5,7 @@
  * was built for), the global unique indexes are replaced with per-client ones,
  * and — optionally — a separate owner login is created for you.
  *
- *   npm --workspace server run migrate:tenants -- --tenant "Wellnet" \
+ *   npm --workspace server run migrate:tenants -- --tenant "Your Company" \
  *       --owner-username owner --owner-email you@example.com --owner-password "S0me-Strong-Pass"
  *
  * Safe to run twice: documents that already have a client are left alone.

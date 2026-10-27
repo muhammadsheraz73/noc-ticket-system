@@ -120,3 +120,18 @@
 /* A button that reads as an inline link inside a sentence. */
 .link-btn { padding: 0; border: 0; background: none; font: inherit; color: var(--brand); font-weight: 600; cursor: pointer; }
 .link-btn:hover { text-decoration: underline; }
+
+/* Plan picker above the feature switches. */
+.plan-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.plan-card {
+  display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: var(--radius);
+  border: 1.5px solid var(--line); background: var(--surface); text-align: left; font: inherit; cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.plan-card:hover { border-color: var(--line-strong); }
+.plan-card.is-active { border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 15%, transparent); }
+.plan-card--custom { cursor: default; background: var(--bg); }
+.plan-card__name { font-weight: 800; font-size: 14.5px; color: var(--ink); }
+.plan-card__blurb { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.plan-card__count { margin-top: 2px; font-size: 11.5px; font-weight: 700; color: var(--brand); }
+.plan-badge { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); font-size: 11.5px; font-weight: 700; color: var(--ink-2); }

@@ -89,11 +89,12 @@ export const env = {
   ticketNumberStart: int(process.env.TICKET_NUMBER_START, 4626),
 
   company: {
-    name: process.env.COMPANY_NAME || 'WellNetworks (Private) Limited',
-    address: process.env.COMPANY_ADDRESS || 'C1, Pak Arab Housing Scheme, 17KM Ferozepur Road, Lahore',
-    phone: process.env.COMPANY_PHONE || '(042)-37-888-999',
-    email: process.env.COMPANY_EMAIL || 'info@wellnetworks.com.pk',
-    tagline: process.env.COMPANY_TAGLINE || 'RELIABLE SOURCE OF INTERNET CONNECTIVITY',
+    // Only a fallback: every PDF prints the client's own letterhead from Settings.
+    name: process.env.COMPANY_NAME || 'NOC Panel',
+    address: process.env.COMPANY_ADDRESS || '',
+    phone: process.env.COMPANY_PHONE || '',
+    email: process.env.COMPANY_EMAIL || '',
+    tagline: process.env.COMPANY_TAGLINE || '',
   },
   invoice: {
     currency: process.env.INVOICE_CURRENCY || 'PKR',
@@ -107,6 +108,7 @@ export const env = {
   ai: aiConfig(),
 
   seed: {
+    adminName: process.env.SEED_ADMIN_NAME || 'Panel Owner',
     adminUsername: (process.env.SEED_ADMIN_USERNAME || 'admin').toLowerCase(),
     adminEmail: process.env.SEED_ADMIN_EMAIL || 'admin@noc.local',
     adminPassword: process.env.SEED_ADMIN_PASSWORD || 'Admin@123',

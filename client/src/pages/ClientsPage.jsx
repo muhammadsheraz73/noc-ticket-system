@@ -7,6 +7,7 @@ import { Alert, EmptyState, Loading, TextInput } from '../components/ui.jsx';
 import ClientFormModal from '../components/ClientFormModal.jsx';
 import { ClientAvatar, HealthBadge } from '../components/OwnerKit.jsx';
 import { formatDate, formatDateTime, formatNumber, relativeTime } from '../utils/format.js';
+import { PLAN_LABELS } from '../utils/modules.js';
 
 /** The four ways the owner slices the client list. */
 const FILTERS = [
@@ -125,6 +126,7 @@ export default function ClientsPage() {
                     <tr>
                       <th>Client</th>
                       <th>Status</th>
+                      <th>Plan</th>
                       <th className="text-right">Logins</th>
                       <th className="text-right">Customers</th>
                       <th className="text-right">Open tickets</th>
@@ -150,6 +152,7 @@ export default function ClientsPage() {
                             </div>
                           </td>
                           <td><HealthBadge health={client.health} /></td>
+                          <td><span className="plan-badge">{PLAN_LABELS[client.plan] || 'Custom'}</span></td>
                           <td className="text-right">{m.logins.active}</td>
                           <td className="text-right">{formatNumber(m.customers.total)}</td>
                           <td className="text-right">

@@ -25,3 +25,16 @@ export function firstOpenPath(user) {
   const open = MODULES.find((m) => m.key !== 'dashboard' && m.roles.includes(user?.role) && !locked.includes(m.key));
   return open ? open.path : '/settings';
 }
+
+/**
+ * Ready-made packages (keys and locks match PLANS on the server). Picking one
+ * sets its switches; changing a switch by hand makes the client "Custom".
+ */
+export const PLANS = [
+  { key: 'basic', label: 'Basic', blurb: 'Tickets, customers and employees', locked: ['billing', 'invoices', 'quotations', 'inventory', 'team'] },
+  { key: 'standard', label: 'Standard', blurb: 'Basic + billing, invoices and billing team', locked: ['quotations', 'inventory'] },
+  { key: 'premium', label: 'Premium', blurb: 'Everything, including quotations and inventory', locked: [] },
+];
+
+export const PLAN_LABELS = { ...Object.fromEntries(PLANS.map((p) => [p.key, p.label])), custom: 'Custom' };
+

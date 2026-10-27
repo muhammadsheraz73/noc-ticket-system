@@ -36,6 +36,8 @@ const tenantSchema = new mongoose.Schema(
     themeColor: { type: String, default: '' },
     /** Panel features the owner has locked for every login of this client (keys of MODULES). */
     lockedModules: { type: [String], default: [] },
+    /** Which package this client bought (PLANS); clients created before plans existed read as "custom". */
+    plan: { type: String, enum: ['basic', 'standard', 'premium', 'custom'], default: 'custom' },
     isActive: { type: Boolean, default: true, index: true },
   },
   { timestamps: true },

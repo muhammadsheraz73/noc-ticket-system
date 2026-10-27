@@ -12,6 +12,8 @@ import asyncHandler from '../utils/asyncHandler.js';
 import env from '../config/env.js';
 import { requireOwner } from '../middleware/auth.js';
 import { parsePagination } from '../utils/search.js';
+import { streamBackup } from '../services/dataExport.js';
+import { recordAudit } from '../utils/audit.js';
 import { CLOSED_STATUSES, ROLES, TICKET_STATUSES } from '../utils/constants.js';
 
 /**
@@ -413,6 +415,32 @@ router.get(
       total,
       pages: Math.max(1, Math.ceil(total / limit)),
     });
+  }),
+);
+
+/* ------------------------------------------------------------------ backup */
+
+const backupDate = () => new Intl.DateTimeFormat('en-CA', { timeZone: env.timezone }).format(new Date());
+
+/** GET /api/owner/backup — a complete copy of every client's data (read-only). */
+router.get(
+  '/backup',
+  asyncHandler(async (req, res) => {
+    await recordAudit({ req, action: 'export', entityType: 'Backup', entityLabel: 'full backup' });
+    await streamBackup(res, { filename: `noc-panel backup ${backupDate()}.json` });
+  }),
+);
+
+/** GET /api/owner/clients/:id/backup — a complete copy of one client's data (read-only). */
+router.get(
+  '/clients/:id/backup',
+  asyncHandler(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) throw ApiError.notFound('Client not found');
+    const tenant = await Tenant.findById(req.params.id).select('name').lean();
+    if (!tenant) throw ApiError.notFound('Client not found');
+    await recordAudit({ req, action: 'export', entityType: 'Backup', entityId: tenant._id, entityLabel: `${tenant.name} backup` });
+    const safeName = tenant.name.replace(/[\\/:*?"<>|]/g, '').trim();
+    await streamBackup(res, { tenantId: tenant._id, filename: `${safeName} backup ${backupDate()}.json` });
   }),
 );
 

@@ -24,18 +24,30 @@ import { buildTicketText } from '../utils/ticketFormatter.js';
 import { calculateTotals, generateInvoiceNumber } from '../services/invoiceService.js';
 import { reserveTicketNumber, TICKET_SEQUENCE_KEY } from '../services/ticketService.js';
 
+/**
+ * `npm run seed`        → only the panel owner's login (safe for a fresh install).
+ * `npm run seed:demo`   → also a "Demo ISP" client full of sample data.
+ * `npm run seed:reset`  → wipes the database first (local development only).
+ *
+ * --reset and --demo refuse to touch a remote or production database unless
+ * --i-understand is also given, so a live client's data cannot be wiped or
+ * cluttered by running the wrong command.
+ */
 const RESET = process.argv.includes('--reset');
+const DEMO = process.argv.includes('--demo') || RESET;
+const FORCE = process.argv.includes('--i-understand');
 
+/** The panel owner: manages clients and their logins, has no client data. */
+const OWNER = {
+  name: env.seed.adminName,
+  username: env.seed.adminUsername,
+  email: env.seed.adminEmail,
+  password: env.seed.adminPassword,
+  role: ROLES.SUPERADMIN,
+};
+
+/** Logins of the demo client (only with --demo). */
 const USERS = [
-  {
-    name: 'Mirza Arslan Shabbir',
-    username: env.seed.adminUsername,
-    email: env.seed.adminEmail,
-    password: env.seed.adminPassword,
-    // The panel owner: manages clients and their logins, has no client data.
-    role: ROLES.SUPERADMIN,
-    phone: '0300-1112233',
-  },
   {
     name: 'Muhammad Sheraz',
     username: 'sheraz',
@@ -138,7 +150,38 @@ const VLANS = [
   { vlanId: 811, name: 'RESI-TWN-811', description: 'Residential pool, Township', subnet: '10.81.1.0/24' },
 ];
 
+/** True when the database is not on this machine (Atlas, a server…) or we run in production. */
+function isLiveDatabase() {
+  const local = /^mongodb:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(env.mongoUri || '');
+  return env.isProduction || Boolean(env.mongoUri && !local);
+}
+
+async function createOwner() {
+  let owner = await User.findOne({ $or: [{ email: OWNER.email }, { username: OWNER.username }] });
+  if (!owner) {
+    owner = await User.create({
+      name: OWNER.name,
+      username: OWNER.username,
+      email: OWNER.email,
+      role: OWNER.role,
+      passwordHash: await User.hashPassword(OWNER.password),
+    });
+    logger.info(`Created the panel owner ${OWNER.username} / ${OWNER.email}`);
+  } else {
+    logger.info(`Panel owner ${owner.username} already exists — left unchanged.`);
+  }
+  return owner;
+}
+
 async function run() {
+  if ((RESET || DEMO) && isLiveDatabase() && !FORCE) {
+    logger.error(
+      `Refusing to ${RESET ? 'WIPE' : 'add demo data to'} a live/remote database. `
+      + 'This protects real client data. If you are absolutely sure, add --i-understand.',
+    );
+    process.exit(1);
+  }
+
   await connectDatabase();
 
   if (RESET) {
@@ -164,6 +207,13 @@ async function run() {
   // Repair any account left without a username by an earlier version first,
   // otherwise saving it below would fail schema validation.
   await backfillUsernames();
+  await createOwner();
+
+  if (!DEMO) {
+    printSummary();
+    await disconnectDatabase();
+    return;
+  }
 
   // One demo client; everything below is created inside its scope.
   let tenant = await Tenant.findOne({ name: 'Demo ISP' });
@@ -179,7 +229,7 @@ async function run() {
         username: spec.username,
         email: spec.email,
         role: spec.role,
-        tenant: spec.role === ROLES.SUPERADMIN ? undefined : tenant._id,
+        tenant: tenant._id,
         phone: spec.phone,
         passwordHash: await User.hashPassword(spec.password),
       });
@@ -478,8 +528,14 @@ async function run() {
 function printSummary() {
   const line = '='.repeat(66);
   console.log(`\n${line}`);
-  console.log('  SEED COMPLETE — demo accounts (sign in with the username or the email)');
+  console.log(`  SEED COMPLETE${DEMO ? ' — demo accounts (sign in with the username or the email)' : ''}`);
   console.log(line);
+  console.log(`  owner           ${OWNER.username.padEnd(10)} ${OWNER.email.padEnd(22)} ${OWNER.password}`);
+  if (!DEMO) {
+    console.log('  Sign in as the owner, change the password in Settings, then add your clients.');
+    console.log(`${line}\n`);
+    return;
+  }
   for (const user of USERS) {
     console.log(
       `  ${user.role.padEnd(15)} ${user.username.padEnd(10)} ${user.email.padEnd(22)} ${user.password}`,

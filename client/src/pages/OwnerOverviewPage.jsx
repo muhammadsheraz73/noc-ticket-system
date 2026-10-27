@@ -8,6 +8,9 @@ import Kpi from '../components/Kpi.jsx';
 import { Alert, EmptyState, Loading } from '../components/ui.jsx';
 import { ActivityFeed, ClientAvatar, HealthBadge, RangeSwitch, TrendBars } from '../components/OwnerKit.jsx';
 import { formatDateTime, formatNumber, relativeTime } from '../utils/format.js';
+import { PLAN_LABELS } from '../utils/modules.js';
+import { useToast } from '../context/ToastContext.jsx';
+import { blobError, downloadFromApi } from '../utils/download.js';
 
 const LEVEL_ORDER = { critical: 0, attention: 1, healthy: 2, suspended: 3 };
 const whole = (v) => Math.round(Number(v || 0)).toLocaleString('en-US');
@@ -23,6 +26,21 @@ export default function OwnerOverviewPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [backingUp, setBackingUp] = useState(false);
+  const toast = useToast();
+
+  /** Read-only copy of every client's data, saved to this computer. */
+  const backup = async () => {
+    setBackingUp(true);
+    try {
+      await downloadFromApi('/owner/backup', 'noc-panel-backup.json');
+      toast.success('Backup downloaded', 'Keep the file somewhere safe (Google Drive, USB).');
+    } catch (err) {
+      toast.error('Backup failed', await blobError(err));
+    } finally {
+      setBackingUp(false);
+    }
+  };
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -62,7 +80,14 @@ export default function OwnerOverviewPage() {
       <PageHead
         title={`${greeting}, ${user.name.split(' ')[0]}`}
         subtitle={`You have ${t.clients} client${t.clients === 1 ? '' : 's'} on your panel. Here is how they are doing.`}
-        actions={<Link className="btn" to="/clients?new=1">＋ New client</Link>}
+        actions={(
+          <>
+            <button className="btn btn--secondary" onClick={backup} disabled={backingUp} title="Download a full copy of every client's data">
+              {backingUp ? <span className="spinner spinner--dark" /> : '⭳'} Backup all data
+            </button>
+            <Link className="btn" to="/clients?new=1">＋ New client</Link>
+          </>
+        )}
       />
 
       {error ? <Alert tone="error">{error}</Alert> : null}
@@ -230,7 +255,10 @@ function ClientCard({ client, now }) {
           <div className="o-card__contact">{[client.contactName, client.phone].filter(Boolean).join(' · ') || 'No contact saved'}</div>
         </div>
       </div>
-      <HealthBadge health={client.health} />
+      <div className="row" style={{ gap: 6 }}>
+        <HealthBadge health={client.health} />
+        <span className="plan-badge">{PLAN_LABELS[client.plan] || 'Custom'}</span>
+      </div>
       <div className="o-card__stats">
         <div className="o-card__stat"><b>{m.logins.active}</b><span>Logins</span></div>
         <div className="o-card__stat"><b>{formatNumber(m.customers.total)}</b><span>Customers</span></div>

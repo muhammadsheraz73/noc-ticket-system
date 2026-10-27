@@ -30,6 +30,18 @@ export const MODULES = {
 export const MODULE_KEYS = Object.keys(MODULES);
 
 /**
+ * Ready-made packages the owner sells. A plan is just a set of locked
+ * features; "custom" means the owner switched features by hand.
+ */
+export const PLANS = {
+  basic: { label: 'Basic', locked: ['billing', 'invoices', 'quotations', 'inventory', 'team'] },
+  standard: { label: 'Standard', locked: ['quotations', 'inventory'] },
+  premium: { label: 'Premium', locked: [] },
+};
+
+export const PLAN_KEYS = [...Object.keys(PLANS), 'custom'];
+
+/**
  * Login usernames: lowercase letters, digits, dot, underscore and hyphen, and
  * they must start and end with a letter or a digit. Deliberately narrow so a
  * username can never be confused with an email address at the login prompt.

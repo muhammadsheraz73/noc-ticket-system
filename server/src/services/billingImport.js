@@ -57,16 +57,21 @@ export function parseBillingWorkbook(buffer) {
     const username = String(row[col.user] ?? '').trim();
     if (!username) continue;
     const get = (i) => (i >= 0 ? row[i] : '');
+    const text = (i) => String(get(i) ?? '').trim();
+    // A missing column or an empty cell is `undefined`, never '' or 0, so an
+    // import can tell "not in the sheet" from a real value and never blanks
+    // out data that is already saved.
+    const blank = (i) => i < 0 || text(i) === '';
     rows.push({
       username,
       activationDate: parseDate(get(col.activation)),
       paymentDate: col.payDate !== col.activation ? parseDate(get(col.payDate)) : undefined,
-      package: String(get(col.pkg) ?? '').trim(),
-      status: /inactive|disable|left/i.test(String(get(col.status))) ? 'Inactive' : 'Active',
-      address: String(get(col.address) ?? '').replace(/\s+/g, ' ').trim(),
-      fee: parseMoney(get(col.fee)),
+      package: blank(col.pkg) ? undefined : text(col.pkg),
+      status: blank(col.status) ? undefined : /inactive|disable|left/i.test(text(col.status)) ? 'Inactive' : 'Active',
+      address: blank(col.address) ? undefined : text(col.address).replace(/\s+/g, ' '),
+      fee: blank(col.fee) ? undefined : parseMoney(get(col.fee)),
       received: parseMoney(get(col.received)),
-      receivedBy: String(get(col.receivedBy) ?? '').trim(),
+      receivedBy: text(col.receivedBy),
     });
   }
   return rows;

@@ -7,7 +7,7 @@ import { requireOwner } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { seedTenantDefaults } from '../services/tenantService.js';
 import { recordAudit } from '../utils/audit.js';
-import { ROLES } from '../utils/constants.js';
+import { PLANS, ROLES } from '../utils/constants.js';
 import { accessSchema, tenantSchema, tenantUpdateSchema } from '../validators/schemas.js';
 
 const router = Router();
@@ -101,8 +101,11 @@ router.put(
   asyncHandler(async (req, res) => {
     const tenant = await Tenant.findById(req.params.id);
     if (!tenant) throw ApiError.notFound('Client not found');
-    const before = [...tenant.lockedModules];
-    tenant.lockedModules = req.body.lockedModules;
+    const before = { plan: tenant.plan || 'custom', locked: [...tenant.lockedModules] };
+    const plan = req.body.plan || 'custom';
+    // A named plan is the source of truth for its locks; "custom" keeps the switches as sent.
+    tenant.plan = plan;
+    tenant.lockedModules = PLANS[plan] ? [...PLANS[plan].locked] : req.body.lockedModules;
     await tenant.save();
 
     await recordAudit({
@@ -111,9 +114,9 @@ router.put(
       entityType: 'Tenant',
       entityId: tenant._id,
       entityLabel: `${tenant.name} (feature access)`,
-      meta: { lockedBefore: before, lockedAfter: tenant.lockedModules },
+      meta: { before, after: { plan: tenant.plan, locked: tenant.lockedModules } },
     });
-    res.json({ success: true, lockedModules: tenant.lockedModules });
+    res.json({ success: true, plan: tenant.plan, lockedModules: tenant.lockedModules });
   }),
 );
 

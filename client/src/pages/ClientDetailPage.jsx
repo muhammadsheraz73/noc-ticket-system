@@ -12,7 +12,8 @@ import {
   ActivityFeed, ClientAvatar, HealthBadge, RangeSwitch, RankBars, TrendBars, durationLabel,
 } from '../components/OwnerKit.jsx';
 import UsersPage from './UsersPage.jsx';
-import { MODULES } from '../utils/modules.js';
+import { MODULES, PLANS, PLAN_LABELS } from '../utils/modules.js';
+import { blobError, downloadFromApi } from '../utils/download.js';
 import {
   PRIORITY_TONE, STATUS_TONE, formatDate, formatDateTime, formatNumber, relativeTime,
 } from '../utils/format.js';
@@ -45,6 +46,20 @@ export default function ClientDetailPage() {
   const [toggling, setToggling] = useState(false);
   const [busy, setBusy] = useState(false);
   const [loginCount, setLoginCount] = useState(null);
+  const [backingUp, setBackingUp] = useState(false);
+
+  /** Read-only copy of just this client's data. */
+  const backup = async () => {
+    setBackingUp(true);
+    try {
+      await downloadFromApi(`/owner/clients/${id}/backup`, 'client-backup.json');
+      toast.success('Backup downloaded', data?.client?.name);
+    } catch (err) {
+      toast.error('Backup failed', await blobError(err));
+    } finally {
+      setBackingUp(false);
+    }
+  };
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -85,14 +100,16 @@ export default function ClientDetailPage() {
     }
   };
 
-  const saveAccess = async (lockedModules) => {
+  const saveAccess = async (lockedModules, plan) => {
     try {
-      await api.put(`/tenants/${id}/access`, { lockedModules });
+      await api.put(`/tenants/${id}/access`, { lockedModules, plan });
     } catch (err) {
       throw new Error(errorMessage(err));
     }
     toast.success(
-      lockedModules.length ? `${lockedModules.length} feature${lockedModules.length === 1 ? '' : 's'} locked` : 'All features open',
+      plan !== 'custom'
+        ? `${PLAN_LABELS[plan]} plan saved`
+        : lockedModules.length ? `${lockedModules.length} feature${lockedModules.length === 1 ? '' : 's'} locked` : 'All features open',
       data.client.name,
     );
     load(true);
@@ -124,7 +141,10 @@ export default function ClientDetailPage() {
         <div className="o-client-head">
           <ClientAvatar client={client} large />
           <div className="o-client-head__main">
-            <h1 className="o-client-head__name">{client.name} <HealthBadge health={client.health} /></h1>
+            <h1 className="o-client-head__name">
+              {client.name} <HealthBadge health={client.health} />
+              <span className="plan-badge" title="Plan">{PLAN_LABELS[client.plan] || 'Custom'} plan</span>
+            </h1>
             <div className="o-client-head__meta">
               <span>👤 {client.contactName || 'No contact person'}</span>
               {client.phone ? <span>📞 {client.phone}</span> : null}
@@ -135,6 +155,9 @@ export default function ClientDetailPage() {
             </div>
           </div>
           <div className="o-client-head__actions">
+            <button className="btn btn--secondary" onClick={backup} disabled={backingUp} title="Download a full copy of this client's data">
+              {backingUp ? <span className="spinner spinner--dark" /> : '⭳'} Backup
+            </button>
             <button className="btn btn--secondary" onClick={() => setEditing(true)}>Edit details</button>
             <button
               className={`btn ${client.isActive ? 'btn--secondary text-danger' : ''}`}
@@ -166,7 +189,11 @@ export default function ClientDetailPage() {
             >
               {t.label}
               {counts[t.key] !== undefined ? (
-                <span className="o-tab__count">{t.key === 'access' ? (counts.access ? `${counts.access} locked` : 'all open') : counts[t.key]}</span>
+                <span className="o-tab__count">
+                  {t.key === 'access'
+                    ? (client.plan && client.plan !== 'custom' ? PLAN_LABELS[client.plan] : counts.access ? `${counts.access} locked` : 'all open')
+                    : counts[t.key]}
+                </span>
               ) : null}
             </button>
           ))}
@@ -180,15 +207,15 @@ export default function ClientDetailPage() {
           <section className="o-section">
             <div className="o-section__head">
               <div>
-                <h2 className="o-section__title">Feature access</h2>
+                <h2 className="o-section__title">Plan &amp; feature access</h2>
                 <p className="o-section__sub">
-                  Switch off what {client.name} should not use. Locked features stay in their menu with a 🔒 but cannot be
+                  Pick the package {client.name} bought, or switch features by hand. Locked features stay in their menu with a 🔒 but cannot be
                   opened — for every login of this client. To lock something for one person only, open the
                   {' '}<button type="button" className="link-btn" onClick={() => setTab('logins')}>Logins</button> tab and use 🔒 Access.
                 </p>
               </div>
             </div>
-            <AccessPanel modules={MODULES} locked={locked} onSave={saveAccess} />
+            <AccessPanel modules={MODULES} locked={locked} plan={client.plan || 'custom'} plans={PLANS} onSave={saveAccess} />
           </section>
         ) : null}
 

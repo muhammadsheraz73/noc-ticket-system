@@ -12,6 +12,7 @@ import {
   CUSTOMER_STATUSES,
   INVENTORY_UNITS,
   MODULE_KEYS,
+  PLAN_KEYS,
   STOCK_MOVEMENT_TYPES,
   USERNAME_MAX,
   USERNAME_MIN,
@@ -143,6 +144,8 @@ export const tenantUpdateSchema = tenantSchema.partial();
 /** The owner locking panel features for a client or a login. */
 export const accessSchema = z.object({
   lockedModules: z.array(z.enum(MODULE_KEYS)).max(MODULE_KEYS.length).transform((keys) => [...new Set(keys)]),
+  /** Only for a whole client: the package it is on. A named plan decides the locks itself. */
+  plan: z.enum(PLAN_KEYS).optional(),
 });
 
 /** Admin-issued password reset — no current password, the admin is the authority. */

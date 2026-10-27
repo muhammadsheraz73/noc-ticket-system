@@ -117,9 +117,18 @@ router.delete(
 );
 
 /**
- * POST /api/billing/subscribers/import?period=2026-10 — upload the old Excel sheet.
- * Creates/updates subscribers; if the sheet has a Fee, also creates that month's
- * bill, and a payment for whatever the "Received" column holds.
+ * POST /api/billing/subscribers/import?period=2026-10[&dryRun=true] — load an
+ * ISP's existing Excel billing sheet (used when a new client starts).
+ *
+ * Creates new billing users and fills in existing ones; if a user is active and
+ * has a fee, also creates that month's bill, plus a payment for whatever the
+ * "Received" column holds.
+ *
+ * Safe on live data:
+ *  - dryRun=true only reports what would happen and saves nothing;
+ *  - an empty cell or missing column never overwrites a saved value;
+ *  - an existing bill is never changed, and a payment is only added to a
+ *    bill that has none yet.
  */
 router.post(
   '/subscribers/import',
@@ -127,55 +136,77 @@ router.post(
   asyncHandler(async (req, res) => {
     if (!req.file) throw ApiError.badRequest('Please choose a spreadsheet to upload');
     const p = period(req.query.period);
+    const dryRun = req.query.dryRun === 'true';
     const rows = parseBillingWorkbook(req.file.buffer);
     if (!rows.length) throw ApiError.badRequest('No users found in the sheet');
 
-    const result = { rows: rows.length, created: 0, updated: 0, billsCreated: 0, paymentsAdded: 0 };
+    const result = { rows: rows.length, created: 0, updated: 0, unchanged: 0, billsCreated: 0, billsExisting: 0, paymentsAdded: 0 };
+    const preview = [];
     for (const row of rows) {
       let subscriber = await Subscriber.findOne({ usernameKey: row.username.toLowerCase() });
-      const fields = {
+      // Only what the sheet actually says; blanks leave saved values alone.
+      const fields = Object.fromEntries(Object.entries({
         username: row.username,
         activationDate: row.activationDate,
         package: row.package,
         status: row.status,
         address: row.address,
         monthlyFee: row.fee,
-      };
-      if (subscriber) {
-        Object.assign(subscriber, fields);
-        result.updated += 1;
-      } else {
-        subscriber = new Subscriber(fields);
-        result.created += 1;
-      }
-      await subscriber.save();
+      }).filter(([, v]) => v !== undefined));
 
-      if (row.status !== 'Active' || !row.fee) continue;
-      let record = await BillingRecord.findOne({ subscriber: subscriber._id, period: p });
-      if (!record) {
-        record = new BillingRecord({
-          subscriber: subscriber._id,
-          username: subscriber.username,
-          period: p,
-          package: subscriber.package,
-          address: subscriber.address,
-          fee: row.fee,
-        });
-        result.billsCreated += 1;
+      let action;
+      if (subscriber) {
+        const changed = Object.entries(fields).some(([k, v]) => String(subscriber[k] ?? '') !== String(v ?? ''));
+        Object.assign(subscriber, fields);
+        action = changed ? 'update' : 'unchanged';
+      } else {
+        subscriber = new Subscriber({ status: 'Active', monthlyFee: 0, ...fields });
+        action = 'new';
       }
-      if (row.received > 0 && record.payments.length === 0) {
-        record.payments.push({
-          amount: row.received,
-          receivedBy: row.receivedBy,
-          receivedAt: row.paymentDate || new Date(),
-          note: 'Imported from Excel',
-        });
-        result.paymentsAdded += 1;
+      result[{ new: 'created', update: 'updated', unchanged: 'unchanged' }[action]] += 1;
+      if (!dryRun && action !== 'unchanged') await subscriber.save();
+
+      const fee = row.fee ?? subscriber.monthlyFee;
+      let bill = 'none';
+      let payment = 0;
+      if (subscriber.status === 'Active' && fee > 0) {
+        let record = subscriber.isNew ? null : await BillingRecord.findOne({ subscriber: subscriber._id, period: p });
+        if (record) {
+          bill = 'exists';
+          result.billsExisting += 1;
+        } else {
+          bill = 'new';
+          result.billsCreated += 1;
+          record = new BillingRecord({
+            subscriber: subscriber._id,
+            username: subscriber.username,
+            period: p,
+            package: subscriber.package,
+            address: subscriber.address,
+            fee,
+          });
+        }
+        if (row.received > 0 && record.payments.length === 0) {
+          payment = row.received;
+          result.paymentsAdded += 1;
+          record.payments.push({
+            amount: row.received,
+            receivedBy: row.receivedBy,
+            receivedAt: row.paymentDate || new Date(),
+            note: 'Imported from Excel',
+          });
+        }
+        if (!dryRun && (bill === 'new' || payment)) await record.save();
       }
-      await record.save();
+      if (preview.length < 50) {
+        preview.push({ username: row.username, package: subscriber.package, fee, status: subscriber.status, action, bill, payment });
+      }
     }
-    await recordAudit({ req, action: 'import', entityType: 'Billing', entityLabel: `${p} (${rows.length} rows)`, meta: result });
-    res.json({ success: true, period: p, ...result });
+
+    if (!dryRun) {
+      await recordAudit({ req, action: 'import', entityType: 'Billing', entityLabel: `${p} (${rows.length} rows)`, meta: result });
+    }
+    res.json({ success: true, dryRun, period: p, ...result, preview });
   }),
 );
 
