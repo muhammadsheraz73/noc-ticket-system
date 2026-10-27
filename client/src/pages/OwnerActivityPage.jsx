@@ -3,20 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import api, { errorMessage } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
-import { Alert, EmptyState, Field, Loading, Pagination, Select } from '../components/ui.jsx';
-import { ActivityFeed } from '../components/OwnerKit.jsx';
+import { Alert, EmptyState, Loading, Pagination, Select } from '../components/ui.jsx';
+import { ACTIVITY_TYPES, ActivityFeed } from '../components/OwnerKit.jsx';
 
-const ENTITY_TYPES = [
-  { value: '', label: 'Everything' },
-  { value: 'Ticket', label: 'Tickets' },
-  { value: 'Customer', label: 'Customers' },
-  { value: 'Invoice', label: 'Invoices' },
-  { value: 'User', label: 'Sign-ins & logins' },
-  { value: 'FieldTeam', label: 'Employees' },
-  { value: 'InventoryItem', label: 'Inventory' },
-];
-
-/** Owner-only: everything every client has done, newest first. */
+/** Owner-only: everything every client has done, grouped by day, newest first. */
 export default function OwnerActivityPage() {
   const { serverNow } = useAuth();
   const [params, setParams] = useSearchParams();
@@ -57,44 +47,56 @@ export default function OwnerActivityPage() {
     setParams(next, { replace: true });
   };
 
+  const clientName = clients.find((c) => c._id === tenant)?.name;
+
   return (
     <>
-      <PageHead title="Activity" subtitle="Every sign-in and change made by your clients, newest first." />
+      <PageHead
+        title="Activity"
+        subtitle={clientName
+          ? `Everything ${clientName} has done on the panel, newest first.`
+          : 'Every sign-in and change made by your clients, newest first.'}
+        actions={(
+          <Select value={tenant} onChange={(event) => update('client', event.target.value)} aria-label="Client">
+            <option value="">All clients</option>
+            {clients.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+          </Select>
+        )}
+      />
 
       {error ? <Alert tone="error" title="Could not load activity">{error}</Alert> : null}
 
-      <div className="card">
-        <div className="filters">
-          <div className="filters__item filters__item--grow">
-            <Field label="Client">
-              <Select value={tenant} onChange={(event) => update('client', event.target.value)}>
-                <option value="">All clients</option>
-                {clients.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
-              </Select>
-            </Field>
-          </div>
-          <div className="filters__item">
-            <Field label="Type">
-              <Select value={entityType} onChange={(event) => update('type', event.target.value)}>
-                {ENTITY_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </Select>
-            </Field>
-          </div>
+      <div className="stack">
+        <div className="o-chips" role="group" aria-label="Show">
+          {ACTIVITY_TYPES.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              className={`o-chip${entityType === t.value ? ' is-active' : ''}`}
+              aria-pressed={entityType === t.value}
+              onClick={() => update('type', t.value)}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
-        <div className="card__body card__body--flush">
-          {loading && !data ? (
-            <Loading label="Loading activity…" />
-          ) : !data || data.items.length === 0 ? (
-            <EmptyState icon="🕘" title="No activity" message="Nothing matches these filters yet." />
-          ) : (
-            <ActivityFeed items={data.items} now={serverNow()} showClient={!tenant} />
-          )}
-        </div>
-        {data?.pages > 1 ? (
-          <div className="card__foot">
-            <Pagination pagination={data} onChange={(p) => update('page', String(p))} />
+
+        <div className="card">
+          <div className="card__body card__body--flush">
+            {loading && !data ? (
+              <Loading label="Loading activity…" />
+            ) : !data || data.items.length === 0 ? (
+              <EmptyState icon="🕘" title="No activity" message="Nothing matches these filters yet." />
+            ) : (
+              <ActivityFeed items={data.items} now={serverNow()} showClient={!tenant} />
+            )}
           </div>
-        ) : null}
+          {data?.pages > 1 ? (
+            <div className="card__foot">
+              <Pagination pagination={data} onChange={(p) => update('page', String(p))} />
+            </div>
+          ) : null}
+        </div>
       </div>
     </>
   );

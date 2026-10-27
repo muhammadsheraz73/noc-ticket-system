@@ -15,13 +15,18 @@ const BLANK = {
   tenant: '', name: '', username: '', email: '', password: '', phone: '', isActive: true,
 };
 
-export default function UsersPage() {
+/**
+ * One client's logins, shown inside that client's page (Logins tab). The owner
+ * creates the client's Admin logins here; the client's Admin adds its own
+ * billing-team (Accounts) logins, which also appear here.
+ */
+export default function UsersPage({ tenantId, onCount }) {
   const toast = useToast();
 
   const [items, setItems] = useState([]);
   const [clients, setClients] = useState([]);
   const [params] = useSearchParams();
-  const [clientFilter, setClientFilter] = useState(params.get('client') || '');
+  const [clientFilter, setClientFilter] = useState(tenantId || params.get('client') || '');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -80,6 +85,9 @@ export default function UsersPage() {
   }, [clientFilter]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Keep the parent's "Logins (n)" tab count in step as logins are added or removed.
+  useEffect(() => { if (!loading) onCount?.(items.length); }, [items.length, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openForm = (user) => {
     setEditing(user || null);
@@ -198,32 +206,52 @@ export default function UsersPage() {
 
   return (
     <>
-      <PageHead
-        title="Client logins"
-        subtitle="Logins you create here are each client's Admin, with full access to that client's data. A client's Admin can add their own Accounts logins for their billing team."
-        actions={(
-          <>
-            <Select value={clientFilter} onChange={(event) => setClientFilter(event.target.value)}>
-              <option value="">All clients</option>
-              {clients.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
-            </Select>
-            <button className="btn" onClick={() => openForm(null)} disabled={clients.length === 0}>＋ New login</button>
-          </>
-        )}
-      />
+      {tenantId ? (
+        <div className="o-section__head" style={{ marginBottom: 12 }}>
+          <div>
+            <h2 className="o-section__title">Logins</h2>
+            <p className="o-section__sub">
+              <b>Admin</b> logins (created by you) see the full panel. <b>Accounts</b> logins see only the billing panel —
+              the client's admin can add those too.
+            </p>
+          </div>
+          <div className="o-section__actions">
+            <button className="btn" onClick={() => openForm(null)}>＋ New admin login</button>
+          </div>
+        </div>
+      ) : (
+        <PageHead
+          title="Client logins"
+          subtitle="Logins you create here are each client's Admin, with full access to that client's data. A client's Admin can add their own Accounts logins for their billing team."
+          actions={(
+            <>
+              <Select value={clientFilter} onChange={(event) => setClientFilter(event.target.value)}>
+                <option value="">All clients</option>
+                {clients.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+              </Select>
+              <button className="btn" onClick={() => openForm(null)} disabled={clients.length === 0}>＋ New login</button>
+            </>
+          )}
+        />
+      )}
 
       {error ? <Alert tone="error" title="Could not load users">{error}</Alert> : null}
 
       <div className="card">
         <div className="card__body card__body--flush">
           {items.length === 0 ? (
-            <EmptyState icon="🛡" title="No logins yet" message="Create a client first, then add its login." />
+            <EmptyState
+              icon="🔑"
+              title="No logins yet"
+              message={tenantId ? 'Nobody at this client can sign in until you create a login.' : 'Create a client first, then add its login.'}
+              action={tenantId ? <button className="btn" onClick={() => openForm(null)}>＋ New admin login</button> : null}
+            />
           ) : (
             <div className="table-wrap">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Name</th><th>Client</th><th>Role</th><th>Username</th><th>Email</th>
+                    <th>Name</th>{tenantId ? null : <th>Client</th>}<th>Role</th><th>Username</th><th>Email</th>
                     <th>Status</th><th>Last sign-in</th><th />
                   </tr>
                 </thead>
@@ -241,7 +269,7 @@ export default function UsersPage() {
                         </div>
                         <div className="small muted">{user.phone || '—'}</div>
                       </td>
-                      <td><Badge tone="info">{user.tenantName || '—'}</Badge></td>
+                      {tenantId ? null : <td><Badge tone="info">{user.tenantName || '—'}</Badge></td>}
                       <td><Badge tone={user.role === 'accounts' ? 'warn' : 'neutral'}>{ROLE_LABELS[user.role] || user.role}</Badge></td>
                       <td className="mono strong">{user.username || '—'}</td>
                       <td className="mono small">{user.email}</td>
@@ -295,12 +323,14 @@ export default function UsersPage() {
         }
       >
         <div className="form-grid">
-          <Field label="Client" required error={errors.tenant} hint={editing ? 'A login cannot move to another client.' : ''} full>
-            <Select value={form.tenant} onChange={set('tenant')} error={errors.tenant} disabled={Boolean(editing)}>
-              <option value="">Select a client…</option>
-              {clients.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
-            </Select>
-          </Field>
+          {tenantId ? null : (
+            <Field label="Client" required error={errors.tenant} hint={editing ? 'A login cannot move to another client.' : ''} full>
+              <Select value={form.tenant} onChange={set('tenant')} error={errors.tenant} disabled={Boolean(editing)}>
+                <option value="">Select a client…</option>
+                {clients.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+              </Select>
+            </Field>
+          )}
           <Field label="Full name" required error={errors.name}>
             <TextInput value={form.name} onChange={setName} error={errors.name} />
           </Field>

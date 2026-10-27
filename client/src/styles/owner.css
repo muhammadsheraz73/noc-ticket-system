@@ -1,0 +1,122 @@
+/* ------------------------------------------------------------ owner panel */
+
+/* A titled block of the page, so each part reads as its own question. */
+.o-section { display: grid; gap: 12px; }
+.o-section__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.o-section__title { margin: 0; font-size: 16px; font-weight: 700; color: var(--ink); }
+.o-section__sub { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
+.o-section__actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* ---------------------------------------------------------- filter chips */
+.o-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.o-chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.o-chip:hover { border-color: var(--line-strong); color: var(--ink); }
+.o-chip.is-active { background: var(--ink); border-color: var(--ink); color: #fff; }
+.o-chip__count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--bg); color: var(--muted); font-size: 11.5px; text-align: center; }
+.o-chip.is-active .o-chip__count { background: rgba(255, 255, 255, 0.18); color: #fff; }
+
+/* ------------------------------------------------------- attention banner */
+.o-alerts { display: grid; gap: 10px; }
+.o-alert {
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--warn);
+  color: inherit; box-shadow: var(--shadow); transition: border-color 0.15s, transform 0.15s;
+}
+.o-alert:hover { text-decoration: none; border-color: var(--line-strong); transform: translateY(-1px); }
+.o-alert--critical { border-left-color: var(--danger); }
+.o-alert__body { flex: 1; min-width: 0; }
+.o-alert__name { font-weight: 700; color: var(--ink); }
+.o-alert__reasons { margin: 3px 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--ink-2); }
+.o-alert__reasons li::before { content: '• '; color: var(--muted-2); }
+.o-alert__go { flex: 0 0 auto; font-size: 13px; font-weight: 600; color: var(--brand); white-space: nowrap; }
+.o-allgood {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: var(--radius);
+  background: var(--ok-bg); color: var(--ok); font-weight: 600; font-size: 14px;
+}
+
+/* ------------------------------------------------------------ client cards */
+.o-cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.o-card {
+  display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: var(--radius-xl, 14px);
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.o-card:hover { text-decoration: none; border-color: var(--line-strong); transform: translateY(-2px); box-shadow: 0 10px 28px -12px rgba(15, 23, 42, 0.25); }
+.o-card.is-suspended { opacity: 0.72; }
+.o-card__top { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.o-card__name { font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o-card__contact { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o-card__stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.o-card__stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.o-card__stat b { font-size: 16px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.o-card__stat span { font-size: 11.5px; color: var(--muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o-card__stat--danger b { color: var(--danger); }
+.o-card__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--muted); }
+.o-card__open { font-weight: 600; color: var(--brand); }
+.o-card--new {
+  align-items: center; justify-content: center; text-align: center; min-height: 190px;
+  border-style: dashed; box-shadow: none; background: transparent; color: var(--muted); font: inherit; cursor: pointer;
+}
+.o-card--new:hover { color: var(--brand); border-color: var(--brand); }
+.o-card--new b { font-size: 26px; line-height: 1; }
+
+/* ------------------------------------------------------ client page header */
+.o-client-head {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 18px 20px; border-radius: var(--radius-xl, 14px);
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+.o-client-head__main { flex: 1; min-width: 220px; }
+.o-client-head__name { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0; font-size: 22px; font-weight: 800; color: var(--ink); }
+.o-client-head__meta { display: flex; gap: 6px 16px; flex-wrap: wrap; margin-top: 6px; font-size: 13px; color: var(--muted); }
+.o-client-head__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------------------------------------------------------------- tabs */
+.o-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.o-tab {
+  display: inline-flex; align-items: center; gap: 7px; padding: 10px 14px; margin-bottom: -1px;
+  border: 0; border-bottom: 2px solid transparent; background: none; font: inherit; font-size: 14px; font-weight: 600;
+  color: var(--muted); cursor: pointer; white-space: nowrap;
+}
+.o-tab:hover { color: var(--ink); }
+.o-tab.is-active { color: var(--ink); border-bottom-color: var(--brand); }
+.o-tab__count { padding: 1px 7px; border-radius: 999px; background: var(--bg); font-size: 11.5px; color: var(--muted); }
+.o-tab.is-active .o-tab__count { background: var(--brand-light, var(--bg)); color: var(--brand); }
+
+/* --------------------------------------------------------- activity feed */
+.afeed section + section { border-top: 1px solid var(--line); }
+.afeed__day {
+  position: sticky; top: 0; z-index: 1; margin: 0; padding: 8px 16px; background: var(--bg);
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted);
+}
+.afeed__item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--line); }
+.afeed__day + .afeed__item { border-top: 0; }
+.afeed__icon {
+  display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 auto; border-radius: 9px;
+  background: var(--bg); font-size: 15px; box-shadow: inset 0 0 0 1.5px var(--line);
+}
+.afeed__item--ok .afeed__icon { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ok) 45%, transparent); }
+.afeed__item--danger .afeed__icon { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--danger) 45%, transparent); }
+.afeed__item--info .afeed__icon { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--info) 40%, transparent); }
+.afeed__body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.afeed__text { font-size: 13.5px; color: var(--ink); }
+.afeed__client {
+  padding: 1px 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line);
+  font-size: 11.5px; font-weight: 600; color: var(--ink-2); white-space: nowrap;
+}
+.afeed__time { flex: 0 0 auto; font-size: 12px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .o-card__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .o-client-head__actions { width: 100%; }
+}
+
+/* Feature access tab: save bar under the switches. */
+.access-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* A button that reads as an inline link inside a sentence. */
+.link-btn { padding: 0; border: 0; background: none; font: inherit; color: var(--brand); font-weight: 600; cursor: pointer; }
+.link-btn:hover { text-decoration: underline; }

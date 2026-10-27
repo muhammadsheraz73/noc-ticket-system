@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Badge } from './ui.jsx';
 import { ettrLabel, formatDateTime, formatNumber, initials, relativeTime } from '../utils/format.js';
+import '../styles/owner.css';
 
 /** Shared pieces for the owner's monitoring pages. */
 
@@ -168,32 +169,77 @@ const ACTIONS = {
   soft_delete: 'archived',
   status_change: 'changed the status of',
   import_customers: 'imported',
+  import: 'imported',
   deactivate: 'deactivated',
   restore: 'restored',
-  change_password: 'changed the password for',
+  change_password: 'reset the password of',
   delete: 'deleted',
   export: 'exported',
+  payment: 'recorded a payment on',
 };
 
-const ENTITY_LABELS = { FieldTeam: 'employee', IssueType: 'issue type', InventoryItem: 'stock item', BillingRecord: 'billing record' };
+/** What each audited thing is called in plain words. */
+const ENTITY_LABELS = {
+  Ticket: 'ticket',
+  Customer: 'customer',
+  Invoice: 'invoice',
+  Quotation: 'quotation',
+  Billing: 'bill',
+  BillingRecord: 'bill',
+  Subscriber: 'billing user',
+  User: 'login',
+  FieldTeam: 'employee',
+  IssueType: 'issue type',
+  InventoryItem: 'stock item',
+  NetworkDevice: 'network device',
+  Connection: 'connection',
+  Pop: 'POP',
+  Vlan: 'VLAN',
+  Tenant: 'client',
+  Company: 'company profile',
+};
 
-/** One audit entry as a sentence: "Shahzad created Ticket 1042". */
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** "Abdul Rouf 2026-10" → "Abdul Rouf (Oct 2026)". */
+const prettyLabel = (label = '') =>
+  label.replace(/\s*\b(\d{4})-(0[1-9]|1[0-2])\b/, (_m, y, mo) => ` (${MONTH_NAMES[Number(mo) - 1]} ${y})`).trim();
+
+/** One audit entry as a plain sentence: "Hina Batool recorded a payment for Kahna School (Oct 2026)". */
 export function activitySentence(entry) {
-  if (entry.action === 'login') return `${entry.actorName} signed in`;
-  if (entry.action === 'logout') return `${entry.actorName} signed out`;
+  const who = entry.actorName || 'Someone';
+  if (entry.action === 'login') return `${who} signed in`;
+  if (entry.action === 'logout') return `${who} signed out`;
+  const label = entry.entityLabel || '';
+  if (label.endsWith('(feature access)')) return `${who} changed feature access for ${label.replace(' (feature access)', '')}`;
+  if (entry.entityType === 'Billing' && /\bbills$/.test(label)) return `${who} generated bills for ${prettyLabel(label.replace(/ bills$/, ''))}`;
+  if (entry.entityType === 'Billing' && entry.action === 'create') return `${who} created a bill for ${prettyLabel(label)}`;
+  if (entry.entityType === 'Billing' && entry.action === 'delete') return `${who} deleted the bill for ${prettyLabel(label)}`;
   const verb = ACTIONS[entry.action] || entry.action.replace(/_/g, ' ');
-  const entity = ENTITY_LABELS[entry.entityType] || entry.entityType.toLowerCase();
-  return `${entry.actorName} ${verb} ${entity}${entry.entityLabel ? ` ${entry.entityLabel}` : ''}`;
+  const entity = ENTITY_LABELS[entry.entityType] || String(entry.entityType || '').toLowerCase();
+  return `${who} ${verb} ${entity}${label ? ` ${prettyLabel(label)}` : ''}`;
 }
 
-/** Dot colour per kind of action, paired with the sentence so it is never colour alone. */
-export function activityTone(action) {
-  if (action === 'login' || action === 'logout') return 'neutral';
-  if (['delete', 'soft_delete', 'deactivate'].includes(action)) return 'danger';
-  if (action === 'resolve') return 'ok';
-  if (action === 'create' || action === 'import_customers') return 'info';
-  return 'warn';
+/** Icon per area of the panel, shown beside the sentence (never colour alone). */
+export function activityIcon(entry) {
+  if (entry.action === 'login' || entry.action === 'logout') return '🔑';
+  return {
+    Ticket: '🎫', Customer: '👥', Invoice: '🧾', Quotation: '📄', Billing: '💰', BillingRecord: '💰', Subscriber: '💰',
+    User: '👤', FieldTeam: '🧑‍🔧', InventoryItem: '📦', NetworkDevice: '🖧', Connection: '🖧', Pop: '🖧', Vlan: '🖧',
+    Tenant: '🏢', Company: '🏢', IssueType: '🏷',
+  }[entry.entityType] || '•';
 }
+
+/** Activity areas the owner can filter by (values are the server's entity types). */
+export const ACTIVITY_TYPES = [
+  { value: '', label: 'Everything' },
+  { value: 'User', label: 'Logins' },
+  { value: 'Ticket', label: 'Tickets' },
+  { value: 'Customer', label: 'Customers' },
+  { value: 'Billing', label: 'Bills' },
+  { value: 'Invoice', label: 'Invoices' },
+  { value: 'Quotation', label: 'Quotations' },
+  { value: 'Tenant', label: 'Client settings' },
+];
 
 export function ClientAvatar({ client, large = false }) {
   return (
@@ -207,20 +253,59 @@ export function ClientAvatar({ client, large = false }) {
   );
 }
 
-export function ActivityFeed({ items, now, showClient = false }) {
-  if (!items.length) return <div className="card__body muted small">Nothing recorded yet.</div>;
+/** "Today" / "Yesterday" / "Mon, 26 Oct" for the day an entry happened. */
+function dayHeading(value, now) {
+  const d = new Date(value);
+  const key = (x) => `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (key(d) === key(now)) return 'Today';
+  if (key(d) === key(yesterday)) return 'Yesterday';
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
+}
+
+const timeOfDay = (value) => new Date(value).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+/**
+ * The activity trail, grouped under day headings. Each line: an icon for the
+ * area, a plain sentence, the client (when several are mixed) and the time.
+ */
+export function ActivityFeed({ items, now, showClient = false, grouped = true, empty = 'Nothing recorded yet.' }) {
+  if (!items.length) return <div className="card__body muted small">{empty}</div>;
+  const groups = [];
+  for (const entry of items) {
+    const heading = grouped ? dayHeading(entry.createdAt, now) : '';
+    if (!groups.length || groups[groups.length - 1].heading !== heading) groups.push({ heading, entries: [] });
+    groups[groups.length - 1].entries.push(entry);
+  }
   return (
-    <div className="feed">
-      {items.map((entry) => (
-        <div className="feed__item" key={entry._id}>
-          <span className={`feed__dot feed__dot--${activityTone(entry.action)}`} />
-          <div style={{ minWidth: 0 }}>
-            <div>{activitySentence(entry)}</div>
-            {showClient && entry.tenantName ? <div className="feed__client">{entry.tenantName}</div> : null}
-          </div>
-          <span className="feed__meta" title={formatDateTime(entry.createdAt)}>{relativeTime(entry.createdAt, now)}</span>
-        </div>
+    <div className="afeed">
+      {groups.map((group, gi) => (
+        <section key={`${group.heading}-${gi}`}>
+          {group.heading ? <h4 className="afeed__day">{group.heading}</h4> : null}
+          {group.entries.map((entry) => (
+            <div className={`afeed__item afeed__item--${activityTone(entry.action)}`} key={entry._id}>
+              <span className="afeed__icon" aria-hidden="true">{activityIcon(entry)}</span>
+              <div className="afeed__body">
+                <div className="afeed__text">{activitySentence(entry)}</div>
+                {showClient && entry.tenantName ? <span className="afeed__client">{entry.tenantName}</span> : null}
+              </div>
+              <span className="afeed__time" title={formatDateTime(entry.createdAt)}>
+                {grouped ? timeOfDay(entry.createdAt) : relativeTime(entry.createdAt, now)}
+              </span>
+            </div>
+          ))}
+        </section>
       ))}
     </div>
   );
+}
+
+/** Tone per kind of action — drives the icon ring colour, paired with the sentence. */
+export function activityTone(action) {
+  if (action === 'login' || action === 'logout') return 'neutral';
+  if (['delete', 'soft_delete', 'deactivate'].includes(action)) return 'danger';
+  if (action === 'resolve' || action === 'payment') return 'ok';
+  if (action === 'create' || action === 'import_customers' || action === 'import') return 'info';
+  return 'warn';
 }

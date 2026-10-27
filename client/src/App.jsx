@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth, ROLES } from './context/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
 import { Loading, EmptyState } from './components/ui.jsx';
@@ -17,7 +17,6 @@ import InvoiceDetailPage from './pages/InvoiceDetailPage.jsx';
 import SearchPage from './pages/SearchPage.jsx';
 import InventoryPage from './pages/InventoryPage.jsx';
 import EmployeesPage from './pages/EmployeesPage.jsx';
-import UsersPage from './pages/UsersPage.jsx';
 import ClientsPage from './pages/ClientsPage.jsx';
 import ClientDetailPage from './pages/ClientDetailPage.jsx';
 import OwnerOverviewPage from './pages/OwnerOverviewPage.jsx';
@@ -41,6 +40,13 @@ function Home({ role }) {
   if (isLocked('dashboard')) return <Navigate to={firstOpenPath(user)} replace />;
   if (role === ROLES.ACCOUNTS) return <BillingDashboardPage />;
   return <DashboardPage />;
+}
+
+/** Logins now live on each client's page; old links land on the right tab. */
+function LoginsRedirect() {
+  const [params] = useSearchParams();
+  const client = params.get('client');
+  return <Navigate to={client ? `/clients/${client}?tab=logins` : '/clients'} replace />;
 }
 
 /**
@@ -242,7 +248,7 @@ export default function App() {
           path="users"
           element={
             <Protected ownerOk roles={[ROLES.SUPERADMIN]}>
-              <UsersPage />
+              <LoginsRedirect />
             </Protected>
           }
         />

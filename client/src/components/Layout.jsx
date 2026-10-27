@@ -47,15 +47,23 @@ const NAV = [
   },
 ];
 
-/** The panel owner monitors and manages clients and their logins — it never edits client data. */
+/**
+ * The panel owner monitors and manages clients — it never edits client data.
+ * Everything about one client (its logins, feature access, activity) lives on
+ * that client's own page, so there is no separate, mixed list of logins.
+ */
 const OWNER_NAV = [
   {
-    group: 'Panel',
+    group: 'Owner',
     items: [
       { to: '/', label: 'Overview', icon: '▤', end: true },
       { to: '/clients', label: 'Clients', icon: '🏢' },
-      { to: '/users', label: 'Logins', icon: '🛡' },
       { to: '/activity', label: 'Activity', icon: '🕘' },
+    ],
+  },
+  {
+    group: 'Account',
+    items: [
       { to: '/settings', label: 'Settings', icon: '⚙' },
     ],
   },
@@ -117,6 +125,7 @@ export default function Layout() {
               {user?.role === ROLES.SUPERADMIN ? 'NOC Panel' : user?.tenantName || 'NOC Manager'}
             </strong>
             {user?.role === ROLES.ACCOUNTS ? <span className="sidebar__logo-sub">Billing Panel</span> : null}
+            {user?.role === ROLES.SUPERADMIN ? <span className="sidebar__logo-sub">Owner</span> : null}
           </div>
         </div>
 
@@ -170,7 +179,7 @@ export default function Layout() {
             ☰
           </button>
 
-          {user?.role === ROLES.ACCOUNTS ? null : <GlobalSearch />}
+          {user?.role === ROLES.ACCOUNTS || user?.role === ROLES.SUPERADMIN ? null : <GlobalSearch />}
           <div className="topbar__spacer" />
 
           <div className="usermenu" ref={menuRef}>
