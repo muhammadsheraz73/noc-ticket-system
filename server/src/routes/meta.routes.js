@@ -7,6 +7,31 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { recordAudit } from '../utils/audit.js';
 import { issueTypeSchema } from '../validators/schemas.js';
+import Tenant from '../models/Tenant.js';
+import { DEFAULT_ISSUE_TYPES, LATER_ISSUE_TYPES } from '../utils/constants.js';
+import { getTenantId } from '../utils/tenantContext.js';
+
+/**
+ * Give an existing client the issue types added since it was created
+ * (LATER_ISSUE_TYPES) — once. Only inserts a type the client does not have
+ * (`$setOnInsert`), so a type it already has, even switched off, is never
+ * touched; the client is then marked so a type it later deletes stays gone.
+ */
+async function ensureLaterIssueTypes() {
+  const tenantId = getTenantId();
+  if (!tenantId) return;
+  const tenant = await Tenant.findById(tenantId).select('issueTypesAdded').lean();
+  const missing = LATER_ISSUE_TYPES.filter((name) => !(tenant?.issueTypesAdded || []).includes(name));
+  if (!missing.length) return;
+  for (const name of missing) {
+    await IssueType.updateOne(
+      { name },
+      { $setOnInsert: { name, sortOrder: DEFAULT_ISSUE_TYPES.indexOf(name) * 10, defaultEttrMinutes: 120, isActive: true } },
+      { upsert: true },
+    );
+  }
+  await Tenant.updateOne({ _id: tenantId }, { $addToSet: { issueTypesAdded: { $each: missing } } });
+}
 import { parsePagination } from '../utils/search.js';
 import env from '../config/env.js';
 import {
@@ -27,6 +52,7 @@ router.use(requireAuth);
 router.get(
   '/',
   asyncHandler(async (_req, res) => {
+    await ensureLaterIssueTypes();
     const issueTypes = await IssueType.find({ isActive: true }).sort({ sortOrder: 1, name: 1 }).lean();
     res.json({
       success: true,

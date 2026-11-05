@@ -6,7 +6,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import TicketPreview from '../components/TicketPreview.jsx';
 import { Alert, Badge, DefItem, Field, Select, TextInput, Textarea } from '../components/ui.jsx';
-import { PRIORITY_TONE } from '../utils/format.js';
+import { PAYMENT_COLLECTION, PRIORITY_TONE } from '../utils/format.js';
 
 const PRIORITIES = ['Urgent', 'High', 'Medium', 'Low'];
 const STATUSES = ['In Progress'];
@@ -36,6 +36,7 @@ export default function CreateTicketPage() {
   const [form, setForm] = useState({
     issueType: 'Fiber Cut',
     remarks: '',
+    collectionAmount: '',
     priority: 'Urgent',
     status: 'In Progress',
     ettrMinutes: 60,
@@ -142,6 +143,7 @@ export default function CreateTicketPage() {
         customerId: customer.customerReferenceNumber,
         assignedTo: form.assignedTo || undefined,
         assignedHelper: form.assignedHelper || undefined,
+        collectionAmount: form.issueType === PAYMENT_COLLECTION && form.collectionAmount !== '' ? Number(form.collectionAmount) : undefined,
       });
       toast.success(`Ticket TID ${data.ticket.ticketNumber} created`, `${customer.name} · ${form.issueType}`);
       if (data.ai && !data.ai.available && form.runAiAnalysis) {
@@ -270,6 +272,25 @@ export default function CreateTicketPage() {
                     </Select>
                   </Field>
 
+                  {form.issueType === PAYMENT_COLLECTION ? (
+                    <Field
+                      label="Amount to collect (PKR)"
+                      error={errors.collectionAmount}
+                      full
+                      hint="How much the field team should collect from the customer — printed on the ticket."
+                    >
+                      <TextInput
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={form.collectionAmount}
+                        onChange={set('collectionAmount')}
+                        error={errors.collectionAmount}
+                        placeholder="3500"
+                      />
+                    </Field>
+                  ) : null}
+
                   <Field label="Remarks" error={errors.remarks} full hint="What the NOC operator observed — appears on the generated ticket.">
                     <Textarea value={form.remarks} onChange={set('remarks')} error={errors.remarks} rows={3} placeholder="shahid town fiber down" />
                   </Field>
@@ -371,6 +392,9 @@ function buildPreview({ customer, form, assigneeName, assignedByName, now }) {
     sep,
     `Type: *${form.issueType}*`,
     `Remarks: ${form.remarks || '-'}`,
+    ...(form.issueType === PAYMENT_COLLECTION && Number(form.collectionAmount) > 0
+      ? [`Amount to Collect: *PKR ${Number(form.collectionAmount).toLocaleString('en-US')}*`]
+      : []),
     sep,
     `Assigned By: ${assignedByName}`,
     `Required: ${PRIORITY_LABELS[form.priority]}`,

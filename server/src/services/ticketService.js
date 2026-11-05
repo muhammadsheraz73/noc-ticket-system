@@ -6,7 +6,7 @@ import env from '../config/env.js';
 import { nextSequence } from '../utils/sequence.js';
 import { addMinutes, computeTimeLeft, formatTicketDateTime } from '../utils/datetime.js';
 import { buildTicketText } from '../utils/ticketFormatter.js';
-import { CLOSED_STATUSES } from '../utils/constants.js';
+import { CLOSED_STATUSES, PAYMENT_COLLECTION } from '../utils/constants.js';
 
 export const TICKET_SEQUENCE_KEY = 'ticketNumber';
 
@@ -67,6 +67,7 @@ export async function createTicket({ payload, user }) {
     customerName: customer.name,
     issueType: payload.issueType,
     remarks: payload.remarks || '',
+    collectionAmount: payload.issueType === PAYMENT_COLLECTION && payload.collectionAmount != null ? payload.collectionAmount : undefined,
     priority: payload.priority || 'Medium',
     status: payload.status || 'In Progress',
     ettrMinutes,

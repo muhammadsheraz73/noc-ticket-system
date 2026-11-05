@@ -10,7 +10,7 @@ import {
   Alert, Badge, ConfirmDialog, DefItem, Field, Loading, Modal, Select, TextInput, Textarea,
 } from '../components/ui.jsx';
 import {
-  STATUS_TONE, PRIORITY_TONE, INVOICE_TONE, formatDateTime, formatDate, formatMoney, ettrLabel, relativeTime,
+  STATUS_TONE, PRIORITY_TONE, INVOICE_TONE, PAYMENT_COLLECTION, formatDateTime, formatDate, formatMoney, ettrLabel, relativeTime,
 } from '../utils/format.js';
 
 const STATUSES = ['New', 'In Progress', 'On Hold', 'Resolved', 'Closed'];
@@ -44,6 +44,7 @@ export default function TicketDetailPage() {
     status: '',
     ettrMinutes: 60,
     remarks: '',
+    collectionAmount: '',
     assignedTo: '',
     assignedHelper: '',
   });
@@ -107,6 +108,10 @@ export default function TicketDetailPage() {
         status: editForm.status,
         ettrMinutes: Number(editForm.ettrMinutes),
         remarks: editForm.remarks,
+        // Blank clears the amount; it only applies to Payment Collection tickets.
+        collectionAmount: editForm.issueType === PAYMENT_COLLECTION
+          ? (editForm.collectionAmount === '' ? null : Number(editForm.collectionAmount))
+          : null,
       });
 
       const assignmentChanged =
@@ -213,6 +218,7 @@ export default function TicketDetailPage() {
                     status: ticket.status,
                     ettrMinutes: ticket.ettrMinutes,
                     remarks: ticket.remarks || '',
+                    collectionAmount: ticket.collectionAmount ?? '',
                     assignedTo: ticket.assignedTo || '',
                     assignedHelper: ticket.assignedHelper || '',
                   });
@@ -317,6 +323,9 @@ export default function TicketDetailPage() {
                   {ticket.assignedHelperName ? <DefItem label="Helper" value={ticket.assignedHelperName} /> : null}
                   <DefItem label="Assigned At" value={ticket.assignedAt ? formatDateTime(ticket.assignedAt) : ''} />
                   {ticket.resolvedAt ? <DefItem label="Resolved" value={formatDateTime(ticket.resolvedAt)} /> : null}
+                  {ticket.issueType === PAYMENT_COLLECTION ? (
+                    <DefItem label="Amount to collect" value={ticket.collectionAmount ? formatMoney(ticket.collectionAmount) : 'Not set'} />
+                  ) : null}
                   <DefItem label="Remarks" value={ticket.remarks} />
                   {ticket.resolutionRemarks ? <DefItem label="Resolution" value={ticket.resolutionRemarks} /> : null}
                 </div>
@@ -473,6 +482,18 @@ export default function TicketDetailPage() {
             ))}
           </Select>
         </Field>
+        {editForm.issueType === PAYMENT_COLLECTION ? (
+          <Field label="Amount to collect (PKR)" hint="Printed on the ticket. Leave blank if not known yet.">
+            <TextInput
+              type="number"
+              min="0"
+              step="1"
+              value={editForm.collectionAmount}
+              onChange={(event) => setEditForm((f) => ({ ...f, collectionAmount: event.target.value }))}
+              placeholder="3500"
+            />
+          </Field>
+        ) : null}
         <Field label="Remarks" hint="What the NOC operator observed — appears on the generated ticket.">
           <Textarea value={editForm.remarks} onChange={(event) => setEditForm((f) => ({ ...f, remarks: event.target.value }))} rows={3} />
         </Field>
@@ -643,6 +664,7 @@ function labelAction(entry) {
     case 'priority_change': return `Priority changed ${entry.from} → ${entry.to}`;
     case 'issueType_change': return `Issue type changed ${entry.from} → ${entry.to}`;
     case 'remarks_change': return 'Remarks updated';
+    case 'collectionAmount_change': return `Amount to collect changed ${entry.from || '—'} → ${entry.to || '—'}`;
     default: return entry.action.replace(/_/g, ' ');
   }
 }

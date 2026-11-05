@@ -126,7 +126,19 @@ export const DEFAULT_ISSUE_TYPES = [
   'Cat 6 Wire',
   'Administrative Task',
   'Re-activation',
+  'Payment Collection',
 ];
+
+/** Tickets of this type send someone to collect money, so they carry the amount to collect. */
+export const PAYMENT_COLLECTION = 'Payment Collection';
+
+/**
+ * Issue types added to DEFAULT_ISSUE_TYPES after clients already existed.
+ * Each client gets them once, the first time it loads its issue types (see
+ * GET /api/meta) — never re-added after that, and never changing a type the
+ * client already has, even a switched-off one.
+ */
+export const LATER_ISSUE_TYPES = [PAYMENT_COLLECTION];
 
 export const INVOICE_STATUSES = ['Draft', 'Unpaid', 'Paid', 'Cancelled'];
 

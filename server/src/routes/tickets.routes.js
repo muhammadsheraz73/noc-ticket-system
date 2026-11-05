@@ -10,7 +10,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { recordAudit } from '../utils/audit.js';
 import { containsRegex, parsePagination, parseSort } from '../utils/search.js';
-import { ROLES, CLOSED_STATUSES } from '../utils/constants.js';
+import { ROLES, CLOSED_STATUSES, PAYMENT_COLLECTION } from '../utils/constants.js';
 import {
   createTicketSchema,
   updateTicketSchema,
@@ -256,6 +256,19 @@ router.put(
         ticket[field] = req.body[field];
       }
     }
+
+    // The amount to collect belongs to Payment Collection tickets only.
+    const amount = req.body.collectionAmount;
+    if (amount !== undefined && (amount ?? null) !== (ticket.collectionAmount ?? null)) {
+      pushHistory(ticket, {
+        user: req.user,
+        action: 'collectionAmount_change',
+        from: ticket.collectionAmount ?? '',
+        to: amount ?? '',
+      });
+      ticket.collectionAmount = amount ?? undefined;
+    }
+    if (ticket.issueType !== PAYMENT_COLLECTION) ticket.collectionAmount = undefined;
 
     const customer = await Customer.findById(ticket.customer);
     await refreshGeneratedText(ticket, customer);

@@ -187,10 +187,17 @@ export const importPreviewSchema = z.object({
 });
 
 // -------------------------------------------------------------- tickets
+/** PKR amount for Payment Collection tickets; blank means "not set". */
+const collectionAmount = z.preprocess(
+  (v) => (v === '' || v === null ? null : v),
+  z.coerce.number().min(0, 'Amount cannot be negative').max(1_000_000_000).nullable(),
+).optional();
+
 export const createTicketSchema = z.object({
   customerId: requiredText('Customer', 60),
   issueType: requiredText('Issue Type', 80),
   remarks: optionalText(2000),
+  collectionAmount,
   priority: z.enum(TICKET_PRIORITIES).default('Medium'),
   status: z.enum(['In Progress']).default('In Progress'),
   ettrMinutes: z.coerce.number().int().min(5, 'ETTR must be at least 5 minutes').max(20160).default(60),
@@ -202,6 +209,7 @@ export const createTicketSchema = z.object({
 export const updateTicketSchema = z.object({
   issueType: trimmed(80).optional(),
   remarks: trimmed(2000).optional(),
+  collectionAmount,
   priority: z.enum(TICKET_PRIORITIES).optional(),
   status: z.enum(TICKET_STATUSES).optional(),
   ettrMinutes: z.coerce.number().int().min(5).max(20160).optional(),
