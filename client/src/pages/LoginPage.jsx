@@ -19,8 +19,8 @@ const LockIcon = () => (
 );
 
 /**
- * Sign-in: a white card with a blue welcome panel whose edge curves into the
- * form, and soft blue circles around it. One username-or-email field, the
+ * Sign-in: a white card with an orange welcome panel whose edge curves into the
+ * form, and soft orange circles around it. One username-or-email field, the
  * password (with Show/Hide) and the Sign in button.
  */
 export default function LoginPage() {
