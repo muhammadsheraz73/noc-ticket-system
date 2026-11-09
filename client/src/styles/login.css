@@ -127,16 +127,19 @@
 @media (max-width: 860px) {
   .signin { padding: 20px 16px; align-items: flex-start; }
   .signin__card { grid-template-columns: minmax(0, 1fr); min-height: 0; max-width: 480px; margin-top: 4vh; }
-  /* The orange disc becomes a curved banner across the top. */
-  .signin__shape { left: -30%; top: auto; bottom: calc(100% - 210px); width: 160%; }
+  /* The orange disc becomes a curved banner across the top; its lowest point
+     is 170px down, and the welcome block is taller than that, so the form
+     always starts below the curve. */
+  .signin__shape { left: -30%; top: auto; bottom: calc(100% - 170px); width: 160%; }
   .signin__ball--big, .signin__ball--mid { display: none; }
   .signin__ball--corner { width: 90px; height: 90px; right: -40px; bottom: -45px; }
-  .signin__welcome { padding: 32px 28px 46px; max-width: none; text-align: center; }
+  .signin__welcome { min-height: 196px; padding: 30px 24px 0; max-width: none; text-align: center; }
   .signin__welcome-title { font-size: 34px; }
   .signin__welcome-name { font-size: 16px; }
   .signin__welcome-text { display: none; }
-  .signin__form-side { padding: 28px 24px 56px; max-width: none; }
-  .signin__title { font-size: 28px; }
+  .signin__form-side { padding: 8px 24px 56px; max-width: none; }
+  .signin__title { font-size: 28px; text-align: center; }
+  .signin__subtitle { text-align: center; }
 }
 
 @media (prefers-reduced-motion: reduce) {
