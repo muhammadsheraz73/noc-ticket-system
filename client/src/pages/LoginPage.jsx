@@ -61,8 +61,8 @@ export default function LoginPage() {
         <span className="signin__ball signin__ball--corner" aria-hidden="true" />
 
         <section className="signin__welcome">
-          <h1 className="signin__welcome-title">WELCOME</h1>
-          <p className="signin__welcome-name">ISP MATRIX</p>
+          <h1 className="signin__welcome-title">ISP MATRIX</h1>
+          <p className="signin__welcome-name">ISP Billing &amp; Network Operations</p>
           <p className="signin__welcome-text">
             Billing, ticketing, inventory and invoicing for your ISP — all in one panel.
             Sign in with the username your administrator gave you.
@@ -70,7 +70,7 @@ export default function LoginPage() {
         </section>
 
         <main className="signin__form-side">
-          <h2 className="signin__title">Sign in</h2>
+          <h2 className="signin__title">Welcome</h2>
           <p className="signin__subtitle">Sign in to your account to continue.</p>
 
           {error ? <div className="signin__error" role="alert">{error}</div> : null}

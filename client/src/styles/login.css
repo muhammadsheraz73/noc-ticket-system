@@ -51,7 +51,7 @@
   animation: si-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s backwards;
 }
 .signin__welcome-name {
-  margin: 10px 0 0; font-size: 19px; font-weight: 600; letter-spacing: 1.5px; color: #ffffff;
+  margin: 10px 0 0; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; color: #ffffff;
   animation: si-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.25s backwards;
 }
 .signin__welcome-text {
@@ -135,7 +135,7 @@
   .signin__ball--corner { width: 90px; height: 90px; right: -40px; bottom: -45px; }
   .signin__welcome { min-height: 196px; padding: 30px 24px 0; max-width: none; text-align: center; }
   .signin__welcome-title { font-size: 34px; }
-  .signin__welcome-name { font-size: 16px; }
+  .signin__welcome-name { font-size: 13.5px; letter-spacing: 0.2px; }
   .signin__welcome-text { display: none; }
   .signin__form-side { padding: 8px 24px 56px; max-width: none; }
   .signin__title { font-size: 28px; text-align: center; }
