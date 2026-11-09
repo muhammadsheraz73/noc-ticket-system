@@ -57,7 +57,6 @@ export default function LoginPage() {
       <div className="signin__card">
         <span className="signin__shape" aria-hidden="true" />
         <span className="signin__ball signin__ball--big" aria-hidden="true" />
-        <span className="signin__ball signin__ball--mid" aria-hidden="true" />
         <span className="signin__ball signin__ball--corner" aria-hidden="true" />
 
         <section className="signin__welcome">
