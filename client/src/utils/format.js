@@ -8,9 +8,6 @@ export const STATUS_TONE = {
   Closed: 'neutral',
 };
 
-/** Issue type whose tickets carry an amount to collect (matches the server). */
-export const PAYMENT_COLLECTION = 'Payment Collection';
-
 export const PRIORITY_TONE = {
   Urgent: 'danger',
   High: 'warn',

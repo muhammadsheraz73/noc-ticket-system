@@ -42,8 +42,6 @@ const ticketSchema = new mongoose.Schema(
 
     issueType: { type: String, required: true, trim: true, index: true },
     remarks: { type: String, trim: true, default: '' },
-    /** Payment Collection tickets only: the amount (PKR) the field team should collect. */
-    collectionAmount: { type: Number, min: 0 },
     priority: { type: String, enum: TICKET_PRIORITIES, default: 'Medium', index: true },
     status: { type: String, enum: TICKET_STATUSES, default: 'New', index: true },
 

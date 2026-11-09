@@ -3,7 +3,6 @@ import {
   PRIORITY_MESSAGES,
   CLOSED_STATUSES,
   TICKET_FORBIDDEN_CUSTOMER_FIELDS,
-  PAYMENT_COLLECTION,
 } from './constants.js';
 import { formatTicketDateTime, formatEttrDuration, computeTimeLeft } from './datetime.js';
 
@@ -87,10 +86,6 @@ export function buildTicketText(ticket, customer, options = {}) {
 
   lines.push(`Type: *${ticket.issueType}*`);
   lines.push(`Remarks: ${ticket.remarks || '-'}`);
-  // Only Payment Collection tickets with an amount get this line; every other ticket is unchanged.
-  if (ticket.issueType === PAYMENT_COLLECTION && ticket.collectionAmount > 0) {
-    lines.push(`Amount to Collect: *PKR ${Number(ticket.collectionAmount).toLocaleString('en-US')}*`);
-  }
   lines.push(SEPARATOR);
 
   lines.push(`Assigned By: ${ticket.assignedByName || '-'}`);
