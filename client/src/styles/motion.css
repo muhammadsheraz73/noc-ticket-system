@@ -273,54 +273,6 @@
 .toast__close { transition: color 0.15s, transform 0.2s; }
 .toast__close:hover { color: var(--ink); transform: rotate(90deg); }
 
-/* ------------------------------------------------------------------- login */
-.login-hero > * { position: relative; z-index: 1; }
-.login-hero > .login-hero__footer { position: absolute; }
-.login-hero > .login-hero__orb, .login-hero > .login-hero__grid { position: absolute; z-index: 0; }
-
-.login-hero__grid {
-  inset: 0; pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-  background-size: 40px 40px;
-  -webkit-mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
-  mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
-  animation: grid-pan 8s linear infinite;
-}
-.login-hero__orb {
-  border-radius: 50%; pointer-events: none; filter: blur(50px);
-  animation: orb-drift 16s ease-in-out infinite;
-}
-.login-hero__orb--1 { width: 340px; height: 340px; top: -80px; left: -60px; background: rgba(255, 255, 255, 0.28); }
-.login-hero__orb--2 { width: 280px; height: 280px; bottom: -60px; right: -40px; background: rgba(0, 0, 0, 0.28); animation-duration: 20s; animation-delay: -6s; }
-.login-hero__orb--3 { width: 200px; height: 200px; top: 45%; left: 60%; background: rgba(255, 210, 160, 0.35); animation-duration: 13s; animation-delay: -3s; }
-
-.login-hero__icon {
-  animation: rise-in 0.6s var(--ease-out) backwards, float 4s ease-in-out 0.8s infinite;
-  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.2));
-}
-.login-hero__icon :is(circle, path) {
-  stroke-dasharray: 120; stroke-dashoffset: 0;
-  animation: draw 1.6s var(--ease-out) 0.2s backwards;
-}
-.login-hero__name { animation: rise-in 0.6s var(--ease-out) 0.15s backwards; --rise: 16px; }
-.login-hero__tagline { animation: rise-in 0.6s var(--ease-out) 0.28s backwards; }
-.login-hero__features li {
-  animation: rise-in 0.5s var(--ease-spring) backwards;
-  animation-delay: calc(450ms + var(--i, 0) * 90ms);
-}
-.login-hero__footer { animation: fade-in 0.8s ease 0.8s backwards; }
-
-.login-card__mobile-brand { animation: rise-in 0.5s var(--ease-out) backwards; }
-.login-card__intro { animation: slide-in-right 0.55s var(--ease-out) 0.1s backwards; }
-.login-card__form {
-  animation: rise-in 0.6s var(--ease-out) 0.2s backwards; --rise: 18px;
-  transition: box-shadow 0.3s;
-}
-.login-card__form:focus-within { box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04), 0 18px 40px -16px rgba(15, 23, 42, 0.25); }
-.login-card__footer { animation: fade-in 0.6s ease 0.45s backwards; }
-
 /* --------------------------------------------------------- accessibility */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

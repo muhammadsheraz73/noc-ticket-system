@@ -1,0 +1,143 @@
+/* --------------------------------------------------------------- sign in */
+/* Blue welcome card: a curved blue panel on the left, soft 3D circles, the form on white. */
+.signin {
+  --si-blue: #1a73d9;
+  --si-blue-deep: #0b4fa8;
+  --si-navy: #0d3b78;
+  --si-ink: #2b2b2b;
+  --si-muted: #6b7280;
+  --si-field: #f1f2f4;
+
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; align-items: center; justify-content: center; padding: 32px 20px;
+  background:
+    radial-gradient(70vw 70vh at 0% 0%, rgba(255, 255, 255, 0.14), transparent 60%),
+    linear-gradient(135deg, #0a58c2 0%, #1677e0 55%, #0c4fae 100%);
+  font-family: 'Poppins', var(--font);
+}
+
+.signin__card {
+  position: relative; overflow: hidden; isolation: isolate;
+  width: 100%; max-width: 1000px; min-height: 580px;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  border-radius: 24px; background: #ffffff;
+  box-shadow: 0 30px 70px -25px rgba(4, 30, 80, 0.55);
+  animation: si-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* The big blue disc: its right edge is the curve between welcome and form. */
+.signin__shape {
+  /* Sized so its right edge stops at the middle of the card, before the form. */
+  position: absolute; z-index: -1; left: -32%; top: -26%;
+  width: 80%; aspect-ratio: 1; border-radius: 50%;
+  background: linear-gradient(160deg, #2a86ea 0%, #1565c8 45%, #0b4fa8 100%);
+}
+
+/* Glossy circles, lit from the top left. */
+.signin__ball {
+  position: absolute; z-index: -1; border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #5aa9ff 0%, #1f73d6 45%, #0b4fa8 100%);
+  box-shadow: 0 18px 40px -12px rgba(5, 40, 100, 0.55);
+}
+.signin__ball--big { width: 300px; height: 300px; left: -90px; bottom: -150px; animation: si-float 9s ease-in-out infinite; }
+.signin__ball--mid { width: 230px; height: 230px; left: 26%; bottom: -60px; animation: si-float 11s ease-in-out -3s infinite; }
+.signin__ball--corner { width: 170px; height: 170px; right: -55px; bottom: -70px; animation: si-float 10s ease-in-out -6s infinite; }
+
+/* ------------------------------------------------------------- welcome side */
+.signin__welcome { align-self: center; padding: 48px 40px 140px 56px; color: #ffffff; max-width: 420px; }
+.signin__welcome-title {
+  margin: 0; font-size: 46px; font-weight: 800; letter-spacing: 2px; line-height: 1.05; color: #ffffff;
+  animation: si-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s backwards;
+}
+.signin__welcome-name {
+  margin: 10px 0 0; font-size: 19px; font-weight: 600; letter-spacing: 1.5px; color: #ffffff;
+  animation: si-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.25s backwards;
+}
+.signin__welcome-text {
+  margin: 16px 0 0; max-width: 330px; font-size: 13px; line-height: 1.7; color: rgba(255, 255, 255, 0.85);
+  animation: si-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.35s backwards;
+}
+
+/* ---------------------------------------------------------------- form side */
+.signin__form-side { align-self: center; padding: 48px 56px 64px 40px; max-width: 460px; width: 100%; justify-self: center; }
+.signin__title { margin: 0; font-size: 36px; font-weight: 700; letter-spacing: 1px; color: var(--si-ink); }
+.signin__subtitle { margin: 6px 0 26px; font-size: 13px; color: var(--si-muted); }
+
+.signin__error {
+  margin-bottom: 14px; padding: 10px 14px; border-radius: 10px; font-size: 13px;
+  background: #fdecec; border: 1px solid #f5c2c2; color: #b42318;
+}
+
+.signin__form { display: flex; flex-direction: column; gap: 16px; }
+.signin__sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+.signin__input {
+  display: flex; align-items: center; gap: 12px; height: 54px; padding: 0 14px 0 16px;
+  border-radius: 12px; background: var(--si-field); border: 1.5px solid transparent;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.signin__input:focus-within { background: #ffffff; border-color: var(--si-blue); box-shadow: 0 0 0 4px rgba(26, 115, 217, 0.14); }
+.signin__icon { display: grid; place-items: center; color: #3a3a3a; flex: 0 0 auto; }
+.signin__icon svg { width: 20px; height: 20px; }
+.signin__input input {
+  flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent;
+  font: inherit; font-size: 14px; color: var(--si-ink);
+}
+.signin__input input::placeholder { color: #8a8f98; }
+.signin__input input:-webkit-autofill {
+  -webkit-text-fill-color: var(--si-ink);
+  -webkit-box-shadow: 0 0 0 40px var(--si-field) inset;
+}
+.signin__show {
+  flex: 0 0 auto; padding: 6px 4px; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.6px; color: var(--si-navy);
+}
+.signin__show:hover { color: var(--si-blue); }
+
+.signin__submit {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  height: 54px; margin-top: 8px; border: 0; border-radius: 10px; cursor: pointer;
+  background: var(--si-navy); color: #ffffff;
+  font: inherit; font-size: 16px; font-weight: 600; letter-spacing: 1px;
+  box-shadow: 0 12px 24px -12px rgba(13, 59, 120, 0.7);
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+.signin__submit:hover:not(:disabled) { background: #0b4fa8; box-shadow: 0 14px 28px -12px rgba(13, 59, 120, 0.8); }
+.signin__submit:active:not(:disabled) { transform: translateY(1px); }
+.signin__submit:disabled { cursor: progress; opacity: 0.85; }
+.signin__submit:focus-visible, .signin__show:focus-visible { outline: 2px solid var(--si-blue); outline-offset: 3px; }
+.signin__spinner {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.35); border-top-color: #ffffff;
+  animation: si-spin 0.75s linear infinite;
+}
+
+.signin__help { margin: 26px 0 0; font-size: 12.5px; color: var(--si-muted); text-align: center; }
+.signin__help span { font-weight: 600; color: var(--si-navy); }
+
+@keyframes si-rise { from { opacity: 0; transform: translateY(14px); } }
+@keyframes si-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes si-spin { to { transform: rotate(360deg); } }
+
+/* ------------------------------------------------------- tablets and phones */
+@media (max-width: 860px) {
+  .signin { padding: 20px 16px; align-items: flex-start; }
+  .signin__card { grid-template-columns: minmax(0, 1fr); min-height: 0; max-width: 480px; margin-top: 4vh; }
+  /* The blue disc becomes a curved banner across the top. */
+  .signin__shape { left: -30%; top: auto; bottom: calc(100% - 210px); width: 160%; }
+  .signin__ball--big, .signin__ball--mid { display: none; }
+  .signin__ball--corner { width: 90px; height: 90px; right: -40px; bottom: -45px; }
+  .signin__welcome { padding: 32px 28px 46px; max-width: none; text-align: center; }
+  .signin__welcome-title { font-size: 34px; }
+  .signin__welcome-name { font-size: 16px; }
+  .signin__welcome-text { display: none; }
+  .signin__form-side { padding: 28px 24px 56px; max-width: none; }
+  .signin__title { font-size: 28px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signin__card, .signin__ball, .signin__welcome-title, .signin__welcome-name, .signin__welcome-text { animation: none !important; }
+}
