@@ -1,9 +1,8 @@
 /* --------------------------------------------------------------- sign in */
 /*
- * Split screen on large screens: the form on white (left) and a light warm
- * panel saying what the product does (right). Phones and tablets get the
- * form alone. Orange is the accent only: logo, button, icons, focus ring.
- * Sizes follow the window height so the page never scrolls.
+ * One centred column on every screen: a large logo, then the form, on white
+ * with a faint orange glow. Orange is the accent only: logo, button, focus
+ * ring. Sizes follow the window height so the page never scrolls.
  */
 .auth {
   --a-brand: var(--brand, #e35a00);
@@ -16,33 +15,37 @@
   --a-gap: clamp(14px, 2.2vh, 20px);
 
   min-height: 100vh; min-height: 100dvh;
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  background: #ffffff; color: var(--a-ink);
+  display: flex; flex-direction: column;
+  background:
+    radial-gradient(720px 340px at 50% -90px, rgba(255, 107, 0, 0.12), transparent 70%),
+    #ffffff;
+  color: var(--a-ink);
   font-family: 'Geist Variable', var(--font);
 }
 
 /* ---------------------------------------------------------------- form side */
 .auth__main {
-  display: flex; flex-direction: column; min-width: 0;
-  padding: clamp(18px, 4vh, 40px) clamp(24px, 5vw, 64px);
+  flex: 1; display: flex; flex-direction: column; min-width: 0;
+  padding: clamp(16px, 3.4vh, 36px) 20px;
 }
-.auth__brand { display: flex; align-items: center; gap: 10px; }
+/* Big centred logo, the name under it. */
+.auth__brand { display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1.6vh, 14px); margin-bottom: clamp(18px, 4vh, 36px); }
 .auth__logo {
-  display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px;
+  display: grid; place-items: center; width: clamp(60px, 10vh, 80px); height: clamp(60px, 10vh, 80px); border-radius: 22px;
   background: linear-gradient(135deg, var(--a-accent), var(--a-dark)); color: #ffffff;
-  box-shadow: 0 6px 14px -6px rgba(184, 72, 0, 0.6);
+  box-shadow: 0 14px 30px -12px rgba(184, 72, 0, 0.65);
 }
-.auth__logo svg { width: 20px; height: 20px; }
-.auth__brand-name { font-family: 'Poppins', var(--font); font-size: 17px; font-weight: 700; letter-spacing: 0.3px; color: var(--a-ink); }
+.auth__logo svg { width: 48%; height: 48%; }
+.auth__brand-name { font-family: 'Poppins', var(--font); font-size: clamp(22px, 3.6vh, 28px); font-weight: 700; letter-spacing: 0.5px; color: var(--a-ink); }
 .auth__brand-name b { color: var(--a-brand); }
 
 .auth__form-wrap {
   flex: 1; display: flex; flex-direction: column; justify-content: center;
-  width: 100%; max-width: 380px; margin: 0 auto; padding: clamp(16px, 4vh, 40px) 0;
+  width: 100%; max-width: 400px; margin: 0 auto; padding: clamp(8px, 2vh, 24px) 0;
   animation: auth-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
-.auth__title { margin: 0; font-size: clamp(26px, 4.2vh, 32px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; color: var(--a-ink); }
-.auth__subtitle { margin: 8px 0 clamp(18px, 3.4vh, 30px); font-size: 14.5px; line-height: 1.5; color: var(--a-muted); }
+.auth__title { margin: 0; text-align: center; font-size: clamp(26px, 4.2vh, 32px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; color: var(--a-ink); }
+.auth__subtitle { text-align: center; margin: 8px 0 clamp(18px, 3.4vh, 30px); font-size: 14.5px; line-height: 1.5; color: var(--a-muted); }
 
 .auth__error {
   margin-bottom: 16px; padding: 10px 14px; border-radius: 10px; font-size: 13.5px;
@@ -58,6 +61,16 @@
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .auth__field input::placeholder { color: #9ca3af; }
+/* Keep fields white when the browser fills in a saved login (it paints them blue otherwise). */
+.auth__field input:-webkit-autofill,
+.auth__field input:-webkit-autofill:hover,
+.auth__field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--a-ink);
+  -webkit-box-shadow: 0 0 0 40px #ffffff inset;
+  caret-color: var(--a-ink);
+  transition: background-color 9999s ease-out 0s;
+}
+.auth__field input:-webkit-autofill:focus { -webkit-box-shadow: 0 0 0 40px #ffffff inset, 0 0 0 4px rgba(255, 107, 0, 0.14); }
 .auth__field input:hover { border-color: #b8bfc8; }
 .auth__field input:focus { outline: none; border-color: var(--a-accent); box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.14); }
 .auth__password { position: relative; }
@@ -91,76 +104,17 @@
 .auth__help { margin: clamp(14px, 2.6vh, 22px) 0 0; font-size: 13px; color: var(--a-muted); text-align: center; }
 .auth__footer { font-size: 12px; color: #9ca3af; text-align: center; }
 
-/* -------------------------------------------------------------- brand side */
-.auth__side {
-  position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
-  padding: clamp(24px, 5vh, 56px) clamp(32px, 5vw, 72px);
-  border-left: 1px solid #f1e6dc;
-  background:
-    radial-gradient(520px 420px at 85% 10%, rgba(255, 107, 0, 0.16), transparent 70%),
-    radial-gradient(480px 380px at 10% 95%, rgba(255, 107, 0, 0.10), transparent 70%),
-    radial-gradient(circle, rgba(184, 72, 0, 0.09) 1px, transparent 1.2px) 0 0 / 22px 22px,
-    #fff8f2;
-}
-.auth__side-inner { width: 100%; max-width: 460px; animation: auth-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s backwards; }
-.auth__eyebrow { margin: 0 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--a-dark); }
-.auth__headline {
-  margin: 0; font-family: 'Poppins', var(--font); font-size: clamp(26px, 4.4vh, 36px); font-weight: 700;
-  line-height: 1.2; letter-spacing: -0.01em; color: var(--a-ink);
-}
-.auth__headline span { color: var(--a-brand); }
-
-.auth__features { list-style: none; margin: clamp(18px, 3.6vh, 32px) 0 0; padding: 0; display: grid; gap: clamp(12px, 2.2vh, 18px); }
-.auth__features li { display: flex; gap: 14px; align-items: flex-start; }
-.auth__feature-icon {
-  display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; border-radius: 11px;
-  background: #ffffff; border: 1px solid #fbdcc6; color: var(--a-brand);
-  box-shadow: 0 4px 12px -6px rgba(184, 72, 0, 0.35);
-}
-.auth__feature-icon svg { width: 20px; height: 20px; }
-.auth__features b { display: block; font-size: 15px; font-weight: 650; color: var(--a-ink); }
-.auth__features li > span:last-child > span { display: block; margin-top: 2px; font-size: 13.5px; line-height: 1.5; color: var(--a-muted); }
-
-/* A picture of the product: a small collections chart card. */
-.auth__preview {
-  margin-top: clamp(20px, 4vh, 36px); padding: 16px 18px 14px; border-radius: 14px;
-  background: #ffffff; border: 1px solid #f1e6dc;
-  box-shadow: 0 20px 40px -24px rgba(120, 45, 0, 0.35);
-}
-.auth__preview-head { display: flex; align-items: center; justify-content: space-between; font-size: 13.5px; font-weight: 650; color: var(--a-ink); }
-.auth__preview-pill { padding: 2px 9px; border-radius: 999px; background: #fff1e6; color: var(--a-dark); font-size: 11.5px; font-weight: 600; }
-.auth__preview-bars { display: flex; align-items: flex-end; gap: 10px; height: clamp(70px, 13vh, 120px); margin-top: 14px; border-bottom: 1px solid #f1f2f4; }
-.auth__preview-bars span {
-  flex: 1; border-radius: 6px 6px 0 0; transform-origin: bottom;
-  background: linear-gradient(180deg, var(--a-accent), #ffb27a);
-  animation: auth-grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) backwards;
-}
-.auth__preview-bars span:last-child { background: linear-gradient(180deg, var(--a-dark), var(--a-accent)); }
-
 @keyframes auth-rise { from { opacity: 0; transform: translateY(12px); } }
-@keyframes auth-grow { from { transform: scaleY(0); } }
 @keyframes auth-spin { to { transform: rotate(360deg); } }
 
-/* Short laptop screens: drop the chart so the panel fits. */
-@media (max-height: 700px) {
-  .auth__preview { display: none; }
-}
-
-/* ------------------------------------------------------- tablets and phones */
-@media (max-width: 1023px) {
-  .auth {
-    grid-template-columns: minmax(0, 1fr);
-    background:
-      radial-gradient(600px 260px at 50% -60px, rgba(255, 107, 0, 0.12), transparent 70%),
-      #ffffff;
-  }
-  .auth__side { display: none; }
-  .auth__main { padding: clamp(16px, 3.4vh, 32px) 20px; }
-  .auth__brand { justify-content: center; }
-  .auth__form-wrap { max-width: 400px; }
-  .auth__title, .auth__subtitle { text-align: center; }
+/* Very short phones: tighten the spacing a little so nothing scrolls. */
+@media (max-height: 580px) {
+  .auth__logo { width: 52px; height: 52px; border-radius: 16px; }
+  .auth__brand { margin-bottom: 12px; }
+  .auth__subtitle { font-size: 13.5px; margin-bottom: 14px; }
+  .auth__help { margin-top: 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .auth__form-wrap, .auth__side-inner, .auth__preview-bars span { animation: none !important; }
+  .auth__form-wrap { animation: none !important; }
 }
