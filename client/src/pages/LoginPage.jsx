@@ -19,8 +19,8 @@ const LockIcon = () => (
 );
 
 /**
- * Sign-in: a white card with an orange welcome panel whose edge curves into the
- * form, and soft orange circles around it. One username-or-email field, the
+ * Sign-in: a white card with a soft peach welcome panel whose edge curves into
+ * the form, a few glossy orange circles, and an orange Sign in button. One username-or-email field, the
  * password (with Show/Hide) and the Sign in button.
  */
 export default function LoginPage() {
@@ -61,7 +61,7 @@ export default function LoginPage() {
         <span className="signin__ball signin__ball--corner" aria-hidden="true" />
 
         <section className="signin__welcome">
-          <h1 className="signin__welcome-title">ISP MATRIX</h1>
+          <h1 className="signin__welcome-title">ISP <span className="signin__accent">MATRIX</span></h1>
           <p className="signin__welcome-name">ISP Billing &amp; Network Operations</p>
           <p className="signin__welcome-text">
             Billing, ticketing, inventory and invoicing for your ISP — all in one panel.
