@@ -109,7 +109,7 @@ export default function ClientDetailPage() {
     toast.success(
       plan !== 'custom'
         ? `${PLAN_LABELS[plan]} plan saved`
-        : lockedModules.length ? `${lockedModules.length} feature${lockedModules.length === 1 ? '' : 's'} locked` : 'All features open',
+        : lockedModules.length ? `${lockedModules.length} feature${lockedModules.length === 1 ? '' : 's'} hidden` : 'All features shown',
       data.client.name,
     );
     load(true);
@@ -191,7 +191,7 @@ export default function ClientDetailPage() {
               {counts[t.key] !== undefined ? (
                 <span className="o-tab__count">
                   {t.key === 'access'
-                    ? (client.plan && client.plan !== 'custom' ? PLAN_LABELS[client.plan] : counts.access ? `${counts.access} locked` : 'all open')
+                    ? (client.plan && client.plan !== 'custom' ? PLAN_LABELS[client.plan] : counts.access ? `${counts.access} hidden` : 'all shown')
                     : counts[t.key]}
                 </span>
               ) : null}
@@ -209,9 +209,9 @@ export default function ClientDetailPage() {
               <div>
                 <h2 className="o-section__title">Plan &amp; feature access</h2>
                 <p className="o-section__sub">
-                  Pick the package {client.name} bought, or switch features by hand. Locked features stay in their menu with a 🔒 but cannot be
-                  opened — for every login of this client. To lock something for one person only, open the
-                  {' '}<button type="button" className="link-btn" onClick={() => setTab('logins')}>Logins</button> tab and use 🔒 Access.
+                  Pick the package {client.name} bought, or switch features by hand. A hidden feature disappears from the
+                  menu of every login of this client and cannot be opened. To hide something for one person only, open the
+                  {' '}<button type="button" className="link-btn" onClick={() => setTab('logins')}>Logins</button> tab and use Feature access.
                 </p>
               </div>
             </div>

@@ -28,7 +28,7 @@ import QuotationFormPage from './pages/QuotationFormPage.jsx';
 import QuotationDetailPage from './pages/QuotationDetailPage.jsx';
 import TeamPage from './pages/TeamPage.jsx';
 import BillingDashboardPage from './pages/BillingDashboardPage.jsx';
-import { MODULE_LABELS, firstOpenPath } from './utils/modules.js';
+import { firstOpenPath } from './utils/modules.js';
 
 /** Everybody inside a client except its billing department (Accounts), whose panel is billing-only. */
 const OPERATIONS = [ROLES.ADMIN, ROLES.NOC_OPERATOR, ROLES.FIELD_ENGINEER];
@@ -71,15 +71,8 @@ function Protected({ roles, ownerOk, module, children }) {
       />
     );
   }
-  if (isLocked(module)) {
-    return (
-      <EmptyState
-        icon="🔒"
-        title={`${MODULE_LABELS[module]} is locked`}
-        message="The panel owner has locked this feature for your account. Please contact them to unlock it."
-      />
-    );
-  }
+  // A feature the owner has hidden behaves as if it is not there.
+  if (isLocked(module)) return <Navigate to="/" replace />;
   return children;
 }
 

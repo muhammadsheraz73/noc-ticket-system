@@ -144,7 +144,7 @@ function authenticate(allow) {
 
     const feature = moduleFor(req);
     if (feature && lockedModulesFor(user, tenant).includes(feature)) {
-      throw ApiError.forbidden(`${MODULES[feature]} is locked for your account. Please contact the panel owner.`);
+      throw ApiError.forbidden(`${MODULES[feature]} is not available on your account.`);
     }
 
     req.user = user;

@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Alert, Modal } from './ui.jsx';
 
 /**
- * Owner-only: lock or open panel features. Each row is a switch — on means the
- * feature is open, off means locked. Features already locked for the whole
- * client (`inherited`) are shown locked and cannot be opened from here.
+ * Owner-only: show or hide panel features. Each row is a switch — on means the
+ * feature is shown, off means hidden (gone from that login's menu). Features
+ * already hidden for the whole client (`inherited`) show as hidden here.
  */
 function AccessEditor({ modules, inherited, draft, setDraft }) {
   const editable = modules.filter((m) => !inherited.includes(m.key));
@@ -15,14 +15,14 @@ function AccessEditor({ modules, inherited, draft, setDraft }) {
     <>
       <div className="access-bar">
         <span className="small muted">
-          {lockedCount === 0 ? 'Everything is open' : `${lockedCount} of ${modules.length} locked`}
+          {lockedCount === 0 ? 'Everything is shown' : `${lockedCount} of ${modules.length} hidden`}
         </span>
         <div className="access-bar__actions">
           <button type="button" className="btn btn--ghost btn--sm" onClick={() => setDraft(editable.map((m) => m.key))}>
-            Lock all
+            Hide all
           </button>
           <button type="button" className="btn btn--ghost btn--sm" onClick={() => setDraft([])}>
-            Open all
+            Show all
           </button>
         </div>
       </div>
@@ -34,21 +34,21 @@ function AccessEditor({ modules, inherited, draft, setDraft }) {
           return (
             <li key={m.key} className={isLocked ? 'is-locked' : ''}>
               <div className="access-list__text">
-                <span className="access-list__label">{isLocked ? '🔒 ' : ''}{m.label}</span>
+                <span className="access-list__label">{m.label}</span>
                 <span className="access-list__hint">
-                  {fromClient ? 'Locked for the whole client' : m.hint}
+                  {fromClient ? 'Hidden for the whole client' : m.hint}
                 </span>
               </div>
-              <label className="switch" title={fromClient ? 'Unlock it on the client’s Feature access tab' : ''}>
+              <label className="switch" title={fromClient ? 'Show it again on the client’s Feature access tab' : ''}>
                 <input
                   type="checkbox"
                   checked={!isLocked}
                   disabled={fromClient}
                   onChange={() => toggle(m.key)}
-                  aria-label={`${m.label}: ${isLocked ? 'locked' : 'open'}`}
+                  aria-label={`${m.label}: ${isLocked ? 'hidden' : 'shown'}`}
                 />
                 <span className="switch__track"><span className="switch__thumb" /></span>
-                <span className="switch__text">{isLocked ? 'Locked' : 'Open'}</span>
+                <span className="switch__text">{isLocked ? 'Hidden' : 'Shown'}</span>
               </label>
             </li>
           );

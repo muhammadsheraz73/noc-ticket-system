@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, ROLES } from '../context/AuthContext.jsx';
-import { useToast } from '../context/ToastContext.jsx';
 import api from '../api/client.js';
 import GlobalSearch from './GlobalSearch.jsx';
 import { initials, ROLE_LABELS } from '../utils/format.js';
@@ -71,7 +70,6 @@ const OWNER_NAV = [
 
 export default function Layout() {
   const { user, logout, setUser, isLocked } = useAuth();
-  const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -112,7 +110,8 @@ export default function Layout() {
   const navGroups = user?.role === ROLES.SUPERADMIN ? OWNER_NAV : NAV;
   const visibleGroups = navGroups.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !item.roles || item.roles.includes(user?.role)),
+    // Features the panel owner has hidden for this login are left out of the menu entirely.
+    items: group.items.filter((item) => (!item.roles || item.roles.includes(user?.role)) && !isLocked(item.module)),
   })).filter((group) => group.items.length > 0);
   let linkIndex = 0;
 
@@ -133,20 +132,7 @@ export default function Layout() {
           {visibleGroups.map((group) => (
             <div className="sidebar__group" key={group.group}>
               <div className="sidebar__group-label">{group.group}</div>
-              {group.items.map((item) => (isLocked(item.module) ? (
-                <button
-                  key={item.to}
-                  type="button"
-                  className="sidebar__link is-locked"
-                  style={{ '--i': linkIndex++ }}
-                  title="Locked by the panel owner"
-                  onClick={() => toast.info(`${item.label} is locked`, 'The panel owner has locked this feature for your account.')}
-                >
-                  <span className="sidebar__icon">{item.icon}</span>
-                  {item.label}
-                  <span className="sidebar__lock" aria-label="locked">🔒</span>
-                </button>
-              ) : (
+              {group.items.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -157,7 +143,7 @@ export default function Layout() {
                   <span className="sidebar__icon">{item.icon}</span>
                   {item.label}
                 </NavLink>
-              )))}
+              ))}
             </div>
           ))}
         </nav>

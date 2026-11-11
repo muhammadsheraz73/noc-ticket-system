@@ -174,14 +174,6 @@ a:hover { text-decoration: underline; }
   transition: background 0.15s, color 0.15s;
 }
 .sidebar__link:hover { background: rgba(255, 255, 255, 0.07); color: #fff; text-decoration: none; }
-/* A feature the panel owner has locked: still listed, greyed out, with a padlock. */
-.sidebar__link.is-locked {
-  width: 100%; border: 0; background: none; font: inherit; font-weight: 500; font-size: 13.5px;
-  text-align: left; cursor: not-allowed; color: #7d7771;
-}
-.sidebar__link.is-locked .sidebar__icon { opacity: 0.45; filter: grayscale(1); }
-.sidebar__link.is-locked:hover { background: rgba(255, 255, 255, 0.04); color: #9b948d; }
-.sidebar__lock { margin-left: auto; font-size: 12px; }
 .sidebar__link.is-active { background: color-mix(in srgb, var(--brand-accent) 16%, transparent); color: #fff; font-weight: 600; }
 .sidebar__link.is-active .sidebar__icon { color: var(--brand-accent); }
 .sidebar__icon { width: 18px; text-align: center; flex: 0 0 18px; font-size: 14px; }
